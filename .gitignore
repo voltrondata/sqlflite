@@ -1,0 +1,9 @@
+# build is out
+build
+
+# CMake Files
+CMakeFiles
+
+# Mac Junk
+._.DS*
+.DS*
