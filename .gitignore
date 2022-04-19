@@ -1,6 +1,8 @@
 # build is out
 build
 
+# and so is data
+data
 # CMake Files
 CMakeFiles
 
