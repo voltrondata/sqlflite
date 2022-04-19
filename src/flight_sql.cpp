@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <csignal>
 #include <iostream>
 #include <pthread.h>
 
@@ -130,41 +131,23 @@ void* CreateClient(void *id) {
     }
 
     // run query
-    const std::string kQuery = "SELECT * FROM countries";
+    // const std::string kQuery = "SELECT L_ORDERKEY, O_ORDERDATE, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue FROM orders AS A INNER JOIN lineitem AS B ON A.O_ORDERKEY = B.L_ORDERKEY GROUP BY L_ORDERKEY, O_ORDERDATE LIMIT 10;";
+    const std::string kQuery = "SELECT L_ORDERKEY, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue FROM lineitem GROUP BY L_ORDERKEY LIMIT 10;";
 
     std::cout << "Executing query: '" << kQuery << "'" << std::endl;
     auto flight_info_result = client->Execute(call_options, kQuery);
     std::unique_ptr<flight::FlightInfo> flight_info;
 
+    std::cout << flight_info_result.status().ToString() << std::endl;
+    std::cout << flight_info_result.ok() << std::endl;
+
     if (flight_info_result.ok()) {
         flight_info = std::move(flight_info_result.ValueOrDie());
         print_results(*flight_info, *client, call_options);
+    } else {
+        std::cout << "There was a problem executing this query..." << std::endl;
+        return (void*) 1;
     }
-
-    // //   // Fetch each partition sequentially (though this can be done in parallel)
-    // for (const flight::FlightEndpoint& endpoint : tables->endpoints()) {
-    // // Here we assume each partition is on the same server we originally queried, but this
-    // // isn't true in general: the server may split the query results between multiple
-    // // other servers, which we would have to connect to.
-
-    // // The "ticket" in the endpoint is opaque to the client. The server uses it to
-    // // identify which part of the query results to return.
-    // auto stream_result = client->DoGet(call_options, endpoint.ticket);
-    // std::unique_ptr<arrow::flight::FlightStreamReader> stream;
-    // if (stream_result.ok()) {
-    //     stream = std::move(stream_result.ValueOrDie());
-    // }
-    // // Read all results into an Arrow Table, though we can iteratively process record
-    // // batches as they arrive as well
-    // auto table_result = stream->ToTable();
-    // auto table = std::move(table_result.ValueOrDie());
-
-
-    //     // ARROW_ASSIGN_OR_RAISE(auto table, stream->ToTable());
-    //     std::cout << "Read one chunk:" << std::endl;
-    //     std::cout << table->ToString() << std::endl;
-    //   }
-    // // return (void*) 0;
     pthread_exit(NULL);
 }
 
@@ -175,7 +158,7 @@ int main(int argc, char** argv) {
 
     createServerParams csp;
     csp.id = 0;
-    csp.path = "geography.db";
+    csp.path = "../data/TPC-H-small.db";
 
     int server_t = pthread_create(&threads[0], NULL, CreateServer, &csp);
     usleep(2000); // let the server start up
@@ -186,7 +169,9 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    pthread_join(threads[0], &result_server);
     pthread_join(threads[1], &result_client);
+    std::raise(SIGTERM); // shutdown the server
+
+    pthread_join(threads[0], &result_server);
     return EXIT_SUCCESS;
 }

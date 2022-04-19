@@ -634,6 +634,8 @@ class SQLiteFlightSqlServer::Impl {
   Status ExecuteSql(const std::string& sql) {
     char* err_msg = nullptr;
     int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err_msg);
+
+    std::cout << rc << std::endl;
     if (rc != SQLITE_OK) {
       std::string error_msg;
       if (err_msg != nullptr) {
