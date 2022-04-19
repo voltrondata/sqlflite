@@ -21,7 +21,13 @@ $ mkdir -p build && cd build
 $ cmake ../cpp -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DARROW_FLIGHT=ON -DARROW_FLIGHT_SQL=ON 
 $ ninja install # Will install into your Conda prefix
 ```
-6. Build the example.
+6. Get the data.
+```bash
+$ mkdir data && cd data
+$ wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db data/tpc-h-small.db
+$ cd ..
+```
+7. Build the example.
 ```bash
 $ mkdir build && cd build
 $ cmake .. -GNinja -DCMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/cmake/arrow
