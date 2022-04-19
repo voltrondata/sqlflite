@@ -23,6 +23,7 @@
 #include <map>
 #include <random>
 #include <sstream>
+#include <iostream>
 
 #include <arrow/api.h>
 #include <arrow/flight/sql/server.h>
@@ -648,10 +649,19 @@ class SQLiteFlightSqlServer::Impl {
 SQLiteFlightSqlServer::SQLiteFlightSqlServer(std::shared_ptr<Impl> impl)
     : impl_(std::move(impl)) {}
 
-arrow::Result<std::shared_ptr<SQLiteFlightSqlServer>> SQLiteFlightSqlServer::Create() {
+arrow::Result<std::shared_ptr<SQLiteFlightSqlServer>> SQLiteFlightSqlServer::Create(std::string path) {
   sqlite3* db = nullptr;
+  char* db_location;
 
-  if (sqlite3_open(":memory:", &db)) {
+  bool in_memory = path == "";
+
+  if (in_memory) {
+    db_location = (char*)":memory:";
+  } else {
+    db_location = (char*)path.c_str(); // TODO: validate that the path exists
+  }
+
+  if (sqlite3_open(db_location, &db)) {
     std::string err_msg = "Can't open database: ";
     if (db != nullptr) {
       err_msg += sqlite3_errmsg(db);
@@ -670,26 +680,28 @@ arrow::Result<std::shared_ptr<SQLiteFlightSqlServer>> SQLiteFlightSqlServer::Cre
     result->RegisterSqlInfo(id_to_result.first, id_to_result.second);
   }
 
-  ARROW_RETURN_NOT_OK(result->ExecuteSql(R"(
-    CREATE TABLE foreignTable (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    foreignName varchar(100),
-    value int);
+  if (in_memory) {
+    ARROW_RETURN_NOT_OK(result->ExecuteSql(R"(
+      CREATE TABLE foreignTable (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      foreignName varchar(100),
+      value int);
 
-    CREATE TABLE intTable (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    keyName varchar(100),
-    value int,
-    foreignId int references foreignTable(id));
+      CREATE TABLE intTable (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      keyName varchar(100),
+      value int,
+      foreignId int references foreignTable(id));
 
-    INSERT INTO foreignTable (foreignName, value) VALUES ('keyOne', 1);
-    INSERT INTO foreignTable (foreignName, value) VALUES ('keyTwo', 0);
-    INSERT INTO foreignTable (foreignName, value) VALUES ('keyThree', -1);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES ('one', 1, 1);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES ('zero', 0, 1);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES ('negative one', -1, 1);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES (NULL, NULL, NULL);
-  )"));
+      INSERT INTO foreignTable (foreignName, value) VALUES ('keyOne', 1);
+      INSERT INTO foreignTable (foreignName, value) VALUES ('keyTwo', 0);
+      INSERT INTO foreignTable (foreignName, value) VALUES ('keyThree', -1);
+      INSERT INTO intTable (keyName, value, foreignId) VALUES ('one', 1, 1);
+      INSERT INTO intTable (keyName, value, foreignId) VALUES ('zero', 0, 1);
+      INSERT INTO intTable (keyName, value, foreignId) VALUES ('negative one', -1, 1);
+      INSERT INTO intTable (keyName, value, foreignId) VALUES (NULL, NULL, NULL);
+    )"));
+  }
 
   return result;
 }

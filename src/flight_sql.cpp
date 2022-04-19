@@ -13,7 +13,44 @@ namespace flightsql = arrow::flight::sql;
 
 int port = 31337;
 
-void* CreateServer(void *id) {
+struct createServerParams {
+    long id;
+    std::string path;
+};
+
+void print_results(
+    flight::FlightInfo results, 
+    flightsql::FlightSqlClient client,
+    const flight::FlightCallOptions &call_options) {
+        // Fetch each partition sequentially (though this can be done in parallel)
+        for (const flight::FlightEndpoint& endpoint : results.endpoints()) {
+            // Here we assume each partition is on the same server we originally queried, but this
+            // isn't true in general: the server may split the query results between multiple
+            // other servers, which we would have to connect to.
+
+            // The "ticket" in the endpoint is opaque to the client. The server uses it to
+            // identify which part of the query results to return.
+            auto stream_result = client.DoGet(call_options, endpoint.ticket);
+            std::unique_ptr<arrow::flight::FlightStreamReader> stream;
+            if (stream_result.ok()) {
+                stream = std::move(stream_result.ValueOrDie());
+            }
+            // Read all results into an Arrow Table, though we can iteratively process record
+            // batches as they arrive as well
+            auto table_result = stream->ToTable();
+            auto table = std::move(table_result.ValueOrDie());
+
+            std::cout << "Read one chunk:" << std::endl;
+            std::cout << table->ToString() << std::endl;
+        }
+}
+
+void* CreateServer(void *params) {
+    // unpack the args
+    struct createServerParams *csp = (struct createServerParams*) params;
+    long id = csp->id;
+    std::string path = csp->path;
+
     std::cout << "Creating server in thread: " << (long) id << std::endl;
 
     auto location_result = flight::Location::ForGrpcTcp("localhost", port);
@@ -21,34 +58,34 @@ void* CreateServer(void *id) {
     if (location_result.ok()) {
         location = std::move(location_result).ValueOrDie();
     } else {
-        std::cout << "Error occured when assigning location. Stopping.";
+        std::cout << "Error occured when assigning location. Stopping." << std::endl;
         return (void*) 1;
     }
 
     arrow::flight::FlightServerOptions options(location);
-    auto server_result = arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create();
+    auto server_result = arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(path);
     std::shared_ptr<arrow::flight::sql::sqlite::SQLiteFlightSqlServer> server;
 
     if (server_result.ok()) {
         server = std::move(server_result).ValueOrDie();
     } else {
-        std::cout << "Error occured when assigning location. Stopping.";
+        std::cout << "Error creating server. Stopping." << std::endl;
         return (void*) 1;
     }
 
     if (!server->Init(options).ok()) {
-        std::cout << "Error occured when assigning location. Stopping.";
+        std::cout << "Error initializing database. Stopping." << std::endl;
         return (void*) 1;
     }
     // // Exit with a clean error code (0) on SIGTERM
     if (!server->SetShutdownOnSignals({SIGTERM}).ok()) {
-        std::cout << "Error occured when assigning location. Stopping.";
+        std::cout << "Error assigning shutdown signal. Stopping." << std::endl;
         return (void*) 1;
     }
 
     std::cout << "Server listening on localhost:" << server->port() << std::endl;
     if (!server->Serve().ok()) {
-        std::cout << "Error occured when assigning location. Stopping.";
+        std::cout << "Error serving the data. Stopping." << std::endl;
         return (void*) 1;
     }
 
@@ -56,10 +93,7 @@ void* CreateServer(void *id) {
     return (void*) 0;
 }
 
-// arrow::Status Main() {
 void* CreateClient(void *id) {
-//   ARROW_ASSIGN_OR_RAISE(auto location,
-//                         flight::Location::ForGrpcTcp("localhost", 31337));
     std::cout << "Creating client in thread: " << (long) id << std::endl;
 
     auto location_result = flight::Location::ForGrpcTcp("localhost", port);
@@ -72,13 +106,10 @@ void* CreateClient(void *id) {
     }
     std::cout << "Connecting to " << location.ToString() << std::endl;
 
-    const std::string kQuery = "SELECT 1";
-
     // Set up the Flight SQL client
     auto flight_client_result = flight::FlightClient::Connect(location);
     std::unique_ptr<flight::FlightClient> flight_client;
     
-    // ARROW_ASSIGN_OR_RAISE(flight_client, flight::FlightClient::Connect(location));
     if (flight_client_result.ok()) {
         flight_client = std::move(flight_client_result.ValueOrDie());
     }
@@ -86,44 +117,54 @@ void* CreateClient(void *id) {
         new flightsql::FlightSqlClient(std::move(flight_client)));
 
     flight::FlightCallOptions call_options;
+    auto tables_result = client->GetTables(call_options, NULL, NULL, NULL, NULL, NULL);
+    std::unique_ptr<flight::FlightInfo> tables;
 
-    // Execute the query, getting a FlightInfo describing how to fetch the results
+    if (tables_result.ok()) {
+        // tables = std::move(tables_result.ValueOrDie());
+        tables = std::move(tables_result.ValueOrDie());
+        print_results(*tables, *client, call_options);
+    } else {
+        std::cout << "We got a problem" << std::endl;
+        return (void*) 1;
+    }
+
+    // run query
+    const std::string kQuery = "SELECT * FROM countries";
+
     std::cout << "Executing query: '" << kQuery << "'" << std::endl;
     auto flight_info_result = client->Execute(call_options, kQuery);
     std::unique_ptr<flight::FlightInfo> flight_info;
 
     if (flight_info_result.ok()) {
         flight_info = std::move(flight_info_result.ValueOrDie());
+        print_results(*flight_info, *client, call_options);
     }
-    //   ARROW_ASSIGN_OR_RAISE(std::unique_ptr<flight::FlightInfo> flight_info,
-    //                         client->Execute(call_options, kQuery));
 
-      // Fetch each partition sequentially (though this can be done in parallel)
-      for (const flight::FlightEndpoint& endpoint : flight_info->endpoints()) {
-        // Here we assume each partition is on the same server we originally queried, but this
-        // isn't true in general: the server may split the query results between multiple
-        // other servers, which we would have to connect to.
+    // //   // Fetch each partition sequentially (though this can be done in parallel)
+    // for (const flight::FlightEndpoint& endpoint : tables->endpoints()) {
+    // // Here we assume each partition is on the same server we originally queried, but this
+    // // isn't true in general: the server may split the query results between multiple
+    // // other servers, which we would have to connect to.
 
-        // The "ticket" in the endpoint is opaque to the client. The server uses it to
-        // identify which part of the query results to return.
-        auto stream_result = client->DoGet(call_options, endpoint.ticket);
-        std::unique_ptr<arrow::flight::FlightStreamReader> stream;
-        if (stream_result.ok()) {
-            stream = std::move(stream_result.ValueOrDie());
-        }
-        // ARROW_ASSIGN_OR_RAISE(auto stream, client->DoGet(call_options, endpoint.ticket));
-        // Read all results into an Arrow Table, though we can iteratively process record
-        // batches as they arrive as well
-        auto table_result = stream->ToTable();
-        auto table = std::move(table_result.ValueOrDie());
+    // // The "ticket" in the endpoint is opaque to the client. The server uses it to
+    // // identify which part of the query results to return.
+    // auto stream_result = client->DoGet(call_options, endpoint.ticket);
+    // std::unique_ptr<arrow::flight::FlightStreamReader> stream;
+    // if (stream_result.ok()) {
+    //     stream = std::move(stream_result.ValueOrDie());
+    // }
+    // // Read all results into an Arrow Table, though we can iteratively process record
+    // // batches as they arrive as well
+    // auto table_result = stream->ToTable();
+    // auto table = std::move(table_result.ValueOrDie());
 
 
-
-        // ARROW_ASSIGN_OR_RAISE(auto table, stream->ToTable());
-        std::cout << "Read one chunk:" << std::endl;
-        std::cout << table->ToString() << std::endl;
-      }
-    // return (void*) 0;
+    //     // ARROW_ASSIGN_OR_RAISE(auto table, stream->ToTable());
+    //     std::cout << "Read one chunk:" << std::endl;
+    //     std::cout << table->ToString() << std::endl;
+    //   }
+    // // return (void*) 0;
     pthread_exit(NULL);
 }
 
@@ -132,7 +173,11 @@ int main(int argc, char** argv) {
     void* result_server; 
     void* result_client;
 
-    int server_t = pthread_create(&threads[0], NULL, CreateServer, (void*) 0);
+    createServerParams csp;
+    csp.id = 0;
+    csp.path = "geography.db";
+
+    int server_t = pthread_create(&threads[0], NULL, CreateServer, &csp);
     usleep(2000); // let the server start up
 
     int client_t = pthread_create(&threads[1], NULL, CreateClient, (void*) 1);
