@@ -138,7 +138,7 @@ void* CreateServer(void *params) {
         std::cout << "Error initializing database. Stopping." << std::endl;
         return (void*) 1;
     }
-    // // Exit with a clean error code (0) on SIGTERM
+    // Exit with a clean error code (0) on SIGTERM
     if (!server->SetShutdownOnSignals({SIGTERM}).ok()) {
         std::cout << "Error assigning shutdown signal. Stopping." << std::endl;
         return (void*) 1;
@@ -149,8 +149,6 @@ void* CreateServer(void *params) {
         std::cout << "Error serving the data. Stopping." << std::endl;
         return (void*) 1;
     }
-
-    // return arrow::Status::OK();
     return (void*) 0;
 }
 
@@ -193,44 +191,6 @@ void* CreateClient(void *params) {
         std::cout << "We got a problem" << std::endl;
         return (void*) 1;
     }
-
-    // run query
-    // const std::string kQuery = "SELECT L_ORDERKEY, O_ORDERDATE, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) FROM orders AS A INNER JOIN lineitem AS B ON A.O_ORDERKEY = B.L_ORDERKEY GROUP BY L_ORDERKEY, O_ORDERDATE LIMIT 10;";
-    // const std::string kQuery = "SELECT L_ORDERKEY, O_ORDERDATE FROM orders AS A INNER JOIN lineitem AS B ON A.O_ORDERKEY = B.L_ORDERKEY LIMIT 10;";
-    // const std::string kQuery = "SELECT L_ORDERKEY, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue FROM lineitem GROUP BY L_ORDERKEY LIMIT 10;";
-    // const std::string kQuery = "SELECT n_name,"
-    //     " sum(l_extendedprice * (1 - l_discount)) AS revenue"
-    //     " FROM customer,"
-    //     "     orders,"
-    //     "     lineitem,"
-    //     "     supplier,"
-    //     "     nation,"
-    //     "     region"
-    //     " WHERE c_custkey = o_custkey"
-    //     " AND l_orderkey = o_orderkey"
-    //     " AND l_suppkey = s_suppkey"
-    //     " AND c_nationkey = s_nationkey"
-    //     " AND s_nationkey = n_nationkey"
-    //     " AND n_regionkey = r_regionkey"
-    //     " AND r_name = 'ASIA'"
-    //     " AND o_orderdate >= '1994-01-01'"
-    //     " AND o_orderdate < '1995-01-01'"
-    //     " GROUP BY n_name"
-    //     " ORDER BY revenue DESC"
-    //     " ;";
-
-
-    // std::cout << "Executing query: '" << kQuery << "'" << std::endl;
-    // auto flight_info_result = client->Execute(call_options, kQuery);
-    // std::unique_ptr<flight::FlightInfo> flight_info;
-
-    // if (flight_info_result.ok()) {
-    //     flight_info = std::move(flight_info_result.ValueOrDie());
-    //     print_results(*flight_info, *client, call_options);
-    // } else {
-    //     std::cout << "There was a problem executing this query..." << std::endl;
-    //     return (void*) 1;
-    // }
 
     runQueries(*client, query_path, skip_queries, call_options);
 
