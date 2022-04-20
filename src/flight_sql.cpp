@@ -1,7 +1,10 @@
 #include <cstdlib>
 #include <csignal>
 #include <iostream>
+#include <fstream>
 #include <pthread.h>
+#include <filesystem>
+#include <vector>
 
 #include <arrow/flight/client.h>
 #include <arrow/flight/sql/client.h>
@@ -16,11 +19,17 @@ int port = 31337;
 
 struct createServerParams {
     long id;
-    std::string path;
+    std::string db_path;
+};
+
+struct createClientParams {
+    long id;
+    std::string query_path;
+    std::vector<int> skip_queries;
 };
 
 void print_results(
-    flight::FlightInfo results, 
+    const flight::FlightInfo &results, 
     flightsql::FlightSqlClient client,
     const flight::FlightCallOptions &call_options) {
         // Fetch each partition sequentially (though this can be done in parallel)
@@ -45,11 +54,63 @@ void print_results(
         }
 }
 
+std::string readFileIntoString(const std::string& path) {
+    auto ss = std::ostringstream{};
+    std::ifstream input_file(path);
+    if (!input_file.is_open()) {
+        std::cerr << "Could not open the file - '"
+             << path << "'" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    ss << input_file.rdbuf();
+    return ss.str();
+}
+
+bool checkIfSkip(std::string path, int query_id) {
+    std::string query_id_str = std::to_string(query_id);
+
+    if (path.find(query_id_str) != std::string::npos) {
+        std::cout << "Skipping query: " << query_id << '\n';
+        return true;
+    }
+    return false;
+}
+
+void runQueries(
+        flightsql::FlightSqlClient client, 
+        const std::string &query_path, 
+        const std::vector<int> &skip_queries, 
+        flight::FlightCallOptions call_options
+    ) {
+    int skip_vector_it = 0;
+    for (const auto & file : std::filesystem::directory_iterator(query_path)) {
+        std::cout << file.path() << std::endl;
+        if (skip_vector_it < skip_queries.size()) {
+            if (checkIfSkip(file.path(), skip_queries.at(skip_vector_it))) {
+                ++skip_vector_it;
+                continue;
+            }
+        }
+        std::string kQuery = readFileIntoString(file.path());
+
+        std::cout << "Executing query: '" << kQuery << "'" << std::endl;
+        auto flight_info_result = client.Execute(call_options, kQuery);
+        std::unique_ptr<flight::FlightInfo> flight_info;
+
+        if (flight_info_result.ok()) {
+            flight_info = std::move(flight_info_result.ValueOrDie());
+            print_results(*flight_info, client, call_options);
+        } else {
+            std::cout << "There was a problem executing this query..." << std::endl;
+        }
+    }
+}
+
 void* CreateServer(void *params) {
     // unpack the args
     struct createServerParams *csp = (struct createServerParams*) params;
     long id = csp->id;
-    std::string path = csp->path;
+    std::string db_path = csp->db_path;
 
     std::cout << "Creating server in thread: " << (long) id << std::endl;
 
@@ -63,7 +124,7 @@ void* CreateServer(void *params) {
     }
 
     arrow::flight::FlightServerOptions options(location);
-    auto server_result = arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(path);
+    auto server_result = arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(db_path);
     std::shared_ptr<arrow::flight::sql::sqlite::SQLiteFlightSqlServer> server;
 
     if (server_result.ok()) {
@@ -93,7 +154,12 @@ void* CreateServer(void *params) {
     return (void*) 0;
 }
 
-void* CreateClient(void *id) {
+void* CreateClient(void *params) {
+    // unpack the args
+    struct createClientParams *ccp = (struct createClientParams*) params;
+    long id = ccp->id;
+    std::string query_path = ccp->query_path;
+    std::vector<int> skip_queries = ccp->skip_queries;
     std::cout << "Creating client in thread: " << (long) id << std::endl;
 
     auto location_result = flight::Location::ForGrpcTcp("localhost", port);
@@ -121,7 +187,6 @@ void* CreateClient(void *id) {
     std::unique_ptr<flight::FlightInfo> tables;
 
     if (tables_result.ok()) {
-        // tables = std::move(tables_result.ValueOrDie());
         tables = std::move(tables_result.ValueOrDie());
         print_results(*tables, *client, call_options);
     } else {
@@ -133,38 +198,42 @@ void* CreateClient(void *id) {
     // const std::string kQuery = "SELECT L_ORDERKEY, O_ORDERDATE, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) FROM orders AS A INNER JOIN lineitem AS B ON A.O_ORDERKEY = B.L_ORDERKEY GROUP BY L_ORDERKEY, O_ORDERDATE LIMIT 10;";
     // const std::string kQuery = "SELECT L_ORDERKEY, O_ORDERDATE FROM orders AS A INNER JOIN lineitem AS B ON A.O_ORDERKEY = B.L_ORDERKEY LIMIT 10;";
     // const std::string kQuery = "SELECT L_ORDERKEY, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue FROM lineitem GROUP BY L_ORDERKEY LIMIT 10;";
-    const std::string kQuery = "SELECT n_name,"
-        " sum(l_extendedprice * (1 - l_discount)) AS revenue"
-        " FROM customer,"
-        "     orders,"
-        "     lineitem,"
-        "     supplier,"
-        "     nation,"
-        "     region"
-        " WHERE c_custkey = o_custkey"
-        " AND l_orderkey = o_orderkey"
-        " AND l_suppkey = s_suppkey"
-        " AND c_nationkey = s_nationkey"
-        " AND s_nationkey = n_nationkey"
-        " AND n_regionkey = r_regionkey"
-        " AND r_name = 'ASIA'"
-        " AND o_orderdate >= '1994-01-01'"
-        " AND o_orderdate < '1995-01-01'"
-        " GROUP BY n_name"
-        " ORDER BY revenue DESC"
-        " ;";
+    // const std::string kQuery = "SELECT n_name,"
+    //     " sum(l_extendedprice * (1 - l_discount)) AS revenue"
+    //     " FROM customer,"
+    //     "     orders,"
+    //     "     lineitem,"
+    //     "     supplier,"
+    //     "     nation,"
+    //     "     region"
+    //     " WHERE c_custkey = o_custkey"
+    //     " AND l_orderkey = o_orderkey"
+    //     " AND l_suppkey = s_suppkey"
+    //     " AND c_nationkey = s_nationkey"
+    //     " AND s_nationkey = n_nationkey"
+    //     " AND n_regionkey = r_regionkey"
+    //     " AND r_name = 'ASIA'"
+    //     " AND o_orderdate >= '1994-01-01'"
+    //     " AND o_orderdate < '1995-01-01'"
+    //     " GROUP BY n_name"
+    //     " ORDER BY revenue DESC"
+    //     " ;";
 
-    std::cout << "Executing query: '" << kQuery << "'" << std::endl;
-    auto flight_info_result = client->Execute(call_options, kQuery);
-    std::unique_ptr<flight::FlightInfo> flight_info;
 
-    if (flight_info_result.ok()) {
-        flight_info = std::move(flight_info_result.ValueOrDie());
-        print_results(*flight_info, *client, call_options);
-    } else {
-        std::cout << "There was a problem executing this query..." << std::endl;
-        return (void*) 1;
-    }
+    // std::cout << "Executing query: '" << kQuery << "'" << std::endl;
+    // auto flight_info_result = client->Execute(call_options, kQuery);
+    // std::unique_ptr<flight::FlightInfo> flight_info;
+
+    // if (flight_info_result.ok()) {
+    //     flight_info = std::move(flight_info_result.ValueOrDie());
+    //     print_results(*flight_info, *client, call_options);
+    // } else {
+    //     std::cout << "There was a problem executing this query..." << std::endl;
+    //     return (void*) 1;
+    // }
+
+    runQueries(*client, query_path, skip_queries, call_options);
+
     pthread_exit(NULL);
 }
 
@@ -175,12 +244,17 @@ int main(int argc, char** argv) {
 
     createServerParams csp;
     csp.id = 0;
-    csp.path = "../data/TPC-H-small.db";
+    csp.db_path = "../data/TPC-H-small.db";
+    
+    createClientParams ccp;
+    ccp.id = 1;
+    ccp.query_path = "../queries/sqlite";
+    ccp.skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
 
     int server_t = pthread_create(&threads[0], NULL, CreateServer, &csp);
     usleep(2000); // let the server start up
 
-    int client_t = pthread_create(&threads[1], NULL, CreateClient, (void*) 1);
+    int client_t = pthread_create(&threads[1], NULL, CreateClient, &ccp);
 
     if (client_t != 0) {
         return EXIT_FAILURE;
