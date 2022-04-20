@@ -41,7 +41,6 @@ void print_results(
             auto table_result = stream->ToTable();
             auto table = std::move(table_result.ValueOrDie());
 
-            std::cout << "Read one chunk:" << std::endl;
             std::cout << table->ToString() << std::endl;
         }
 }
@@ -131,15 +130,33 @@ void* CreateClient(void *id) {
     }
 
     // run query
-    // const std::string kQuery = "SELECT L_ORDERKEY, O_ORDERDATE, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue FROM orders AS A INNER JOIN lineitem AS B ON A.O_ORDERKEY = B.L_ORDERKEY GROUP BY L_ORDERKEY, O_ORDERDATE LIMIT 10;";
-    const std::string kQuery = "SELECT L_ORDERKEY, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue FROM lineitem GROUP BY L_ORDERKEY LIMIT 10;";
+    // const std::string kQuery = "SELECT L_ORDERKEY, O_ORDERDATE, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) FROM orders AS A INNER JOIN lineitem AS B ON A.O_ORDERKEY = B.L_ORDERKEY GROUP BY L_ORDERKEY, O_ORDERDATE LIMIT 10;";
+    // const std::string kQuery = "SELECT L_ORDERKEY, O_ORDERDATE FROM orders AS A INNER JOIN lineitem AS B ON A.O_ORDERKEY = B.L_ORDERKEY LIMIT 10;";
+    // const std::string kQuery = "SELECT L_ORDERKEY, SUM(L_EXTENDEDPRICE * (1 - L_DISCOUNT)) AS revenue FROM lineitem GROUP BY L_ORDERKEY LIMIT 10;";
+    const std::string kQuery = "SELECT n_name,"
+        " sum(l_extendedprice * (1 - l_discount)) AS revenue"
+        " FROM customer,"
+        "     orders,"
+        "     lineitem,"
+        "     supplier,"
+        "     nation,"
+        "     region"
+        " WHERE c_custkey = o_custkey"
+        " AND l_orderkey = o_orderkey"
+        " AND l_suppkey = s_suppkey"
+        " AND c_nationkey = s_nationkey"
+        " AND s_nationkey = n_nationkey"
+        " AND n_regionkey = r_regionkey"
+        " AND r_name = 'ASIA'"
+        " AND o_orderdate >= '1994-01-01'"
+        " AND o_orderdate < '1995-01-01'"
+        " GROUP BY n_name"
+        " ORDER BY revenue DESC"
+        " ;";
 
     std::cout << "Executing query: '" << kQuery << "'" << std::endl;
     auto flight_info_result = client->Execute(call_options, kQuery);
     std::unique_ptr<flight::FlightInfo> flight_info;
-
-    std::cout << flight_info_result.status().ToString() << std::endl;
-    std::cout << flight_info_result.ok() << std::endl;
 
     if (flight_info_result.ok()) {
         flight_info = std::move(flight_info_result.ValueOrDie());

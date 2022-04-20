@@ -212,6 +212,8 @@ std::shared_ptr<DataType> GetArrowType(const char* sqlite_type) {
              boost::istarts_with(sqlite_type, "char") ||
              boost::istarts_with(sqlite_type, "varchar")) {
     return utf8();
+  } else if (boost::iequals(sqlite_type, "DATE")) {
+    return utf8();
   } else {
     throw std::invalid_argument("Invalid SQLite type: " + std::string(sqlite_type));
   }
@@ -233,7 +235,9 @@ int32_t GetSqlTypeFromTypeName(const char* sqlite_type) {
              boost::istarts_with(sqlite_type, "char") ||
              boost::istarts_with(sqlite_type, "varchar")) {
     return SQLITE_TEXT;
-  } else {
+  } else if (boost::iequals(sqlite_type, "DATE")) {
+    return SQLITE_TEXT;
+    } else {
     return SQLITE_NULL;
   }
 }
@@ -262,6 +266,7 @@ class SQLiteFlightSqlServer::Impl {
       const ServerCallContext& context, const StatementQuery& command,
       const FlightDescriptor& descriptor) {
     const std::string& query = command.query;
+
 
     ARROW_ASSIGN_OR_RAISE(auto statement, SqliteStatement::Create(db_, query));
 
@@ -635,7 +640,6 @@ class SQLiteFlightSqlServer::Impl {
     char* err_msg = nullptr;
     int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err_msg);
 
-    std::cout << rc << std::endl;
     if (rc != SQLITE_OK) {
       std::string error_msg;
       if (err_msg != nullptr) {

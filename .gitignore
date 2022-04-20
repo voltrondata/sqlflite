@@ -3,6 +3,10 @@ build
 
 # and so is data
 data
+
+# and so it temp (playground)
+temp
+
 # CMake Files
 CMakeFiles
 
