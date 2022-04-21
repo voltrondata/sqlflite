@@ -7,6 +7,10 @@ find_package(ArrowFlight REQUIRED)
 find_package(ArrowFlightSql REQUIRED)
 find_package(SQLite3 REQUIRED)
 
+# find duckDB
+find_library(DUCKDB_LIB NAMES duckdb PATHS $ENV{CONDA_PREFIX}/lib/)
+set(DUCKDB ${DUCKDB_LIB})
+
 set(ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS
     src/sqlite/sqlite_sql_info.cc
     src/sqlite/sqlite_type_info.cc
