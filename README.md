@@ -1,4 +1,4 @@
-# Arrow Flight-SQL example
+# Arrow FlightSQL example
 
 ## Setup
 
