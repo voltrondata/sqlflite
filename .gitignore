@@ -13,3 +13,6 @@ CMakeFiles
 # Mac Junk
 ._.DS*
 .DS*
+
+# vscode
+.vscode
