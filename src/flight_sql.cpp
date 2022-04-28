@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <filesystem>
 #include <vector>
+// #include <duckdb.h>
 
 #include <arrow/flight/client.h>
 #include <arrow/flight/sql/client.h>
@@ -12,22 +13,12 @@
 #include <arrow/util/logging.h>
 
 #include "sqlite/sqlite_server.h"
+#include "duckdb/duckdb_server.h"
 
 namespace flight = arrow::flight;
 namespace flightsql = arrow::flight::sql;
 
 int port = 31337;
-
-struct createServerParams {
-    long id;
-    std::string db_path;
-};
-
-struct createClientParams {
-    long id;
-    std::string query_path;
-    std::vector<int> skip_queries;
-};
 
 arrow::Status printResults(
     std::unique_ptr<flight::FlightInfo> &results, 
@@ -136,21 +127,29 @@ arrow::Result<std::unique_ptr<flightsql::FlightSqlClient>> CreateClient(std::str
 }
 
 arrow::Status Main() {
-    std::string db_path = "../data/TPC-H-small.db";
-    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(db_path));
+    std::string db_path = "../data/TPC-H-small.duckdb";
+    // ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(db_path));
 
-    std::string query_path = "../queries/sqlite";
-    std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
-    ARROW_ASSIGN_OR_RAISE(auto client, CreateClient(query_path, skip_queries));
+    // std::string query_path = "../queries/sqlite";
+    // std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
+    // ARROW_ASSIGN_OR_RAISE(auto client, CreateClient(query_path, skip_queries));
 
-    flight::FlightCallOptions call_options;
-    ARROW_ASSIGN_OR_RAISE(std::unique_ptr<flight::FlightInfo> tables, client->GetTables(call_options, NULL, NULL, NULL, NULL, NULL));
+    // flight::FlightCallOptions call_options;
+    // ARROW_ASSIGN_OR_RAISE(std::unique_ptr<flight::FlightInfo> tables, client->GetTables(call_options, NULL, NULL, NULL, NULL, NULL));
 
-    if (tables != nullptr) {
-        printResults(tables, client, call_options);
-    }
+    // if (tables != nullptr) {
+    //     printResults(tables, client, call_options);
+    // }
 
-    runQueries(client, query_path, skip_queries, call_options);
+    // runQueries(client, query_path, skip_queries, call_options);
+
+    // std::shared_ptr<arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer> server;
+    ARROW_ASSIGN_OR_RAISE(auto server,
+                            arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(
+                                db_path.c_str(),
+                                nullptr
+                            )
+    );
 
     return arrow::Status::OK();
 }
