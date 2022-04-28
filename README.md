@@ -10,24 +10,29 @@ Follow these steps to do so (thanks to David Li!).
 3. Now, create a new dev environment
 ```bash
 $ mamba create -n flight-sql -c conda-forge python=3.9
-```
-4. Clone Arrow repository: `https://github.com/apache/arrow.git`.
-5. Install dependencies and Arrow inside the environment.
-```bash
 $ conda activate flight-sql
-$ mamba install -c conda-forge compilers
-$ mamba install -c conda-forge --file ci/conda_env_cpp.txt
-$ mkdir -p build && cd build
-$ cmake ../cpp -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DARROW_FLIGHT=ON -DARROW_FLIGHT_SQL=ON 
-$ ninja install # Will install into your Conda prefix
+$ 
+```
+4. Build and install Arrow
+```bash
+$ cd scripts && ./install_arrow.sh
+```
+7. Build and install `duckdb`. This is sometimes necessary as conda `compilers` 
+seem to be including incompatible GlibC library with the compiled binaries
+of `duckdb`.
+```bash
+$ ./install_duckdb.sh
 ```
 6. Get the data.
 ```bash
-$ mkdir data && cd data
-$ wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db data/tpc-h-small.db
-$ cd ..
+$ mkdir ../data
+$ wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O ../data/TPC-H-small.db
 ```
-7. Build the example.
+7. Create duckdb database.
+```bash
+$ ./get_duckdb_database.sh
+```
+9. Build the example.
 ```bash
 $ mkdir build && cd build
 $ cmake .. -GNinja -DCMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/cmake/arrow
