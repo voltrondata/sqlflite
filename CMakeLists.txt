@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(flight_sql)
 
+set(CMAKE_CXX_STANDARD 17)
+
 find_package(Threads REQUIRED)
 find_package(Arrow REQUIRED)
 find_package(ArrowFlight REQUIRED)
@@ -19,15 +21,28 @@ set(ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS
     src/sqlite/sqlite_server.cc
     src/sqlite/sqlite_tables_schema_batch_reader.cc)
 
+set(ARROW_FLIGHT_DUCKDB_SQLITE_SERVER_SRCS
+    src/duckdb/duckdb_sql_info.cpp
+    # src/duckdb/duckdb_type_info.cc
+    # src/duckdb/duckdb_statement.cc
+    # src/duckdb/duckdb_statement_batch_reader.cc
+    src/duckdb/duckdb_server.cpp
+    # src/duckdb/duckdb_tables_schema_batch_reader.cc
+)
+
 add_executable(flight_sql 
     src/flight_sql.cpp 
     ${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
+    ${ARROW_FLIGHT_DUCKDB_SQLITE_SERVER_SRCS}
 )
 
-target_include_directories(flight_sql PRIVATE src/sqlite)
+target_include_directories(flight_sql PRIVATE src/sqlite src/duckdb)
+# target_include_directories(flight_sql PRIVATE src/duckdb)
 target_link_libraries(flight_sql PRIVATE 
 		      arrow_shared
 		      arrow_flight_shared
 		      arrow_flight_sql_shared
               Threads::Threads
-              ${SQLite3_LIBRARIES})
+              ${SQLite3_LIBRARIES}
+              ${DUCKDB}
+              )
