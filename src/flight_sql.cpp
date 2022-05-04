@@ -7,8 +7,10 @@
 #include <vector>
 // #include <duckdb.h>
 
+// #include <arrow/api.h>
 #include <arrow/flight/client.h>
 #include <arrow/flight/sql/client.h>
+#include <arrow/flight/sql/server.h>
 #include <arrow/table.h>
 #include <arrow/util/logging.h>
 
@@ -94,24 +96,42 @@ arrow::Status runQueries(
     return arrow::Status::OK();
 }
 
-arrow::Result<std::shared_ptr<arrow::flight::FlightServerBase>> CreateServer(std::string db_path) {
+arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateServer(
+        const std::string &db_type, 
+        const std::string &db_path
+    ) {
     ARROW_ASSIGN_OR_RAISE(auto location,
                         arrow::flight::Location::ForGrpcTcp("0.0.0.0", port));
     arrow::flight::FlightServerOptions options(location);
 
-    std::shared_ptr<arrow::flight::sql::sqlite::SQLiteFlightSqlServer> server;
-    ARROW_ASSIGN_OR_RAISE(server,
-                            arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(db_path));
+    std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server = nullptr;
 
-    ARROW_CHECK_OK(server->Init(options));
-    // Exit with a clean error code (0) on SIGTERM
-    ARROW_CHECK_OK(server->SetShutdownOnSignals({SIGTERM}));
+    if (db_type == "SQLite") {
+        ARROW_ASSIGN_OR_RAISE(server,
+                                arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(db_path));
+    } else if (db_type == "DuckDB") {
+        ARROW_ASSIGN_OR_RAISE(server,
+                                arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(db_path, NULL));
+    } else {
+        std::string err_msg = "Unknown server type: --> ";
+        err_msg += db_type;
+        return arrow::Status::Invalid(err_msg);
+    }
 
-    std::cout << "Server listening on localhost:" << server->port() << std::endl;
-    return server;
+    if (server != nullptr) {
+        ARROW_CHECK_OK(server->Init(options));
+        // Exit with a clean error code (0) on SIGTERM
+        ARROW_CHECK_OK(server->SetShutdownOnSignals({SIGTERM}));
+
+        std::cout << "Server listening on localhost:" << server->port() << std::endl;
+        return server;
+    } else {
+        std::string err_msg = "Unable to start the server";
+        return arrow::Status::Invalid(err_msg);
+    }
 }
 
-arrow::Result<std::unique_ptr<flightsql::FlightSqlClient>> CreateClient(std::string query_path, std::vector<int> skip_queries) {
+arrow::Result<std::unique_ptr<flightsql::FlightSqlClient>> CreateClient() {
     ARROW_ASSIGN_OR_RAISE(auto location,
                         arrow::flight::Location::ForGrpcTcp("localhost", port));
     arrow::flight::FlightServerOptions options(location);
@@ -128,28 +148,30 @@ arrow::Result<std::unique_ptr<flightsql::FlightSqlClient>> CreateClient(std::str
 
 arrow::Status Main() {
     std::string db_path = "../data/TPC-H-small.duckdb";
-    // ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(db_path));
+    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer("DuckDB", db_path));
 
     // std::string query_path = "../queries/sqlite";
     // std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
-    // ARROW_ASSIGN_OR_RAISE(auto client, CreateClient(query_path, skip_queries));
+    ARROW_ASSIGN_OR_RAISE(auto client, CreateClient());
 
-    // flight::FlightCallOptions call_options;
-    // ARROW_ASSIGN_OR_RAISE(std::unique_ptr<flight::FlightInfo> tables, client->GetTables(call_options, NULL, NULL, NULL, NULL, NULL));
+    flight::FlightCallOptions call_options;
+    ARROW_ASSIGN_OR_RAISE(std::unique_ptr<flight::FlightInfo> tables, client->GetTables(call_options, NULL, NULL, NULL, NULL, NULL));
 
-    // if (tables != nullptr) {
-    //     printResults(tables, client, call_options);
-    // }
+    if (tables != nullptr) {
+        printResults(tables, client, call_options);
+    }
+
+    // client->Execute(call_options, "SELECT 1");
 
     // runQueries(client, query_path, skip_queries, call_options);
 
-    // std::shared_ptr<arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer> server;
-    ARROW_ASSIGN_OR_RAISE(auto server,
-                            arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(
-                                db_path.c_str(),
-                                nullptr
-                            )
-    );
+    // // std::shared_ptr<arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer> server;
+    // ARROW_ASSIGN_OR_RAISE(auto server,
+    //                         arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(
+    //                             db_path.c_str(),
+    //                             nullptr
+    //                         )
+    // );
 
     return arrow::Status::OK();
 }

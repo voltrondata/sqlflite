@@ -17,33 +17,33 @@
 
 #pragma once
 
-#include <sqlite3.h>
+#include <duckdb.hpp>
 
 #include <memory>
 
 #include <arrow/record_batch.h>
 
-#include "sqlite_statement.h"
+#include "duckdb_statement.h"
 
 namespace arrow {
 namespace flight {
 namespace sql {
-namespace sqlite {
+namespace duckdbflight {
 
-class SqliteStatementBatchReader : public RecordBatchReader {
+class DuckDBStatementBatchReader : public RecordBatchReader {
  public:
-  /// \brief Creates a RecordBatchReader backed by a SQLite statement.
-  /// \param[in] statement    SQLite statement to be read.
-  /// \return                 A SqliteStatementBatchReader.
-  static arrow::Result<std::shared_ptr<SqliteStatementBatchReader>> Create(
-      const std::shared_ptr<SqliteStatement>& statement);
+  /// \brief Creates a RecordBatchReader backed by a duckdb statement.
+  /// \param[in] statement    duckdb statement to be read.
+  /// \return                 A DuckDBStatementBatchReader.
+  static arrow::Result<std::shared_ptr<DuckDBStatementBatchReader>> Create(
+      const std::shared_ptr<DuckDBStatement>& statement);
 
-  /// \brief Creates a RecordBatchReader backed by a SQLite statement.
-  /// \param[in] statement    SQLite statement to be read.
+  /// \brief Creates a RecordBatchReader backed by a duckdb statement.
+  /// \param[in] statement    duckdb statement to be read.
   /// \param[in] schema       Schema to be used on results.
-  /// \return                 A SqliteStatementBatchReader..
-  static arrow::Result<std::shared_ptr<SqliteStatementBatchReader>> Create(
-      const std::shared_ptr<SqliteStatement>& statement,
+  /// \return                 A DuckDBStatementBatchReader..
+  static arrow::Result<std::shared_ptr<DuckDBStatementBatchReader>> Create(
+      const std::shared_ptr<DuckDBStatement>& statement,
       const std::shared_ptr<Schema>& schema);
 
   std::shared_ptr<Schema> schema() const override;
@@ -51,16 +51,16 @@ class SqliteStatementBatchReader : public RecordBatchReader {
   Status ReadNext(std::shared_ptr<RecordBatch>* out) override;
 
  private:
-  std::shared_ptr<SqliteStatement> statement_;
+  std::shared_ptr<DuckDBStatement> statement_;
   std::shared_ptr<Schema> schema_;
   int rc_;
   bool already_executed_;
 
-  SqliteStatementBatchReader(std::shared_ptr<SqliteStatement> statement,
+  DuckDBStatementBatchReader(std::shared_ptr<DuckDBStatement> statement,
                              std::shared_ptr<Schema> schema);
 };
 
-}  // namespace sqlite
+}  // namespace duckdbflight
 }  // namespace sql
 }  // namespace flight
 }  // namespace arrow

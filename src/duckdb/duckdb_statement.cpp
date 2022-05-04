@@ -15,158 +15,181 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "sqlite_statement.h"
+#include "duckdb_statement.h"
 
-#include <sqlite3.h>
+#include <duckdb.h>
 #include <iostream>
 
 #include <boost/algorithm/string.hpp>
 
 #include <arrow/flight/sql/column_metadata.h>
-#include "sqlite_server.h"
+#include "duckdb_server.h"
 
 namespace arrow {
 namespace flight {
 namespace sql {
-namespace sqlite {
+namespace duckdbflight {
 
-std::shared_ptr<DataType> GetDataTypeFromSqliteType(const int column_type) {
-  switch (column_type) {
-    case SQLITE_INTEGER:
-      return int64();
-    case SQLITE_FLOAT:
-      return float64();
-    case SQLITE_BLOB:
-      return binary();
-    case SQLITE_TEXT:
-      return utf8();
-    case SQLITE_NULL:
-    default:
-      return null();
-  }
-}
+// std::shared_ptr<DataType> GetDataTypeFromSqliteType(const int column_type) {
+//   switch (column_type) {
+//     case SQLITE_INTEGER:
+//       return int64();
+//     case SQLITE_FLOAT:
+//       return float64();
+//     case SQLITE_BLOB:
+//       return binary();
+//     case SQLITE_TEXT:
+//       return utf8();
+//     case SQLITE_NULL:
+//     default:
+//       return null();
+//   }
+// }
 
-int32_t GetPrecisionFromColumn(int column_type) {
-  switch (column_type) {
-    case SQLITE_INTEGER:
-      return 10;
-    case SQLITE_FLOAT:
-      return 15;
-    case SQLITE_NULL:
-    default:
-      return 0;
-  }
-}
+// int32_t GetPrecisionFromColumn(int column_type) {
+//   switch (column_type) {
+//     case SQLITE_INTEGER:
+//       return 10;
+//     case SQLITE_FLOAT:
+//       return 15;
+//     case SQLITE_NULL:
+//     default:
+//       return 0;
+//   }
+// }
 
-ColumnMetadata GetColumnMetadata(int column_type, const char* table) {
-  ColumnMetadata::ColumnMetadataBuilder builder = ColumnMetadata::Builder();
+// ColumnMetadata GetColumnMetadata(int column_type, const char* table) {
+//   ColumnMetadata::ColumnMetadataBuilder builder = ColumnMetadata::Builder();
 
-  builder.Scale(15).IsAutoIncrement(false).IsReadOnly(false);
+//   builder.Scale(15).IsAutoIncrement(false).IsReadOnly(false);
 
-  if (table == NULLPTR) {
-    return builder.Build();
-  } else if (column_type == SQLITE_TEXT || column_type == SQLITE_BLOB) {
-    std::string table_name(table);
-    builder.TableName(table_name);
-  } else {
-    std::string table_name(table);
-    builder.TableName(table_name).Precision(GetPrecisionFromColumn(column_type));
-  }
-  return builder.Build();
-}
+//   if (table == NULLPTR) {
+//     return builder.Build();
+//   } else if (column_type == SQLITE_TEXT || column_type == SQLITE_BLOB) {
+//     std::string table_name(table);
+//     builder.TableName(table_name);
+//   } else {
+//     std::string table_name(table);
+//     builder.TableName(table_name).Precision(GetPrecisionFromColumn(column_type));
+//   }
+//   return builder.Build();
+// }
 
-arrow::Result<std::shared_ptr<SqliteStatement>> SqliteStatement::Create(
-    sqlite3* db, const std::string& sql) {
-  sqlite3_stmt* stmt = nullptr;
+arrow::Result<std::shared_ptr<DuckDBStatement>> DuckDBStatement::Create(
+    std::shared_ptr<duckdb_connection> con, const std::string& sql) {
+  duckdb_prepared_statement stmt = nullptr;
+  std::cout << sql.c_str() << std::endl;
   int rc =
-      sqlite3_prepare_v2(db, sql.c_str(), static_cast<int>(sql.size()), &stmt, NULLPTR);
+      duckdb_prepare(*con, sql.c_str(), &stmt);
 
-  if (rc != SQLITE_OK) {
-    std::string err_msg = "Can't prepare statement: " + std::string(sqlite3_errmsg(db));
+  if (rc != DuckDBSuccess) {
+    std::string err_msg = "Can't prepare statement: ";// + std::string(duckdb_prepare_error(stmt));
+    const char * duckdb_err = duckdb_prepare_error(&stmt);
+    if (duckdb_err != nullptr) {
+      err_msg += std::string(duckdb_err);
+    } else {
+      err_msg += "No error info available";
+    }
+    std::cout << err_msg << std::endl;
+
+
     if (stmt != nullptr) {
-      rc = sqlite3_finalize(stmt);
-      if (rc != SQLITE_OK) {
-        err_msg += "; Failed to finalize SQLite statement: ";
-        err_msg += std::string(sqlite3_errmsg(db));
-      }
+      duckdb_destroy_prepare(&stmt);
     }
     return Status::Invalid(err_msg);
   }
 
-  std::shared_ptr<SqliteStatement> result(new SqliteStatement(db, stmt));
+
+  std::shared_ptr<DuckDBStatement> result(new DuckDBStatement(stmt));
   return result;
+  // return Status::OK();
 }
 
-arrow::Result<std::shared_ptr<Schema>> SqliteStatement::GetSchema() const {
-  std::vector<std::shared_ptr<Field>> fields;
+// arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
+//   std::vector<std::shared_ptr<Field>> fields;
 
-  int column_count = sqlite3_column_count(stmt_);
+//   int column_count = sqlite3_column_count(stmt_);
 
-  for (int i = 0; i < column_count; i++) {
-    const char* column_name = sqlite3_column_name(stmt_, i);
+//   for (int i = 0; i < column_count; i++) {
+//     const char* column_name = sqlite3_column_name(stmt_, i);
 
-    // SQLite does not always provide column types, especially when the statement has not
-    // been executed yet. Because of this behaviour this method tries to get the column
-    // types in two attempts:
-    // 1. Use sqlite3_column_type(), which return SQLITE_NULL if the statement has not
-    //    been executed yet
-    // 2. Use sqlite3_column_decltype(), which returns correctly if given column is
-    //    declared in the table.
-    // Because of this limitation, it is not possible to know the column types for some
-    // prepared statements, in this case it returns a dense_union type covering any type
-    // SQLite supports.
-    const int column_type = sqlite3_column_type(stmt_, i);
-    const char* table = sqlite3_column_table_name(stmt_, i);
-    std::shared_ptr<DataType> data_type = GetDataTypeFromSqliteType(column_type);
+//     // SQLite does not always provide column types, especially when the statement has not
+//     // been executed yet. Because of this behaviour this method tries to get the column
+//     // types in two attempts:
+//     // 1. Use sqlite3_column_type(), which return SQLITE_NULL if the statement has not
+//     //    been executed yet
+//     // 2. Use sqlite3_column_decltype(), which returns correctly if given column is
+//     //    declared in the table.
+//     // Because of this limitation, it is not possible to know the column types for some
+//     // prepared statements, in this case it returns a dense_union type covering any type
+//     // SQLite supports.
+//     const int column_type = sqlite3_column_type(stmt_, i);
+//     const char* table = sqlite3_column_table_name(stmt_, i);
+//     std::shared_ptr<DataType> data_type = GetDataTypeFromSqliteType(column_type);
 
-    if (data_type->id() == Type::NA) {
-      // Try to retrieve column type from sqlite3_column_decltype
-      const char* column_decltype = sqlite3_column_decltype(stmt_, i);
+//     if (data_type->id() == Type::NA) {
+//       // Try to retrieve column type from sqlite3_column_decltype
+//       const char* column_decltype = sqlite3_column_decltype(stmt_, i);
 
-      if (column_decltype != NULLPTR) {
-        data_type = GetArrowType(column_decltype);
-      } else {
-        // If it can not determine the actual column type, return a dense_union type
-        // covering any type SQLite supports.
-        data_type = GetUnknownColumnDataType();
-      }
-    }
-    ColumnMetadata column_metadata = GetColumnMetadata(column_type, table);
+//       if (column_decltype != NULLPTR) {
+//         data_type = GetArrowType(column_decltype);
+//       } else {
+//         // If it can not determine the actual column type, return a dense_union type
+//         // covering any type SQLite supports.
+//         data_type = GetUnknownColumnDataType();
+//       }
+//     }
+//     ColumnMetadata column_metadata = GetColumnMetadata(column_type, table);
 
-    fields.push_back(
-        arrow::field(column_name, data_type, column_metadata.metadata_map()));
-  }
-  return arrow::schema(fields);
+//     fields.push_back(
+//         arrow::field(column_name, data_type, column_metadata.metadata_map()));
+//   }
+//   return arrow::schema(fields);
+// }
+
+DuckDBStatement::~DuckDBStatement() { 
+  duckdb_destroy_prepare(&stmt_); 
 }
 
-SqliteStatement::~SqliteStatement() { sqlite3_finalize(stmt_); }
-
-arrow::Result<int> SqliteStatement::Step() {
-  int rc = sqlite3_step(stmt_);
-  if (rc == SQLITE_ERROR) {
-    return Status::ExecutionError("A SQLite runtime error has occurred: ",
-                                  sqlite3_errmsg(db_));
+arrow::Result<int> DuckDBStatement::Execute() {
+  int rc = duckdb_execute_prepared_arrow(stmt_, &result_);
+  if (rc == DuckDBError) {
+    return Status::ExecutionError("A DuckDB runtime error has occurred: ",
+                                  duckdb_query_arrow_error(&result_));
   }
-
   return rc;
 }
 
-arrow::Result<int> SqliteStatement::Reset() {
-  int rc = sqlite3_reset(stmt_);
-  if (rc == SQLITE_ERROR) {
-    return Status::ExecutionError("A SQLite runtime error has occurred: ",
-                                  sqlite3_errmsg(db_));
-  }
-
-  return rc;
+arrow::Result<duckdb_arrow> DuckDBStatement::GetResult() {
+  return result_;
 }
 
-sqlite3_stmt* SqliteStatement::GetSqlite3Stmt() const { return stmt_; }
+// arrow::Result<int> DuckDBStatement::Step() {
+//   int rc = sqlite3_step(stmt_);
+//   if (rc == SQLITE_ERROR) {
+//     return Status::ExecutionError("A SQLite runtime error has occurred: ",
+//                                   sqlite3_errmsg(db_));
+//   }
 
-arrow::Result<int64_t> SqliteStatement::ExecuteUpdate() {
-  ARROW_RETURN_NOT_OK(Step());
-  return sqlite3_changes(db_);
-}
+//   return rc;
+// }
+
+// arrow::Result<int> DuckDBStatement::Reset() {
+//   int rc = sqlite3_reset(stmt_);
+//   if (rc == SQLITE_ERROR) {
+//     return Status::ExecutionError("A SQLite runtime error has occurred: ",
+//                                   sqlite3_errmsg(db_));
+//   }
+
+//   return rc;
+// }
+
+duckdb_prepared_statement DuckDBStatement::GetDuckDBStmt() const { return stmt_; }
+
+// arrow::Result<int64_t> DuckDBStatement::ExecuteUpdate() {
+//   ARROW_RETURN_NOT_OK(Step());
+//   return sqlite3_changes(db_);
+// }
 
 }  // namespace sqlite
 }  // namespace sql

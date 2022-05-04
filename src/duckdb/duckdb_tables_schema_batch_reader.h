@@ -17,36 +17,37 @@
 
 #pragma once
 
-#include <sqlite3.h>
+#include <duckdb.hpp>
 
 #include <memory>
 #include <string>
 
 #include <arrow/record_batch.h>
 
-#include "sqlite_statement.h"
-#include "sqlite_statement_batch_reader.h"
+#include "duckdb_statement.h"
+#include "duckdb_statement_batch_reader.h"
 
 namespace arrow {
 namespace flight {
 namespace sql {
-namespace sqlite {
+namespace duckdbflight {
 
-class SqliteTablesWithSchemaBatchReader : public RecordBatchReader {
+class DuckDBTablesWithSchemaBatchReader : public RecordBatchReader {
  private:
-  std::shared_ptr<SqliteStatementBatchReader> reader_;
+  std::shared_ptr<DuckDBStatementBatchReader> reader_;
   std::string main_query_;
-  sqlite3* db_;
+  std::shared_ptr<duckdb_connection> con_;
 
  public:
-  /// Constructor for SqliteTablesWithSchemaBatchReader class
-  /// \param reader an shared_ptr from a SqliteStatementBatchReader.
+  /// Constructor for DuckDBTablesWithSchemaBatchReader class
+  /// \param reader an shared_ptr from a DuckDBStatementBatchReader.
   /// \param main_query  SQL query that originated reader's data.
   /// \param db     a pointer to the sqlite3 db.
-  SqliteTablesWithSchemaBatchReader(
-      std::shared_ptr<SqliteStatementBatchReader> reader, std::string main_query,
-      sqlite3* db)
-      : reader_(std::move(reader)), main_query_(std::move(main_query)), db_(db) {}
+  DuckDBTablesWithSchemaBatchReader(
+      std::shared_ptr<DuckDBStatementBatchReader> reader, std::string main_query,
+      std::shared_ptr<duckdb_connection> con
+      )
+      : reader_(std::move(reader)), main_query_(std::move(main_query)), con_(std::move(con)) {} //, db_(db) {}
 
   std::shared_ptr<Schema> schema() const override;
 

@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <sqlite3.h>
+#include <duckdb.hpp>
 
 #include <memory>
 #include <string>
@@ -28,54 +28,60 @@
 namespace arrow {
 namespace flight {
 namespace sql {
-namespace sqlite {
+namespace duckdbflight {
 
 /// \brief Create an object ColumnMetadata using the column type and
 ///        table name.
-/// \param column_type  The SQLite type.
+/// \param column_type  The DuckDB type.
 /// \param table        The table name.
 /// \return             A Column Metadata object.
 ColumnMetadata GetColumnMetadata(int column_type, const char* table);
 
-class SqliteStatement {
+class DuckDBStatement {
  public:
-  /// \brief Creates a SQLite3 statement.
-  /// \param[in] db        SQLite3 database instance.
+  /// \brief Creates a duckdb statement.
+  /// \param[in] db        duckdb database instance.
   /// \param[in] sql       SQL statement.
-  /// \return              A SqliteStatement object.
-  static arrow::Result<std::shared_ptr<SqliteStatement>> Create(sqlite3* db,
+  /// \return              A DuckDBStatement object.
+  static arrow::Result<std::shared_ptr<DuckDBStatement>> Create(std::shared_ptr<duckdb_connection> con,
                                                                 const std::string& sql);
 
-  ~SqliteStatement();
+  ~DuckDBStatement();
 
   /// \brief Creates an Arrow Schema based on the results of this statement.
   /// \return              The resulting Schema.
   arrow::Result<std::shared_ptr<Schema>> GetSchema() const;
 
-  /// \brief Steps on underlying sqlite3_stmt.
-  /// \return          The resulting return code from SQLite.
-  arrow::Result<int> Step();
+  // /// \brief Steps on underlying duckdb_stmt.
+  // /// \return          The resulting return code from SQLite.
+  // arrow::Result<int> Step();
 
-  /// \brief Reset the state of the sqlite3_stmt.
-  /// \return          The resulting return code from SQLite.
-  arrow::Result<int> Reset();
+  // /// \brief Reset the state of the duckdb_stmt.
+  // /// \return          The resulting return code from SQLite.
+  // arrow::Result<int> Reset();
 
-  /// \brief Returns the underlying sqlite3_stmt.
+  arrow::Result<int> Execute();
+  arrow::Result<duckdb_arrow> GetResult();
+
+  /// \brief Returns the underlying duckdb_stmt.
   /// \return A sqlite statement.
-  sqlite3_stmt* GetSqlite3Stmt() const;
+  duckdb_prepared_statement GetDuckDBStmt() const;
 
   /// \brief Executes an UPDATE, INSERT or DELETE statement.
   /// \return              The number of rows changed by execution.
   arrow::Result<int64_t> ExecuteUpdate();
 
  private:
-  sqlite3* db_;
-  sqlite3_stmt* stmt_;
+  // duckdb_connection* db_;
+  duckdb_prepared_statement stmt_;
+  duckdb_arrow result_;
 
-  SqliteStatement(sqlite3* db, sqlite3_stmt* stmt) : db_(db), stmt_(stmt) {}
+  DuckDBStatement(const duckdb_prepared_statement& stmt) {
+    stmt_ = stmt;
+  }
 };
 
-}  // namespace sqlite
+}  // namespace duckdbflight
 }  // namespace sql
 }  // namespace flight
 }  // namespace arrow

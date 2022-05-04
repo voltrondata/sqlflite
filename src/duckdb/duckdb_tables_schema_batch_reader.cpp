@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "sqlite_tables_schema_batch_reader.h"
+#include "duckdb_tables_schema_batch_reader.h"
 
-#include <sqlite3.h>
+#include <duckdb.hpp>
 
 #include <sstream>
 
@@ -25,86 +25,86 @@
 #include <arrow/flight/sql/server.h>
 #include <arrow/ipc/writer.h>
 #include <arrow/record_batch.h>
-#include "sqlite_server.h"
-#include "sqlite_statement.h"
+#include "duckdb_server.h"
+#include "duckdb_statement.h"
 
 namespace arrow {
 namespace flight {
 namespace sql {
-namespace sqlite {
+namespace duckdbflight {
 
-std::shared_ptr<Schema> SqliteTablesWithSchemaBatchReader::schema() const {
+std::shared_ptr<Schema> DuckDBTablesWithSchemaBatchReader::schema() const {
   return SqlSchema::GetTablesSchemaWithIncludedSchema();
 }
 
-Status SqliteTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>* batch) {
+Status DuckDBTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>* batch) {
   std::stringstream schema_query;
 
   schema_query
       << "SELECT table_name, name, type, [notnull] FROM pragma_table_info(table_name)"
       << "JOIN(" << main_query_ << ") order by table_name";
 
-  std::shared_ptr<SqliteStatement> schema_statement;
+  std::shared_ptr<DuckDBStatement> schema_statement;
   ARROW_ASSIGN_OR_RAISE(schema_statement,
-                        SqliteStatement::Create(db_, schema_query.str()))
+                        DuckDBStatement::Create(con_, schema_query.str()))
 
   std::shared_ptr<RecordBatch> first_batch;
 
   ARROW_RETURN_NOT_OK(reader_->ReadNext(&first_batch));
 
-  if (!first_batch) {
-    *batch = NULLPTR;
-    return Status::OK();
-  }
+  // if (!first_batch) {
+  //   *batch = NULLPTR;
+  //   return Status::OK();
+  // }
 
-  const std::shared_ptr<Array> table_name_array =
-      first_batch->GetColumnByName("table_name");
+  // const std::shared_ptr<Array> table_name_array =
+  //     first_batch->GetColumnByName("table_name");
 
-  BinaryBuilder schema_builder;
+  // BinaryBuilder schema_builder;
 
-  auto* string_array = reinterpret_cast<StringArray*>(table_name_array.get());
+  // auto* string_array = reinterpret_cast<StringArray*>(table_name_array.get());
 
-  std::vector<std::shared_ptr<Field>> column_fields;
-  for (int i = 0; i < table_name_array->length(); i++) {
-    const std::string& table_name = string_array->GetString(i);
+  // std::vector<std::shared_ptr<Field>> column_fields;
+  // for (int i = 0; i < table_name_array->length(); i++) {
+  //   const std::string& table_name = string_array->GetString(i);
 
-    while (sqlite3_step(schema_statement->GetSqlite3Stmt()) == SQLITE_ROW) {
-      std::string sqlite_table_name = std::string(reinterpret_cast<const char*>(
-          sqlite3_column_text(schema_statement->GetSqlite3Stmt(), 0)));
-      if (sqlite_table_name == table_name) {
-        const char* column_name = reinterpret_cast<const char*>(
-            sqlite3_column_text(schema_statement->GetSqlite3Stmt(), 1));
-        const char* column_type = reinterpret_cast<const char*>(
-            sqlite3_column_text(schema_statement->GetSqlite3Stmt(), 2));
-        int nullable = sqlite3_column_int(schema_statement->GetSqlite3Stmt(), 3);
+  //   while (sqlite3_step(schema_statement->GetSqlite3Stmt()) == SQLITE_ROW) {
+  //     std::string sqlite_table_name = std::string(reinterpret_cast<const char*>(
+  //         sqlite3_column_text(schema_statement->GetSqlite3Stmt(), 0)));
+  //     if (sqlite_table_name == table_name) {
+  //       const char* column_name = reinterpret_cast<const char*>(
+  //           sqlite3_column_text(schema_statement->GetSqlite3Stmt(), 1));
+  //       const char* column_type = reinterpret_cast<const char*>(
+  //           sqlite3_column_text(schema_statement->GetSqlite3Stmt(), 2));
+  //       int nullable = sqlite3_column_int(schema_statement->GetSqlite3Stmt(), 3);
 
-        const ColumnMetadata& column_metadata = GetColumnMetadata(
-            GetSqlTypeFromTypeName(column_type), sqlite_table_name.c_str());
-        column_fields.push_back(arrow::field(column_name, GetArrowType(column_type),
-                                             nullable == 0,
-                                             column_metadata.metadata_map()));
-      }
-    }
-    const arrow::Result<std::shared_ptr<Buffer>>& value =
-        ipc::SerializeSchema(*arrow::schema(column_fields));
+  //       const ColumnMetadata& column_metadata = GetColumnMetadata(
+  //           GetSqlTypeFromTypeName(column_type), sqlite_table_name.c_str());
+  //       column_fields.push_back(arrow::field(column_name, GetArrowType(column_type),
+  //                                            nullable == 0,
+  //                                            column_metadata.metadata_map()));
+  //     }
+  //   }
+  //   const arrow::Result<std::shared_ptr<Buffer>>& value =
+  //       ipc::SerializeSchema(*arrow::schema(column_fields));
 
-    std::shared_ptr<Buffer> schema_buffer;
-    ARROW_ASSIGN_OR_RAISE(schema_buffer, value);
+  //   std::shared_ptr<Buffer> schema_buffer;
+  //   ARROW_ASSIGN_OR_RAISE(schema_buffer, value);
 
-    column_fields.clear();
-    ARROW_RETURN_NOT_OK(
-        schema_builder.Append(schema_buffer->data(), schema_buffer->size()));
-  }
+  //   column_fields.clear();
+  //   ARROW_RETURN_NOT_OK(
+  //       schema_builder.Append(schema_buffer->data(), schema_buffer->size()));
+  // }
 
-  std::shared_ptr<Array> schema_array;
-  ARROW_RETURN_NOT_OK(schema_builder.Finish(&schema_array));
+  // std::shared_ptr<Array> schema_array;
+  // ARROW_RETURN_NOT_OK(schema_builder.Finish(&schema_array));
 
-  ARROW_ASSIGN_OR_RAISE(*batch, first_batch->AddColumn(4, "table_schema", schema_array));
+  // ARROW_ASSIGN_OR_RAISE(*batch, first_batch->AddColumn(4, "table_schema", schema_array));
 
   return Status::OK();
 }
 
-}  // namespace sqlite
+}  // namespace duckdbflight
 }  // namespace sql
 }  // namespace flight
 }  // namespace arrow

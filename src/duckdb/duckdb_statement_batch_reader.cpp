@@ -15,107 +15,111 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "sqlite_statement_batch_reader.h"
+#include "duckdb_statement_batch_reader.h"
 
-#include <sqlite3.h>
+#include <duckdb.hpp>
+
+#include <iostream>
 
 #include "arrow/builder.h"
-#include "sqlite_statement.h"
+#include "duckdb_statement.h"
 
-#define STRING_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                             \
-  case TYPE_CLASS##Type::type_id: {                                               \
-    int bytes = sqlite3_column_bytes(STMT, COLUMN);                               \
-    const unsigned char* string = sqlite3_column_text(STMT, COLUMN);              \
-    if (string == nullptr) {                                                      \
-      ARROW_RETURN_NOT_OK(                                                        \
-          (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).AppendNull());        \
-      break;                                                                      \
-    }                                                                             \
-    ARROW_RETURN_NOT_OK(                                                          \
-        (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).Append(string, bytes)); \
-    break;                                                                        \
-  }
+// #define STRING_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                             \
+//   case TYPE_CLASS##Type::type_id: {                                               \
+//     int bytes = sqlite3_column_bytes(STMT, COLUMN);                               \
+//     const unsigned char* string = sqlite3_column_text(STMT, COLUMN);              \
+//     if (string == nullptr) {                                                      \
+//       ARROW_RETURN_NOT_OK(                                                        \
+//           (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).AppendNull());        \
+//       break;                                                                      \
+//     }                                                                             \
+//     ARROW_RETURN_NOT_OK(                                                          \
+//         (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).Append(string, bytes)); \
+//     break;                                                                        \
+//   }
 
-#define BINARY_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                                  \
-  case TYPE_CLASS##Type::type_id: {                                                    \
-    int bytes = sqlite3_column_bytes(STMT, COLUMN);                                    \
-    const void* blob = sqlite3_column_blob(STMT, COLUMN);                              \
-    if (blob == nullptr) {                                                             \
-      ARROW_RETURN_NOT_OK(                                                             \
-          (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).AppendNull());             \
-      break;                                                                           \
-    }                                                                                  \
-    ARROW_RETURN_NOT_OK(                                                               \
-        (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).Append((char*)blob, bytes)); \
-    break;                                                                             \
-  }
+// #define BINARY_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                                  \
+//   case TYPE_CLASS##Type::type_id: {                                                    \
+//     int bytes = sqlite3_column_bytes(STMT, COLUMN);                                    \
+//     const void* blob = sqlite3_column_blob(STMT, COLUMN);                              \
+//     if (blob == nullptr) {                                                             \
+//       ARROW_RETURN_NOT_OK(                                                             \
+//           (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).AppendNull());             \
+//       break;                                                                           \
+//     }                                                                                  \
+//     ARROW_RETURN_NOT_OK(                                                               \
+//         (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).Append((char*)blob, bytes)); \
+//     break;                                                                             \
+//   }
 
-#define INT_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                         \
-  case TYPE_CLASS##Type::type_id: {                                        \
-    if (sqlite3_column_type(stmt_, i) == SQLITE_NULL) {                    \
-      ARROW_RETURN_NOT_OK(                                                 \
-          (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).AppendNull()); \
-      break;                                                               \
-    }                                                                      \
-    sqlite3_int64 value = sqlite3_column_int64(STMT, COLUMN);              \
-    ARROW_RETURN_NOT_OK(                                                   \
-        (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).Append(value));  \
-    break;                                                                 \
-  }
+// #define INT_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                         \
+//   case TYPE_CLASS##Type::type_id: {                                        \
+//     if (sqlite3_column_type(stmt_, i) == SQLITE_NULL) {                    \
+//       ARROW_RETURN_NOT_OK(                                                 \
+//           (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).AppendNull()); \
+//       break;                                                               \
+//     }                                                                      \
+//     sqlite3_int64 value = sqlite3_column_int64(STMT, COLUMN);              \
+//     ARROW_RETURN_NOT_OK(                                                   \
+//         (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).Append(value));  \
+//     break;                                                                 \
+//   }
 
-#define FLOAT_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                       \
-  case TYPE_CLASS##Type::type_id: {                                        \
-    if (sqlite3_column_type(stmt_, i) == SQLITE_NULL) {                    \
-      ARROW_RETURN_NOT_OK(                                                 \
-          (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).AppendNull()); \
-      break;                                                               \
-    }                                                                      \
-    double value = sqlite3_column_double(STMT, COLUMN);                    \
-    ARROW_RETURN_NOT_OK(                                                   \
-        (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).Append(value));  \
-    break;                                                                 \
-  }
+// #define FLOAT_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                       \
+//   case TYPE_CLASS##Type::type_id: {                                        \
+//     if (sqlite3_column_type(stmt_, i) == SQLITE_NULL) {                    \
+//       ARROW_RETURN_NOT_OK(                                                 \
+//           (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).AppendNull()); \
+//       break;                                                               \
+//     }                                                                      \
+//     double value = sqlite3_column_double(STMT, COLUMN);                    \
+//     ARROW_RETURN_NOT_OK(                                                   \
+//         (reinterpret_cast<TYPE_CLASS##Builder&>(builder)).Append(value));  \
+//     break;                                                                 \
+//   }
 
 namespace arrow {
 namespace flight {
 namespace sql {
-namespace sqlite {
+namespace duckdbflight {
 
-// Batch size for SQLite statement results
+// // Batch size for SQLite statement results
 static constexpr int kMaxBatchSize = 1024;
 
-std::shared_ptr<Schema> SqliteStatementBatchReader::schema() const { return schema_; }
+std::shared_ptr<Schema> DuckDBStatementBatchReader::schema() const { return schema_; }
 
-SqliteStatementBatchReader::SqliteStatementBatchReader(
-    std::shared_ptr<SqliteStatement> statement, std::shared_ptr<Schema> schema)
+DuckDBStatementBatchReader::DuckDBStatementBatchReader(
+    std::shared_ptr<DuckDBStatement> statement, std::shared_ptr<Schema> schema)
     : statement_(std::move(statement)),
       schema_(std::move(schema)),
-      rc_(SQLITE_OK),
+      rc_(DuckDBSuccess),
       already_executed_(false) {}
 
-arrow::Result<std::shared_ptr<SqliteStatementBatchReader>>
-SqliteStatementBatchReader::Create(const std::shared_ptr<SqliteStatement>& statement_) {
-  ARROW_RETURN_NOT_OK(statement_->Step());
+arrow::Result<std::shared_ptr<DuckDBStatementBatchReader>>
+DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& statement_) {
+  // ARROW_RETURN_NOT_OK(statement_->Step());
+  printf("KUPA\n");
+  // ARROW_RETURN_NOT_OK(statement_->Execute());
 
   ARROW_ASSIGN_OR_RAISE(auto schema, statement_->GetSchema());
 
-  std::shared_ptr<SqliteStatementBatchReader> result(
-      new SqliteStatementBatchReader(statement_, schema));
+  std::shared_ptr<DuckDBStatementBatchReader> result(
+      new DuckDBStatementBatchReader(statement_, schema));
 
   return result;
 }
 
-arrow::Result<std::shared_ptr<SqliteStatementBatchReader>>
-SqliteStatementBatchReader::Create(const std::shared_ptr<SqliteStatement>& statement,
+arrow::Result<std::shared_ptr<DuckDBStatementBatchReader>>
+DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& statement,
                                    const std::shared_ptr<Schema>& schema) {
-  std::shared_ptr<SqliteStatementBatchReader> result(
-      new SqliteStatementBatchReader(statement, schema));
+  std::shared_ptr<DuckDBStatementBatchReader> result(
+      new DuckDBStatementBatchReader(statement, schema));
 
   return result;
 }
 
-Status SqliteStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
-  sqlite3_stmt* stmt_ = statement_->GetSqlite3Stmt();
+Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
+  duckdb_prepared_statement stmt_ = statement_->GetDuckDBStmt();
 
   const int num_fields = schema_->num_fields();
   std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders(num_fields);
@@ -128,62 +132,91 @@ Status SqliteStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
   }
 
   if (!already_executed_) {
-    ARROW_ASSIGN_OR_RAISE(rc_, statement_->Reset());
-    ARROW_ASSIGN_OR_RAISE(rc_, statement_->Step());
+    ARROW_ASSIGN_OR_RAISE(rc_, statement_->Execute());
+    // ARROW_ASSIGN_OR_RAISE(rc_, statement_->Step());
     already_executed_ = true;
   }
 
-  int64_t rows = 0;
-  while (rows < kMaxBatchSize && rc_ == SQLITE_ROW) {
-    rows++;
-    for (int i = 0; i < num_fields; i++) {
-      const std::shared_ptr<Field>& field = schema_->field(i);
-      const std::shared_ptr<DataType>& field_type = field->type();
-      ArrayBuilder& builder = *builders[i];
+  ARROW_ASSIGN_OR_RAISE(auto result, statement_->GetResult());
+  int64_t cols = duckdb_arrow_column_count(result);
+  int64_t rows = duckdb_arrow_row_count(result);
 
-      // NOTE: This is not the optimal way of building Arrow vectors.
-      // That would be to presize the builders to avoiding several resizing operations
-      // when appending values and also to build one vector at a time.
-      switch (field_type->id()) {
-        INT_BUILDER_CASE(Int64, stmt_, i)
-        INT_BUILDER_CASE(UInt64, stmt_, i)
-        INT_BUILDER_CASE(Int32, stmt_, i)
-        INT_BUILDER_CASE(UInt32, stmt_, i)
-        INT_BUILDER_CASE(Int16, stmt_, i)
-        INT_BUILDER_CASE(UInt16, stmt_, i)
-        INT_BUILDER_CASE(Int8, stmt_, i)
-        INT_BUILDER_CASE(UInt8, stmt_, i)
-        FLOAT_BUILDER_CASE(Double, stmt_, i)
-        FLOAT_BUILDER_CASE(Float, stmt_, i)
-        FLOAT_BUILDER_CASE(HalfFloat, stmt_, i)
-        BINARY_BUILDER_CASE(Binary, stmt_, i)
-        BINARY_BUILDER_CASE(LargeBinary, stmt_, i)
-        STRING_BUILDER_CASE(String, stmt_, i)
-        STRING_BUILDER_CASE(LargeString, stmt_, i)
-        default:
-          return Status::NotImplemented("Not implemented SQLite data conversion to ",
-                                        field_type->name());
-      }
-    }
+  printf("No of cols: %d, no of rows: %d\n", cols, rows);
 
-    ARROW_ASSIGN_OR_RAISE(rc_, statement_->Step());
+  std::vector<std::shared_ptr<Array>> arrays(builders.size());
+
+  for (int i = 0; i < cols; ++i) {
+    ArrowArray * result_array = new ArrowArray();
+    printf("Iter: %d ", i);
+    int rc = duckdb_query_arrow_array(result, (duckdb_arrow_array*)&result_array);
+
+    printf("Rc: %d \n", rc);
+
+    // auto wrapper = (duckdb::ArrowResultWrapper *) result;
+	  // return wrapper->result->collection;
+
+    printf("%d\n", result_array->length);
+
+    // printf("%s\n", result_array->release());
+
+  // while (rows < kMaxBatchSize && rc_ == SQLITE_ROW) {
+  //   rows++;
+    // for (int j = 0; j < num_fields; ++j) {
+    //   const std::shared_ptr<Field>& field = schema_->field(i);
+    //   const std::shared_ptr<DataType>& field_type = field->type();
+      // printf("%d\n", (ArrowArray*)&result_array->length);
+      // Array test = (Array) *result_array;
+
+      // std::cout << test->ToString() << std::endl;
+      // arrays.push_back(std::make_shared<Array>(*test));
+
+  //     ArrayBuilder& builder = *builders[i];
+
+  //     // NOTE: This is not the optimal way of building Arrow vectors.
+  //     // That would be to presize the builders to avoiding several resizing operations
+  //     // when appending values and also to build one vector at a time.
+  //     switch (field_type->id()) {
+  //       INT_BUILDER_CASE(Int64, stmt_, i)
+  //       INT_BUILDER_CASE(UInt64, stmt_, i)
+  //       INT_BUILDER_CASE(Int32, stmt_, i)
+  //       INT_BUILDER_CASE(UInt32, stmt_, i)
+  //       INT_BUILDER_CASE(Int16, stmt_, i)
+  //       INT_BUILDER_CASE(UInt16, stmt_, i)
+  //       INT_BUILDER_CASE(Int8, stmt_, i)
+  //       INT_BUILDER_CASE(UInt8, stmt_, i)
+  //       FLOAT_BUILDER_CASE(Double, stmt_, i)
+  //       FLOAT_BUILDER_CASE(Float, stmt_, i)
+  //       FLOAT_BUILDER_CASE(HalfFloat, stmt_, i)
+  //       BINARY_BUILDER_CASE(Binary, stmt_, i)
+  //       BINARY_BUILDER_CASE(LargeBinary, stmt_, i)
+  //       STRING_BUILDER_CASE(String, stmt_, i)
+  //       STRING_BUILDER_CASE(LargeString, stmt_, i)
+  //       default:
+  //         return Status::NotImplemented("Not implemented SQLite data conversion to ",
+  //                                       field_type->name());
+  //     }
+    // }
+
+  //   ARROW_ASSIGN_OR_RAISE(rc_, statement_->Step());
+    result_array->release(result_array);
+    delete result_array;
   }
 
-  if (rows > 0) {
-    std::vector<std::shared_ptr<Array>> arrays(builders.size());
-    for (int i = 0; i < num_fields; i++) {
-      ARROW_RETURN_NOT_OK(builders[i]->Finish(&arrays[i]));
-    }
+  // if (rows > 0) {
+  //   std::vector<std::shared_ptr<Array>> arrays(builders.size());
+  //   for (int i = 0; i < num_fields; i++) {
+  //     ARROW_RETURN_NOT_OK(builders[i]->Finish(&arrays[i]));
+  //   }
 
-    *out = RecordBatch::Make(schema_, rows, arrays);
-  } else {
-    *out = NULLPTR;
-  }
+  //   *out = RecordBatch::Make(schema_, rows, arrays);
+  // } else {
+  //   *out = NULLPTR;
+  // }
 
   return Status::OK();
 }
 
-}  // namespace sqlite
+}  // namespace duckdbflight
 }  // namespace sql
 }  // namespace flight
 }  // namespace arrow
