@@ -123,6 +123,8 @@ DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& state
 Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
   std::shared_ptr<duckdb::PreparedStatement> stmt_ = statement_->GetDuckDBStmt();
 
+  std::cout << "QUERY: " << stmt_->query << std::endl;
+
   // const int num_fields = schema_->num_fields();
   // std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders(num_fields);
 
@@ -135,19 +137,20 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
 
   if (!already_executed_) {
     ARROW_ASSIGN_OR_RAISE(rc_, statement_->Execute());
-    // ARROW_ASSIGN_OR_RAISE(rc_, statement_->Step());
     std::cout << rc_ << std::endl;
     already_executed_ = true;
   }
 
   ARROW_ASSIGN_OR_RAISE(auto result, statement_->GetResult());
-  ARROW_ASSIGN_OR_RAISE(auto result_schema, statement_->GetSchema());
+  ARROW_ASSIGN_OR_RAISE(auto result_schema, statement_->GetArrowSchema());
   // int64_t cols = duckdb_arrow_column_count((duckdb_arrow*)&result);
   // int64_t rows = duckdb_arrow_row_count((duckdb_arrow*)&result);
-  int64_t cols = stmt_->ColumnCount();
+  int64_t cols = result_schema->n_children;
   int64_t rows = result->length;
 
   printf("No of cols: %d, no of rows: %d\n", cols, rows);
+
+
 
   // std::vector<std::shared_ptr<Array>> arrays(builders.size());
 
@@ -168,9 +171,15 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
   // auto test = (ArrowArray*)&result;
 
   //   // *out = arrow::ImportRecordBatch(result_array, result_schema);
-    ARROW_ASSIGN_OR_RAISE(*out, arrow::ImportRecordBatch((ArrowArray*)&result, (ArrowSchema*)&result_schema));
+    
+    std::shared_ptr<RecordBatch> test = nullptr;
+    test = arrow::ImportRecordBatch(static_cast<ArrowArray*>(result.get()), static_cast<ArrowSchema*>(result_schema.get())).ValueOrDie();
 
-  //   printf("POOP\n");
+    
+    // ARROW_ASSIGN_OR_RAISE(*out, arrow::ImportRecordBatch((ArrowArray*)&result, (ArrowSchema*)&result_schema));
+
+    std::cout << "ROWS: " << test->num_rows() << std::endl;
+    *out = test;
 
   //   // printf("%s\n", result_array->release());
 
