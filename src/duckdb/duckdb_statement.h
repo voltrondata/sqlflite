@@ -43,7 +43,7 @@ class DuckDBStatement {
   /// \param[in] db        duckdb database instance.
   /// \param[in] sql       SQL statement.
   /// \return              A DuckDBStatement object.
-  static arrow::Result<std::shared_ptr<DuckDBStatement>> Create(std::shared_ptr<duckdb_connection> con,
+  static arrow::Result<std::shared_ptr<DuckDBStatement>> Create(std::shared_ptr<duckdb::Connection> con,
                                                                 const std::string& sql);
 
   ~DuckDBStatement();
@@ -61,22 +61,27 @@ class DuckDBStatement {
   // arrow::Result<int> Reset();
 
   arrow::Result<int> Execute();
-  arrow::Result<duckdb_arrow> GetResult();
+  arrow::Result<std::shared_ptr<ArrowArray>> GetResult();
+  arrow::Result<std::shared_ptr<ArrowSchema>> GetArrowSchema();
 
   /// \brief Returns the underlying duckdb_stmt.
   /// \return A sqlite statement.
-  duckdb_prepared_statement GetDuckDBStmt() const;
+  std::shared_ptr<duckdb::PreparedStatement> GetDuckDBStmt() const;
 
   /// \brief Executes an UPDATE, INSERT or DELETE statement.
   /// \return              The number of rows changed by execution.
   arrow::Result<int64_t> ExecuteUpdate();
 
  private:
-  // duckdb_connection* db_;
-  duckdb_prepared_statement stmt_;
-  duckdb_arrow result_;
+  std::shared_ptr<duckdb::Connection> con_;
+  std::shared_ptr<duckdb::PreparedStatement> stmt_;
+  std::shared_ptr<ArrowArray> result_;
+  std::shared_ptr<ArrowSchema> schema_;
 
-  DuckDBStatement(const duckdb_prepared_statement& stmt) {
+  DuckDBStatement(
+    std::shared_ptr<duckdb::Connection> con, 
+    std::shared_ptr<duckdb::PreparedStatement> stmt) {
+    con_ = con;
     stmt_ = stmt;
   }
 };

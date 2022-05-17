@@ -36,7 +36,7 @@ class DuckDBTablesWithSchemaBatchReader : public RecordBatchReader {
  private:
   std::shared_ptr<DuckDBStatementBatchReader> reader_;
   std::string main_query_;
-  std::shared_ptr<duckdb_connection> con_;
+  std::shared_ptr<duckdb::Connection> con_;
 
  public:
   /// Constructor for DuckDBTablesWithSchemaBatchReader class
@@ -45,7 +45,7 @@ class DuckDBTablesWithSchemaBatchReader : public RecordBatchReader {
   /// \param db     a pointer to the sqlite3 db.
   DuckDBTablesWithSchemaBatchReader(
       std::shared_ptr<DuckDBStatementBatchReader> reader, std::string main_query,
-      std::shared_ptr<duckdb_connection> con
+      std::shared_ptr<duckdb::Connection> con
       )
       : reader_(std::move(reader)), main_query_(std::move(main_query)), con_(std::move(con)) {} //, db_(db) {}
 

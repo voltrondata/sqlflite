@@ -245,21 +245,22 @@ std::string PrepareQueryForGetTables(const GetTables& command) {
 // }
 
 class DuckDBFlightSqlServer::Impl {
-    std::shared_ptr<duckdb_database> db_instance_;
-    std::shared_ptr<duckdb_connection> db_conn_;
+  private:
+    std::shared_ptr<duckdb::DuckDB> db_instance_;
+    std::shared_ptr<duckdb::Connection> db_conn_;
 
   public:
     explicit Impl(
-      std::shared_ptr<duckdb_database> db_instance,
-      std::shared_ptr<duckdb_connection> db_connection
+      std::shared_ptr<duckdb::DuckDB> db_instance,
+      std::shared_ptr<duckdb::Connection> db_connection
     ) : db_instance_(std::move(db_instance)), db_conn_(std::move(db_connection)) {
       // duckdb_prepared_statement stmt = nullptr;
       // std::cout << duckdb_prepare(*db_conn_ , "SELECT table_catalog as catalog_name, table_schema as schema_name, table_name,table_type FROM information_schema.tables where 1=1 order by table_name", &stmt) << std::endl;
     }
 
     ~Impl() { 
-      duckdb_disconnect(&*db_conn_);
-      duckdb_close(&*db_instance_);
+      // duckdb_disconnect(&*db_conn_);
+      // duckdb_close(&*db_instance_);
     }
 
 //   std::string GenerateRandomString() {
@@ -370,10 +371,11 @@ class DuckDBFlightSqlServer::Impl {
   arrow::Result<std::unique_ptr<FlightDataStream>> DoGetTables(
       const ServerCallContext& context, const GetTables& command) {
     std::string query = PrepareQueryForGetTables(command);
+    std::cout << query << std::endl;
     std::shared_ptr<DuckDBStatement> statement;
     ARROW_ASSIGN_OR_RAISE(statement, DuckDBStatement::Create(db_conn_, query));
 
-    std::cout << statement << std::endl;
+    // std::cout << statement << std::endl;
 
     std::shared_ptr<DuckDBStatementBatchReader> reader;
     ARROW_ASSIGN_OR_RAISE(reader, DuckDBStatementBatchReader::Create(
@@ -387,7 +389,7 @@ class DuckDBFlightSqlServer::Impl {
     } else {
       return std::unique_ptr<FlightDataStream>(new RecordBatchStream(reader));
     }
-    return Status::OK();
+    // return Status::OK();
   }
 
 //   arrow::Result<int64_t> DoPutCommandStatementUpdate(const ServerCallContext& context,
@@ -661,12 +663,12 @@ class DuckDBFlightSqlServer::Impl {
 //       sqlite3_free(err_msg);
 //       return Status::ExecutionError(error_msg);
 //     }
-    std::string query = "SELECT table_catalog as catalog_name, table_schema as schema_name, table_name,table_type FROM information_schema.tables where 1=1 order by table_name";
-    std::cout << query << std::endl;
+    // std::string query = "SELECT table_catalog as catalog_name, table_schema as schema_name, table_name,table_type FROM information_schema.tables where 1=1 order by table_name";
+    // std::cout << query << std::endl;
 
-    duckdb_prepared_statement* stmt = nullptr;
-    int rc = duckdb_prepare(*db_conn_, query.c_str(), stmt);
-    std::cout << rc << std::endl;
+    // duckdb_prepared_statement* stmt = nullptr;
+    // int rc = duckdb_prepare(*db_conn_, query.c_str(), stmt);
+    // std::cout << rc << std::endl;
 
     return Status::OK();
   }
@@ -677,41 +679,25 @@ DuckDBFlightSqlServer::DuckDBFlightSqlServer(std::shared_ptr<Impl> impl)
 
 arrow::Result<std::shared_ptr<DuckDBFlightSqlServer>> DuckDBFlightSqlServer::Create(
     const std::string &path,
-    const duckdb_config &config
-  ) {
-    duckdb_database db;
-    duckdb_connection con;
+    const duckdb::DBConfig &config
+) {
+    std::shared_ptr<duckdb::DuckDB> db;
+    std::shared_ptr<duckdb::Connection> con;
 
-    char** db_open_error;
-
-    if (duckdb_open_ext(path.c_str(), &db, config, db_open_error) == DuckDBError) {
-      std::string err_msg = "Cannot open the database.";
-      if (db != nullptr) {
-        err_msg += (std::string) *db_open_error;
-        duckdb_close(&db);
-      } else {
-        err_msg += "Unable to start DuckDB.";
-      }
-      // handle error
-      return Status::Invalid(err_msg);
-    }
-
-    if (duckdb_connect(db, &con) == DuckDBError) {
-      std::string err_msg = "Cannot connect to the database.";
-      duckdb_close(&db);
-      return Status::Invalid(err_msg);
-    }
+    db = std::make_shared<duckdb::DuckDB>(path);
+    con = std::make_shared<duckdb::Connection>(*db);
 
 
-  std::shared_ptr<Impl> impl = std::make_shared<Impl>(
-    std::make_shared<duckdb_database>(db), 
-    std::make_shared<duckdb_connection>(con));
+    std::cout << "Getting there: " << path << std::endl;
+
+  std::shared_ptr<Impl> impl = std::make_shared<Impl>(db, con);
   std::shared_ptr<DuckDBFlightSqlServer> result(new DuckDBFlightSqlServer(impl));
 
   for (const auto& id_to_result : GetSqlInfoResultMap()) {
     result->RegisterSqlInfo(id_to_result.first, id_to_result.second);
   }
   return result;
+  // return Status::OK();
 }
 
 DuckDBFlightSqlServer::~DuckDBFlightSqlServer() = default;

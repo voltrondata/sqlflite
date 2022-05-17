@@ -110,8 +110,9 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
         ARROW_ASSIGN_OR_RAISE(server,
                                 arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(db_path));
     } else if (db_type == "DuckDB") {
+        duckdb::DBConfig config;
         ARROW_ASSIGN_OR_RAISE(server,
-                                arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(db_path, NULL));
+                                arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(db_path, config));
     } else {
         std::string err_msg = "Unknown server type: --> ";
         err_msg += db_type;
@@ -150,8 +151,8 @@ arrow::Status Main() {
     std::string db_path = "../data/TPC-H-small.duckdb";
     ARROW_ASSIGN_OR_RAISE(auto server, CreateServer("DuckDB", db_path));
 
-    // std::string query_path = "../queries/sqlite";
-    // std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
+    // // std::string query_path = "../queries/sqlite";
+    // // std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
     ARROW_ASSIGN_OR_RAISE(auto client, CreateClient());
 
     flight::FlightCallOptions call_options;

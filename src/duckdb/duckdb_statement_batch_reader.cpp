@@ -17,12 +17,15 @@
 
 #include "duckdb_statement_batch_reader.h"
 
-#include <duckdb.hpp>
+#include <duckdb.h>
 
 #include <iostream>
 
 #include "arrow/builder.h"
+#include <arrow/c/bridge.h>
+
 #include "duckdb_statement.h"
+// #include <duckdb/main/capi_internal.hpp>
 
 // #define STRING_BUILDER_CASE(TYPE_CLASS, STMT, COLUMN)                             \
 //   case TYPE_CLASS##Type::type_id: {                                               \
@@ -98,7 +101,6 @@ DuckDBStatementBatchReader::DuckDBStatementBatchReader(
 arrow::Result<std::shared_ptr<DuckDBStatementBatchReader>>
 DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& statement_) {
   // ARROW_RETURN_NOT_OK(statement_->Step());
-  printf("KUPA\n");
   // ARROW_RETURN_NOT_OK(statement_->Execute());
 
   ARROW_ASSIGN_OR_RAISE(auto schema, statement_->GetSchema());
@@ -119,99 +121,112 @@ DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& state
 }
 
 Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
-  duckdb_prepared_statement stmt_ = statement_->GetDuckDBStmt();
+  std::shared_ptr<duckdb::PreparedStatement> stmt_ = statement_->GetDuckDBStmt();
 
-  const int num_fields = schema_->num_fields();
-  std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders(num_fields);
+  // const int num_fields = schema_->num_fields();
+  // std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders(num_fields);
 
-  for (int i = 0; i < num_fields; i++) {
-    const std::shared_ptr<Field>& field = schema_->field(i);
-    const std::shared_ptr<DataType>& field_type = field->type();
+  // for (int i = 0; i < num_fields; i++) {
+  //   const std::shared_ptr<Field>& field = schema_->field(i);
+  //   const std::shared_ptr<DataType>& field_type = field->type();
 
-    ARROW_RETURN_NOT_OK(MakeBuilder(default_memory_pool(), field_type, &builders[i]));
-  }
+  //   ARROW_RETURN_NOT_OK(MakeBuilder(default_memory_pool(), field_type, &builders[i]));
+  // }
 
   if (!already_executed_) {
     ARROW_ASSIGN_OR_RAISE(rc_, statement_->Execute());
     // ARROW_ASSIGN_OR_RAISE(rc_, statement_->Step());
+    std::cout << rc_ << std::endl;
     already_executed_ = true;
   }
 
   ARROW_ASSIGN_OR_RAISE(auto result, statement_->GetResult());
-  int64_t cols = duckdb_arrow_column_count(result);
-  int64_t rows = duckdb_arrow_row_count(result);
+  ARROW_ASSIGN_OR_RAISE(auto result_schema, statement_->GetSchema());
+  // int64_t cols = duckdb_arrow_column_count((duckdb_arrow*)&result);
+  // int64_t rows = duckdb_arrow_row_count((duckdb_arrow*)&result);
+  int64_t cols = stmt_->ColumnCount();
+  int64_t rows = result->length;
 
   printf("No of cols: %d, no of rows: %d\n", cols, rows);
 
-  std::vector<std::shared_ptr<Array>> arrays(builders.size());
+  // std::vector<std::shared_ptr<Array>> arrays(builders.size());
 
-  for (int i = 0; i < cols; ++i) {
-    ArrowArray * result_array = new ArrowArray();
-    printf("Iter: %d ", i);
-    int rc = duckdb_query_arrow_array(result, (duckdb_arrow_array*)&result_array);
+  // // for (int i = 0; i < cols; ++i) {
+  //   ArrowArray * result_array = new ArrowArray();
+  //   ArrowSchema * result_schema = new ArrowSchema();
 
-    printf("Rc: %d \n", rc);
+  //   // printf("Iter: %d ", i);
+  //   int rc_array = duckdb_query_arrow_array(result, (duckdb_arrow_array*)&result_array);
+  //   int rc_schema = duckdb_query_arrow_schema(result, (duckdb_arrow_schema *)&result_schema);
 
-    // auto wrapper = (duckdb::ArrowResultWrapper *) result;
-	  // return wrapper->result->collection;
+  //   printf("RC_Array: %d, RC_Schema: %d \n", rc_array, rc_schema);
 
-    printf("%d\n", result_array->length);
+  //   // auto wrapper = (duckdb::ArrowResultWrapper *) result;
+	//   // return wrapper->result->collection;
 
-    // printf("%s\n", result_array->release());
+  //   printf("Length: %d\n", result_array->length);
+  // auto test = (ArrowArray*)&result;
 
-  // while (rows < kMaxBatchSize && rc_ == SQLITE_ROW) {
-  //   rows++;
-    // for (int j = 0; j < num_fields; ++j) {
-    //   const std::shared_ptr<Field>& field = schema_->field(i);
-    //   const std::shared_ptr<DataType>& field_type = field->type();
-      // printf("%d\n", (ArrowArray*)&result_array->length);
-      // Array test = (Array) *result_array;
+  //   // *out = arrow::ImportRecordBatch(result_array, result_schema);
+    ARROW_ASSIGN_OR_RAISE(*out, arrow::ImportRecordBatch((ArrowArray*)&result, (ArrowSchema*)&result_schema));
 
-      // std::cout << test->ToString() << std::endl;
-      // arrays.push_back(std::make_shared<Array>(*test));
+  //   printf("POOP\n");
 
-  //     ArrayBuilder& builder = *builders[i];
+  //   // printf("%s\n", result_array->release());
 
-  //     // NOTE: This is not the optimal way of building Arrow vectors.
-  //     // That would be to presize the builders to avoiding several resizing operations
-  //     // when appending values and also to build one vector at a time.
-  //     switch (field_type->id()) {
-  //       INT_BUILDER_CASE(Int64, stmt_, i)
-  //       INT_BUILDER_CASE(UInt64, stmt_, i)
-  //       INT_BUILDER_CASE(Int32, stmt_, i)
-  //       INT_BUILDER_CASE(UInt32, stmt_, i)
-  //       INT_BUILDER_CASE(Int16, stmt_, i)
-  //       INT_BUILDER_CASE(UInt16, stmt_, i)
-  //       INT_BUILDER_CASE(Int8, stmt_, i)
-  //       INT_BUILDER_CASE(UInt8, stmt_, i)
-  //       FLOAT_BUILDER_CASE(Double, stmt_, i)
-  //       FLOAT_BUILDER_CASE(Float, stmt_, i)
-  //       FLOAT_BUILDER_CASE(HalfFloat, stmt_, i)
-  //       BINARY_BUILDER_CASE(Binary, stmt_, i)
-  //       BINARY_BUILDER_CASE(LargeBinary, stmt_, i)
-  //       STRING_BUILDER_CASE(String, stmt_, i)
-  //       STRING_BUILDER_CASE(LargeString, stmt_, i)
-  //       default:
-  //         return Status::NotImplemented("Not implemented SQLite data conversion to ",
-  //                                       field_type->name());
-  //     }
-    // }
+  // // while (rows < kMaxBatchSize && rc_ == SQLITE_ROW) {
+  // //   rows++;
+  //   // for (int j = 0; j < num_fields; ++j) {
+  //   //   const std::shared_ptr<Field>& field = schema_->field(i);
+  //   //   const std::shared_ptr<DataType>& field_type = field->type();
+  //     // printf("%d\n", (ArrowArray*)&result_array->length);
+  //     // Array test = (Array) *result_array;
 
-  //   ARROW_ASSIGN_OR_RAISE(rc_, statement_->Step());
-    result_array->release(result_array);
-    delete result_array;
-  }
+  //     // std::cout << test->ToString() << std::endl;
+  //     // arrays.push_back(std::make_shared<Array>(*test));
 
-  // if (rows > 0) {
-  //   std::vector<std::shared_ptr<Array>> arrays(builders.size());
-  //   for (int i = 0; i < num_fields; i++) {
-  //     ARROW_RETURN_NOT_OK(builders[i]->Finish(&arrays[i]));
-  //   }
+  // //     ArrayBuilder& builder = *builders[i];
 
-  //   *out = RecordBatch::Make(schema_, rows, arrays);
-  // } else {
-  //   *out = NULLPTR;
-  // }
+  // //     // NOTE: This is not the optimal way of building Arrow vectors.
+  // //     // That would be to presize the builders to avoiding several resizing operations
+  // //     // when appending values and also to build one vector at a time.
+  // //     switch (field_type->id()) {
+  // //       INT_BUILDER_CASE(Int64, stmt_, i)
+  // //       INT_BUILDER_CASE(UInt64, stmt_, i)
+  // //       INT_BUILDER_CASE(Int32, stmt_, i)
+  // //       INT_BUILDER_CASE(UInt32, stmt_, i)
+  // //       INT_BUILDER_CASE(Int16, stmt_, i)
+  // //       INT_BUILDER_CASE(UInt16, stmt_, i)
+  // //       INT_BUILDER_CASE(Int8, stmt_, i)
+  // //       INT_BUILDER_CASE(UInt8, stmt_, i)
+  // //       FLOAT_BUILDER_CASE(Double, stmt_, i)
+  // //       FLOAT_BUILDER_CASE(Float, stmt_, i)
+  // //       FLOAT_BUILDER_CASE(HalfFloat, stmt_, i)
+  // //       BINARY_BUILDER_CASE(Binary, stmt_, i)
+  // //       BINARY_BUILDER_CASE(LargeBinary, stmt_, i)
+  // //       STRING_BUILDER_CASE(String, stmt_, i)
+  // //       STRING_BUILDER_CASE(LargeString, stmt_, i)
+  // //       default:
+  // //         return Status::NotImplemented("Not implemented SQLite data conversion to ",
+  // //                                       field_type->name());
+  // //     }
+  //   // }
+
+  // // //   ARROW_ASSIGN_OR_RAISE(rc_, statement_->Step());
+  //   // result_array->release(result_array);
+  //   delete result_array;
+  // // }
+
+  // // if (rows > 0) {
+  // //   std::vector<std::shared_ptr<Array>> arrays(builders.size());
+  // //   for (int i = 0; i < num_fields; i++) {
+  // //     ARROW_RETURN_NOT_OK(builders[i]->Finish(&arrays[i]));
+  // //   }
+
+  // //   *out = RecordBatch::Make(schema_, rows, arrays);
+  // // } else {
+  // //   *out = NULLPTR;
+  // // }
 
   return Status::OK();
 }
