@@ -172,14 +172,26 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
 
   //   // *out = arrow::ImportRecordBatch(result_array, result_schema);
     
-    std::shared_ptr<RecordBatch> test = nullptr;
-    test = arrow::ImportRecordBatch(static_cast<ArrowArray*>(result.get()), static_cast<ArrowSchema*>(result_schema.get())).ValueOrDie();
+    arrow::Result<std::shared_ptr<RecordBatch>> test = nullptr;
+    // std::shared_ptr<RecordBatch> test_res = nullptr;
+    test = arrow::ImportRecordBatch(result.get(), result_schema.get());
+    // std::cout << "STATUS: " << test.status() << std::endl;
+    
+    if (test.status() == arrow::Status::OK()) {
+      *out = test.ValueOrDie();
 
+      // // print the table
+      // std::cout << (*out)->ToString() << std::endl;
+
+    } else {
+      *out = NULLPTR;
+    }
+
+    // ARROW_ASSIGN_OR_RAISE(auto tst, arrow::ImportRecordBatch(result.get(), result_schema.get()));
     
     // ARROW_ASSIGN_OR_RAISE(*out, arrow::ImportRecordBatch((ArrowArray*)&result, (ArrowSchema*)&result_schema));
 
-    std::cout << "ROWS: " << test->num_rows() << std::endl;
-    *out = test;
+
 
   //   // printf("%s\n", result_array->release());
 

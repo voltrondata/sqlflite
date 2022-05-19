@@ -52,10 +52,12 @@ Status DuckDBTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>*
 
   ARROW_RETURN_NOT_OK(reader_->ReadNext(&first_batch));
 
-  // if (!first_batch) {
-  //   *batch = NULLPTR;
-  //   return Status::OK();
-  // }
+  if (!first_batch) {
+    *batch = NULLPTR;
+    return Status::OK();
+  }
+
+  printf("TRET\n");
 
   // const std::shared_ptr<Array> table_name_array =
   //     first_batch->GetColumnByName("table_name");

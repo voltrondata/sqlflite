@@ -204,9 +204,7 @@ arrow::Result<int> DuckDBStatement::Execute() {
   res->Fetch()->ToArrowArray(&res_arr);
   result_ = std::make_shared<ArrowArray>(res_arr);
 
-  std::cout << "NAME: " << schema_->n_children << std::endl;
-
-  return 10;
+  return 0;
 }
 
 arrow::Result<std::shared_ptr<ArrowArray>> DuckDBStatement::GetResult() {
@@ -267,8 +265,7 @@ arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
   // //       arrow::field(column_name, data_type, column_metadata.metadata_map()));
   // }
   // return arrow::schema(fields);
-  std::cout << "DUPA" << std::endl;
-  ARROW_ASSIGN_OR_RAISE(auto schema, arrow::ImportSchema(dynamic_cast<ArrowSchema*>(schema_.get())));
+  ARROW_ASSIGN_OR_RAISE(auto schema, arrow::ImportSchema(schema_.get()));
 
   return schema;
 }
