@@ -31,10 +31,6 @@
 #include "duckdb_sql_info.h"
 #include "duckdb_statement.h"
 #include "duckdb_statement_batch_reader.h"
-// #include "duckdb_tables_schema_batch_reader.h"
-// #include "sqlite_type_info.h"
-
-// namespace duckdb_ = duckdb::;
 
 namespace arrow {
 namespace flight {
@@ -183,41 +179,11 @@ arrow::Result<std::unique_ptr<FlightInfo>> DuckDBFlightSqlServer::GetFlightInfoS
     const ServerCallContext& context, const StatementQuery& command,
     const FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoStatement(context, command, descriptor);
-  // return Status::OK();
 }
 
 arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetStatement(
     const ServerCallContext& context, const StatementQueryTicket& command) {
   return impl_->DoGetStatement(context, command);
-  // return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>> DuckDBFlightSqlServer::GetFlightInfoCatalogs(
-    const ServerCallContext& context, const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoCatalogs(context, descriptor);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetCatalogs(
-    const ServerCallContext& context) {
-  // return impl_->DoGetCatalogs(context);
-
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>> DuckDBFlightSqlServer::GetFlightInfoSchemas(
-    const ServerCallContext& context, const GetDbSchemas& command,
-    const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoSchemas(context, command, descriptor);
-
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetDbSchemas(
-    const ServerCallContext& context, const GetDbSchemas& command) {
-  // return impl_->DoGetDbSchemas(context, command);
-
-  return Status::OK();
 }
 
 arrow::Result<std::unique_ptr<FlightInfo>> DuckDBFlightSqlServer::GetFlightInfoTables(
@@ -225,149 +191,12 @@ arrow::Result<std::unique_ptr<FlightInfo>> DuckDBFlightSqlServer::GetFlightInfoT
     const FlightDescriptor& descriptor) {
 
   return impl_->GetFlightInfoTables(context, command, descriptor);
-  // std::cout << "TEST" << std::endl;
-  // return Status::OK();
 }
 
 arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetTables(
     const ServerCallContext& context, const GetTables& command) {
 
   return impl_->DoGetTables(context, command);
-  // return Status::OK();
-}
-
-arrow::Result<int64_t> DuckDBFlightSqlServer::DoPutCommandStatementUpdate(
-    const ServerCallContext& context, const StatementUpdate& command) {
-  // return impl_->DoPutCommandStatementUpdate(context, command);
-  return Status::OK();
-}
-
-arrow::Result<ActionCreatePreparedStatementResult>
-DuckDBFlightSqlServer::CreatePreparedStatement(
-    const ServerCallContext& context,
-    const ActionCreatePreparedStatementRequest& request) {
-  // return impl_->CreatePreparedStatement(context, request);
-  return Status::OK();
-}
-
-Status DuckDBFlightSqlServer::ClosePreparedStatement(
-    const ServerCallContext& context,
-    const ActionClosePreparedStatementRequest& request) {
-  // return impl_->ClosePreparedStatement(context, request);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>>
-DuckDBFlightSqlServer::GetFlightInfoPreparedStatement(
-    const ServerCallContext& context, const PreparedStatementQuery& command,
-    const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoPreparedStatement(context, command, descriptor);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>>
-DuckDBFlightSqlServer::DoGetPreparedStatement(const ServerCallContext& context,
-                                              const PreparedStatementQuery& command) {
-  // return impl_->DoGetPreparedStatement(context, command);
-  return Status::OK();
-}
-
-Status DuckDBFlightSqlServer::DoPutPreparedStatementQuery(
-    const ServerCallContext& context, const PreparedStatementQuery& command,
-    FlightMessageReader* reader, FlightMetadataWriter* writer) {
-  // return impl_->DoPutPreparedStatementQuery(context, command, reader, writer);
-  return Status::OK();
-}
-
-arrow::Result<int64_t> DuckDBFlightSqlServer::DoPutPreparedStatementUpdate(
-    const ServerCallContext& context, const PreparedStatementUpdate& command,
-    FlightMessageReader* reader) {
-  // return impl_->DoPutPreparedStatementUpdate(context, command, reader);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>> DuckDBFlightSqlServer::GetFlightInfoTableTypes(
-    const ServerCallContext& context, const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoTableTypes(context, descriptor);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetTableTypes(
-    const ServerCallContext& context) {
-  // return impl_->DoGetTableTypes(context);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>>
-DuckDBFlightSqlServer::GetFlightInfoXdbcTypeInfo(
-    const ServerCallContext& context, const arrow::flight::sql::GetXdbcTypeInfo& command,
-    const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoTypeInfo(context, command, descriptor);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetXdbcTypeInfo(
-    const ServerCallContext& context,
-    const arrow::flight::sql::GetXdbcTypeInfo& command) {
-  // return impl_->DoGetTypeInfo(context, command);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>>
-DuckDBFlightSqlServer::GetFlightInfoPrimaryKeys(const ServerCallContext& context,
-                                                const GetPrimaryKeys& command,
-                                                const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoPrimaryKeys(context, command, descriptor);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetPrimaryKeys(
-    const ServerCallContext& context, const GetPrimaryKeys& command) {
-  // return impl_->DoGetPrimaryKeys(context, command);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>>
-DuckDBFlightSqlServer::GetFlightInfoImportedKeys(const ServerCallContext& context,
-                                                 const GetImportedKeys& command,
-                                                 const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoImportedKeys(context, command, descriptor);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetImportedKeys(
-    const ServerCallContext& context, const GetImportedKeys& command) {
-  // return impl_->DoGetImportedKeys(context, command);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>>
-DuckDBFlightSqlServer::GetFlightInfoExportedKeys(const ServerCallContext& context,
-                                                 const GetExportedKeys& command,
-                                                 const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoExportedKeys(context, command, descriptor);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>> DuckDBFlightSqlServer::DoGetExportedKeys(
-    const ServerCallContext& context, const GetExportedKeys& command) {
-  // return impl_->DoGetExportedKeys(context, command);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightInfo>>
-DuckDBFlightSqlServer::GetFlightInfoCrossReference(const ServerCallContext& context,
-                                                   const GetCrossReference& command,
-                                                   const FlightDescriptor& descriptor) {
-  // return impl_->GetFlightInfoCrossReference(context, command, descriptor);
-  return Status::OK();
-}
-
-arrow::Result<std::unique_ptr<FlightDataStream>>
-DuckDBFlightSqlServer::DoGetCrossReference(const ServerCallContext& context,
-                                           const GetCrossReference& command) {
-  // return impl_->DoGetCrossReference(context, command);
-  return Status::OK();
 }
 
 }  // namespace sqlite

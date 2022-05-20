@@ -36,9 +36,9 @@ SqlInfoResultMap GetSqlInfoResultMap() {
        SqlInfoResult(std::string("8.0.0-SNAPSHOT" /* Only an example */))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_READ_ONLY, SqlInfoResult(false)},
       {SqlInfoOptions::SqlInfo::SQL_DDL_CATALOG,
-       SqlInfoResult(false /* SQLite 3 does not support catalogs */)},
+       SqlInfoResult(false)},
       {SqlInfoOptions::SqlInfo::SQL_DDL_SCHEMA,
-       SqlInfoResult(false /* SQLite 3 does not support schemas */)},
+       SqlInfoResult(false)},
       {SqlInfoOptions::SqlInfo::SQL_DDL_TABLE, SqlInfoResult(true)},
       {SqlInfoOptions::SqlInfo::SQL_IDENTIFIER_CASE,
        SqlInfoResult(int64_t(SqlInfoOptions::SqlSupportedCaseSensitivity::

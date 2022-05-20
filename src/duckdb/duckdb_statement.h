@@ -52,31 +52,13 @@ class DuckDBStatement {
   /// \return              The resulting Schema.
   arrow::Result<std::shared_ptr<Schema>> GetSchema() const;
 
-  // /// \brief Steps on underlying duckdb_stmt.
-  // /// \return          The resulting return code from SQLite.
-  // arrow::Result<int> Step();
-
-  // /// \brief Reset the state of the duckdb_stmt.
-  // /// \return          The resulting return code from SQLite.
-  // arrow::Result<int> Reset();
-
   arrow::Result<int> Execute();
   arrow::Result<std::shared_ptr<RecordBatch>> GetResult();
   // arrow::Result<std::shared_ptr<Schema>> GetArrowSchema();
 
-  /// \brief Returns the underlying duckdb_stmt.
-  /// \return A sqlite statement.
-  std::shared_ptr<duckdb::PreparedStatement> GetDuckDBStmt() const;
-
-  /// \brief Executes an UPDATE, INSERT or DELETE statement.
-  /// \return              The number of rows changed by execution.
-  arrow::Result<int64_t> ExecuteUpdate();
-
  private:
   std::shared_ptr<duckdb::Connection> con_;
   std::shared_ptr<duckdb::PreparedStatement> stmt_;
-  // std::shared_ptr<ArrowArray> result_;
-  // std::shared_ptr<ArrowSchema> schema_;
   std::shared_ptr<RecordBatch> result_;
   std::shared_ptr<Schema> schema_;
 
