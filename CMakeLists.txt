@@ -8,6 +8,7 @@ find_package(Arrow REQUIRED)
 find_package(ArrowFlight REQUIRED)
 find_package(ArrowFlightSql REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(Boost COMPONENTS program_options REQUIRED)
 
 # find duckDB
 find_library(DUCKDB_LIB NAMES duckdb PATHS $ENV{CONDA_PREFIX}/lib/)
@@ -43,4 +44,5 @@ target_link_libraries(flight_sql PRIVATE
               Threads::Threads
               ${SQLite3_LIBRARIES}
               ${DUCKDB}
+              ${Boost_LIBRARIES}
               )

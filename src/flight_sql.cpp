@@ -11,12 +11,14 @@
 #include <arrow/table.h>
 #include <arrow/util/logging.h>
 #include <arrow/record_batch.h>
+#include <boost/program_options.hpp>
 
 #include "sqlite/sqlite_server.h"
 #include "duckdb/duckdb_server.h"
 
 namespace flight = arrow::flight;
 namespace flightsql = arrow::flight::sql;
+namespace po = boost::program_options;
 
 int port = 31337;
 
@@ -102,10 +104,10 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
 
     std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server = nullptr;
 
-    if (db_type == "SQLite") {
+    if (db_type == "sqlite") {
         ARROW_ASSIGN_OR_RAISE(server,
                                 arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(db_path));
-    } else if (db_type == "DuckDB") {
+    } else if (db_type == "duckdb") {
         duckdb::DBConfig config;
         ARROW_ASSIGN_OR_RAISE(server,
                                 arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(db_path, config));
@@ -120,7 +122,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
         // Exit with a clean error code (0) on SIGTERM
         ARROW_CHECK_OK(server->SetShutdownOnSignals({SIGTERM}));
 
-        std::cout << "Server listening on localhost:" << server->port() << std::endl;
+        std::cout << db_type << " server listening on localhost:" << server->port() << std::endl;
         return server;
     } else {
         std::string err_msg = "Unable to start the server";
@@ -143,11 +145,24 @@ arrow::Result<std::unique_ptr<flightsql::FlightSqlClient>> CreateClient() {
     return client;
 }
 
-arrow::Status Main() {
-    std::string db_path = "../data/TPC-H-small.duckdb";
-    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer("DuckDB", db_path));
+arrow::Status Main(const std::string& backend) {
+    std::map<std::string, std::string> databases;
+    databases["duckdb"] = "../data/TPC-H-small.duckdb";
+    databases["sqlite"] = "../data/TPC-H-small.db";
 
-    std::string query_path = "../queries/sqlite";
+    // std::string db_path;
+    // switch (backend) {
+    //     case 'duckdb':
+    //         db_path = "../data/TPC-H-small.duckdb";
+    //         break;
+    //     case "sqlite":
+    //         db_path = "../data/TPC-H-small.db";
+    //         break;
+    // }
+    // std::string db_path = "../data/TPC-H-small.duckdb";
+    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(backend, databases[backend]));
+
+    std::string query_path = "../queries";
     std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
     ARROW_ASSIGN_OR_RAISE(auto client, CreateClient());
 
@@ -164,7 +179,26 @@ arrow::Status Main() {
 }
 
 int main(int argc, char** argv) {
-    auto status = Main();
+    
+    // Declare the supported options.
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help", "produce this help message")
+        ("backend,B", po::value<std::string>()->default_value("duckdb"), "Specify the database backend. Allowed options: duckdb, sqlite.")
+    ;
+
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);    
+
+    if (vm.count("help")) {
+        std::cout << desc << "\n";
+        return 1;
+    }
+
+    std::string backend = vm["backend"].as<std::string>();
+
+    auto status = Main(backend);
     if (!status.ok()) {
         std::cerr << status << std::endl;
         return 1;
