@@ -55,6 +55,7 @@ class DuckDBStatementBatchReader : public RecordBatchReader {
   std::shared_ptr<Schema> schema_;
   int rc_;
   bool already_executed_;
+  bool results_read_;
 
   DuckDBStatementBatchReader(std::shared_ptr<DuckDBStatement> statement,
                              std::shared_ptr<Schema> schema);

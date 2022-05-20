@@ -96,7 +96,8 @@ DuckDBStatementBatchReader::DuckDBStatementBatchReader(
     : statement_(std::move(statement)),
       schema_(std::move(schema)),
       rc_(DuckDBSuccess),
-      already_executed_(false) {}
+      already_executed_(false),
+      results_read_(false) {}
 
 arrow::Result<std::shared_ptr<DuckDBStatementBatchReader>>
 DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& statement_) {
@@ -121,9 +122,9 @@ DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& state
 }
 
 Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
-  std::shared_ptr<duckdb::PreparedStatement> stmt_ = statement_->GetDuckDBStmt();
+  // std::shared_ptr<duckdb::PreparedStatement> stmt_ = statement_->GetDuckDBStmt();
 
-  std::cout << "QUERY: " << stmt_->query << std::endl;
+  // std::cout << "QUERY: " << stmt_->query << std::endl;
 
   // const int num_fields = schema_->num_fields();
   // std::vector<std::unique_ptr<arrow::ArrayBuilder>> builders(num_fields);
@@ -137,18 +138,17 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
 
   if (!already_executed_) {
     ARROW_ASSIGN_OR_RAISE(rc_, statement_->Execute());
-    std::cout << rc_ << std::endl;
     already_executed_ = true;
   }
 
-  ARROW_ASSIGN_OR_RAISE(auto result, statement_->GetResult());
-  ARROW_ASSIGN_OR_RAISE(auto result_schema, statement_->GetArrowSchema());
-  // int64_t cols = duckdb_arrow_column_count((duckdb_arrow*)&result);
-  // int64_t rows = duckdb_arrow_row_count((duckdb_arrow*)&result);
-  int64_t cols = result_schema->n_children;
-  int64_t rows = result->length;
+  // ARROW_ASSIGN_OR_RAISE(auto result, statement_->GetResult());
+  // ARROW_ASSIGN_OR_RAISE(auto result_schema, statement_->GetSchema());
+  // // int64_t cols = duckdb_arrow_column_count((duckdb_arrow*)&result);
+  // // int64_t rows = duckdb_arrow_row_count((duckdb_arrow*)&result);
+  // int64_t cols = result->num_columns();
+  // int64_t rows = result->num_rows();
 
-  printf("No of cols: %d, no of rows: %d\n", cols, rows);
+  // printf("No of cols: %d, no of rows: %d\n", cols, rows);
 
 
 
@@ -172,19 +172,25 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
 
   //   // *out = arrow::ImportRecordBatch(result_array, result_schema);
     
-    arrow::Result<std::shared_ptr<RecordBatch>> test = nullptr;
-    // std::shared_ptr<RecordBatch> test_res = nullptr;
-    test = arrow::ImportRecordBatch(result.get(), result_schema.get());
+    // arrow::Result<std::shared_ptr<RecordBatch>> test = nullptr;
+    // // std::shared_ptr<RecordBatch> test_res = nullptr;
+
+    // test = arrow::ImportRecordBatch(result.get(), result_schema.get());
     // std::cout << "STATUS: " << test.status() << std::endl;
     
-    if (test.status() == arrow::Status::OK()) {
-      *out = test.ValueOrDie();
+    // if (test.status() == arrow::Status::OK()) {
+    if(!results_read_) {
+      // *out = test.ValueOrDie();
+      std::cout << "THERE'S ROWS" << std::endl;
+      ARROW_ASSIGN_OR_RAISE(*out, statement_->GetResult());
+      results_read_ = true;
 
-      // // print the table
-      // std::cout << (*out)->ToString() << std::endl;
+      // // // print the table
+      std::cout << "DATA: " << (*out)->ToString() << std::endl;
 
     } else {
-      *out = NULLPTR;
+      std::cout << "POT" << std::endl;
+      *out = nullptr;
     }
 
     // ARROW_ASSIGN_OR_RAISE(auto tst, arrow::ImportRecordBatch(result.get(), result_schema.get()));

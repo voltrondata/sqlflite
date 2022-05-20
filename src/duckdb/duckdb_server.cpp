@@ -390,24 +390,24 @@ class DuckDBFlightSqlServer::Impl {
     // std::cout << table->ToString() << std::endl;
 
     if (command.include_schema) {
-      std::cout << "FFF" << std::endl;
       std::shared_ptr<DuckDBTablesWithSchemaBatchReader> table_schema_reader =
           std::make_shared<DuckDBTablesWithSchemaBatchReader>(reader, query, db_conn_);
       return std::unique_ptr<FlightDataStream>(
           new RecordBatchStream(table_schema_reader));
     } else {
       std::cout << "DUH" << std::endl;
-      // // RecordBatchStream* brs = new RecordBatchStream(reader);
+      RecordBatchStream* brs = new RecordBatchStream(reader);
       // // arrow::Result<FlightPayload> fff = brs->GetSchemaPayload();
       // // RecordBatchReader* rdr = new RecordBatchReader(brs);
       // auto table = reader->ToTable().ValueOrDie()->ToString();
       // std::cout<<table<<std::endl;
+
       // std::unique_ptr<FlightDataStream> brs = std::make_unique<FlightDataStream>(RecordBatchStream(reader));
       // auto ss = brs->Next();
       // std::cout << ss->ipc_message.body_length << std::endl;
       return std::unique_ptr<FlightDataStream>(new RecordBatchStream(reader));
     }
-    // return Status::OK();
+    return Status::OK();
   }
 
 //   arrow::Result<int64_t> DoPutCommandStatementUpdate(const ServerCallContext& context,

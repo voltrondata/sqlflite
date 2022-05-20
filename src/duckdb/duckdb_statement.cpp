@@ -193,29 +193,33 @@ DuckDBStatement::~DuckDBStatement() {
 }
 
 arrow::Result<int> DuckDBStatement::Execute() {
-  printf("Executing...");
+  printf("Executing...\n");
   auto res = stmt_->Execute();
 
-  ArrowSchema res_schema;
-  QueryResult::ToArrowSchema(&res_schema, res->types, res->names);
-  schema_ = std::make_shared<ArrowSchema>(res_schema);
-
   ArrowArray res_arr;
+  ArrowSchema res_schema;
+  
+  QueryResult::ToArrowSchema(&res_schema, res->types, res->names);
   res->Fetch()->ToArrowArray(&res_arr);
-  result_ = std::make_shared<ArrowArray>(res_arr);
+  ARROW_ASSIGN_OR_RAISE(result_, arrow::ImportRecordBatch(&res_arr, &res_schema));
+
+  // std::cout << "POOF" << std::endl;
+  QueryResult::ToArrowSchema(&res_schema, res->types, res->names);
+
+  ARROW_ASSIGN_OR_RAISE(auto schema_, arrow::ImportSchema(&res_schema));
+  // schema_ = std::make_shared<ArrowSchema>(res_schema);
+
+  // std::cout << "SCHEMA: " << schema_->ToString() << std::endl;
 
   return 0;
 }
 
-arrow::Result<std::shared_ptr<ArrowArray>> DuckDBStatement::GetResult() {
+arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::GetResult() {
   return result_;
 }
 
-arrow::Result<std::shared_ptr<ArrowSchema>> DuckDBStatement::GetArrowSchema() {
-  return schema_;
-}
-
 arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
+  // return schema_;
   // std::vector<std::shared_ptr<Field>> fields;
 
   // int column_count = stmt_->ColumnCount();
@@ -265,9 +269,8 @@ arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
   // //       arrow::field(column_name, data_type, column_metadata.metadata_map()));
   // }
   // return arrow::schema(fields);
-  ARROW_ASSIGN_OR_RAISE(auto schema, arrow::ImportSchema(schema_.get()));
 
-  return schema;
+  return schema_;
 }
 
 // arrow::Result<int> DuckDBStatement::Step() {
