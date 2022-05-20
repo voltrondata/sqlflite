@@ -189,7 +189,7 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
       std::cout << "DATA: " << (*out)->ToString() << std::endl;
 
     } else {
-      std::cout << "POT" << std::endl;
+      std::cout << "NO DATA" << std::endl;
       *out = nullptr;
     }
 

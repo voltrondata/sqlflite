@@ -31,7 +31,6 @@ arrow::Status printResults(
         // Fetch each partition sequentially (though this can be done in parallel)
         int ep = 0;
         for (const flight::FlightEndpoint& endpoint : results->endpoints()) {
-            std::cout << ep << std::endl;
             // Here we assume each partition is on the same server we originally queried, but this
             // isn't true in general: the server may split the query results between multiple
             // other servers, which we would have to connect to.
@@ -51,7 +50,7 @@ arrow::Status printResults(
             // // auto table_result = stream->ToTable();
             // // auto table = std::move(table_result.ValueOrDie());
             // std::cout << "BLAH" << std::endl;
-        std::cout << "123" << std::endl;
+        std::cout << "WORK FOR PETE'S SAKE!" << std::endl;
         ep++;
         }
 
