@@ -27,9 +27,7 @@ arrow::Status printResults(
     std::unique_ptr<flight::FlightInfo> &results, 
     std::unique_ptr<flightsql::FlightSqlClient> &client,
     const flight::FlightCallOptions &call_options) {
-        std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
         // Fetch each partition sequentially (though this can be done in parallel)
-        int ep = 0;
         for (const flight::FlightEndpoint& endpoint : results->endpoints()) {
             // Here we assume each partition is on the same server we originally queried, but this
             // isn't true in general: the server may split the query results between multiple
@@ -40,29 +38,9 @@ arrow::Status printResults(
             ARROW_ASSIGN_OR_RAISE(auto stream, client->DoGet(call_options, endpoint.ticket));
             // Read all results into an Arrow Table, though we can iteratively process record
             // batches as they arrive as well
-            auto temp = stream->Next();
-            std::cout << temp->data->ToString() << std::endl;
-            // std::cout << stream->Next() << std::endl;
-            // std::cout << "DUMMY TOM " << std::endl;
-            // ARROW_ASSIGN_OR_RAISE(auto rb_, stream->ToRecordBatches());
-            // batches.emplace_back(rb_);
-            // batches.insert(batches.end(), rb_.begin(), rb_.end());
-            // // auto table_result = stream->ToTable();
-            // // auto table = std::move(table_result.ValueOrDie());
-            // std::cout << "BLAH" << std::endl;
-        std::cout << "WORK FOR PETE'S SAKE!" << std::endl;
-        ep++;
+            ARROW_ASSIGN_OR_RAISE(auto table, stream->ToTable());
+            std::cout << table->ToString() << std::endl;
         }
-
-
-        // ARROW_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Table> tbl, arrow::Table::FromRecordBatches(batches));
-        // std::cout << tbl->ToString() << std::endl;
-
-        // for (const std::shared_ptr<arrow::RecordBatch> rb : batches) {
-        //     std::cout << rb->ToString() << std::endl;
-        // }
-
-        std::cout << batches.size() << std::endl;
 
     return arrow::Status::OK();
 }
@@ -183,7 +161,7 @@ arrow::Status Main() {
         ARROW_RETURN_NOT_OK(printResults(tables, client, call_options));
     }
 
-    // client->Execute(call_options, "SELECT 1");
+    client->Execute(call_options, "SELECT * FROM LINEITEM LIMIT 10");
 
     // runQueries(client, query_path, skip_queries, call_options);
 

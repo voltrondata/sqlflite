@@ -58,7 +58,7 @@ namespace {
 std::string PrepareQueryForGetTables(const GetTables& command) {
   std::stringstream table_query;
 
-  table_query << "SELECT table_catalog as catalog_name, table_schema as schema_name, table_name,"
+  table_query << "SELECT 'NOT_IMPLEMENTED' as catalog_name, table_schema as schema_name, table_name,"
                  "table_type FROM information_schema.tables where 1=1";
 
   if (command.catalog.has_value()) {
@@ -396,7 +396,12 @@ class DuckDBFlightSqlServer::Impl {
           new RecordBatchStream(table_schema_reader));
     } else {
       std::cout << "DUH" << std::endl;
-      RecordBatchStream* brs = new RecordBatchStream(reader);
+      // RecordBatchStream* brs = new RecordBatchStream(reader);
+      // std::shared_ptr<RecordBatch> rec;
+      // auto ret = reader->ReadNext(&rec);
+      // std::cout << rec->ToString() << std::endl;
+      // ret = reader->ReadNext(&rec);
+
       // // arrow::Result<FlightPayload> fff = brs->GetSchemaPayload();
       // // RecordBatchReader* rdr = new RecordBatchReader(brs);
       // auto table = reader->ToTable().ValueOrDie()->ToString();

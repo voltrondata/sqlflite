@@ -141,7 +141,7 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
     already_executed_ = true;
   }
 
-  std::cout << "SCHEMA: " << statement_->GetSchema().ValueOrDie()->ToString() << std::endl;
+  // std::cout << "SCHEMA: " << statement_->GetSchema().ValueOrDie()->ToString() << std::endl;
 
   // ARROW_ASSIGN_OR_RAISE(auto result, statement_->GetResult());
   // ARROW_ASSIGN_OR_RAISE(auto result_schema, statement_->GetSchema());
@@ -183,12 +183,14 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
     // if (test.status() == arrow::Status::OK()) {
     if(!results_read_) {
       // *out = test.ValueOrDie();
-      std::cout << "THERE'S ROWS" << std::endl;
+      // std::cout << "THERE'S ROWS" << std::endl;
       ARROW_ASSIGN_OR_RAISE(*out, statement_->GetResult());
       results_read_ = true;
 
-      // // // print the table
-      std::cout << "DATA: " << (*out)->ToString() << std::endl;
+      // // // // print the table
+      // std::cout << "DATA: " << (*out)->ToString() << std::endl;
+
+      std::cout << "META: " << schema_->ToString() << std::endl;
 
     } else {
       std::cout << "NO DATA" << std::endl;
