@@ -206,7 +206,7 @@ arrow::Result<int> DuckDBStatement::Execute() {
   // std::cout << "POOF" << std::endl;
   QueryResult::ToArrowSchema(&res_schema, res->types, res->names);
 
-  ARROW_ASSIGN_OR_RAISE(auto schema_, arrow::ImportSchema(&res_schema));
+  ARROW_ASSIGN_OR_RAISE(schema_, arrow::ImportSchema(&res_schema));
   // schema_ = std::make_shared<ArrowSchema>(res_schema);
 
   // std::cout << "SCHEMA: " << schema_->ToString() << std::endl;

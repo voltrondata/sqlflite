@@ -141,6 +141,8 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
     already_executed_ = true;
   }
 
+  std::cout << "SCHEMA: " << statement_->GetSchema().ValueOrDie()->ToString() << std::endl;
+
   // ARROW_ASSIGN_OR_RAISE(auto result, statement_->GetResult());
   // ARROW_ASSIGN_OR_RAISE(auto result_schema, statement_->GetSchema());
   // // int64_t cols = duckdb_arrow_column_count((duckdb_arrow*)&result);
