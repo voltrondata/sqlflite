@@ -23,11 +23,9 @@ set(ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS
 
 set(ARROW_FLIGHT_DUCKDB_SQLITE_SERVER_SRCS
     src/duckdb/duckdb_sql_info.cpp
-    # src/duckdb/duckdb_type_info.cc
     src/duckdb/duckdb_statement.cpp
     src/duckdb/duckdb_statement_batch_reader.cpp
     src/duckdb/duckdb_server.cpp
-    src/duckdb/duckdb_tables_schema_batch_reader.cpp
 )
 
 add_executable(flight_sql 

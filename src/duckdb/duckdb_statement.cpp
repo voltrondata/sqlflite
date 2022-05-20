@@ -51,9 +51,8 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
     case duckdb::LogicalTypeId::DOUBLE:
       return float64();
     case duckdb::LogicalTypeId::CHAR:
-      return utf8();
     case duckdb::LogicalTypeId::VARCHAR:
-      return large_utf8();
+      return utf8(); 
     case duckdb::LogicalTypeId::BLOB:
       return binary();
     case duckdb::LogicalTypeId::TINYINT:
@@ -143,6 +142,7 @@ arrow::Result<std::shared_ptr<DuckDBStatement>> DuckDBStatement::Create(
     std::shared_ptr<duckdb::Connection> con, const std::string& sql) {
   std::shared_ptr<duckdb::PreparedStatement> stmt = con->Prepare(sql);
   std::shared_ptr<DuckDBStatement> result(new DuckDBStatement(con, stmt));
+
   return result;
 }
 
@@ -193,7 +193,6 @@ DuckDBStatement::~DuckDBStatement() {
 }
 
 arrow::Result<int> DuckDBStatement::Execute() {
-  printf("Executing...\n");
   auto res = stmt_->Execute();
 
   ArrowArray res_arr;
@@ -204,14 +203,6 @@ arrow::Result<int> DuckDBStatement::Execute() {
   ARROW_ASSIGN_OR_RAISE(result_, arrow::ImportRecordBatch(&res_arr, &res_schema));
   schema_ = result_->schema();
 
-  // // std::cout << "POOF" << std::endl;
-  // QueryResult::ToArrowSchema(&res_schema, res->types, res->names);
-
-  // ARROW_ASSIGN_OR_RAISE(schema_, arrow::ImportSchema(&res_schema));
-  // // schema_ = std::make_shared<ArrowSchema>(res_schema);
-
-  // std::cout << "SCHEMA: " << schema_->ToString() << std::endl;
-
   return 0;
 }
 
@@ -220,58 +211,21 @@ arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::GetResult() {
 }
 
 arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
-  // return schema_;
-  // std::vector<std::shared_ptr<Field>> fields;
+  std::vector<std::shared_ptr<Field>> fields;
 
-  // int column_count = stmt_->ColumnCount();
-  // auto column_names = stmt_->GetNames();
-  // auto column_types = stmt_->GetTypes();
+  int column_count = stmt_->ColumnCount();
+  auto column_names = stmt_->GetNames();
+  auto column_types = stmt_->GetTypes();
 
-  // // int i = 0;
-  // // for (std::string nm : column_names) {
-  // //   std::cout << nm << ": " << column_types[i].ToString() << GetDataTypeFromDuckDbType(column_types[i].id(), column_types[i]) << std::endl;
-  // //   i++;
-  // // }
+  for (int i = 0; i < column_count; i++) {
+    std::string column_name = column_names[i];
+    std::shared_ptr<arrow::DataType> data_type = GetDataTypeFromDuckDbType(column_types[i].id(), column_types[i]);
+    ColumnMetadata column_metadata = ColumnMetadata::Builder().Build();
 
-  // for (int i = 0; i < column_count; i++) {
-  //   std::string column_name = column_names[i];
-  //   std::shared_ptr<arrow::DataType> data_type = GetDataTypeFromDuckDbType(column_types[i].id(), column_types[i]);
-  // //   const char* column_name = sqlite3_column_name(stmt_, i);
-
-  // //   // SQLite does not always provide column types, especially when the statement has not
-  // //   // been executed yet. Because of this behaviour this method tries to get the column
-  // //   // types in two attempts:
-  // //   // 1. Use sqlite3_column_type(), which return SQLITE_NULL if the statement has not
-  // //   //    been executed yet
-  // //   // 2. Use sqlite3_column_decltype(), which returns correctly if given column is
-  // //   //    declared in the table.
-  // //   // Because of this limitation, it is not possible to know the column types for some
-  // //   // prepared statements, in this case it returns a dense_union type covering any type
-  // //   // SQLite supports.
-  // //   const int column_type = sqlite3_column_type(stmt_, i);
-  // //   const char* table = sqlite3_column_table_name(stmt_, i);
-  // //   std::shared_ptr<DataType> data_type = GetDataTypeFromSqliteType(column_type);
-
-  // //   if (data_type->id() == Type::NA) {
-  // //     // Try to retrieve column type from sqlite3_column_decltype
-  // //     const char* column_decltype = sqlite3_column_decltype(stmt_, i);
-
-  // //     if (column_decltype != NULLPTR) {
-  // //       data_type = GetArrowType(column_decltype);
-  // //     } else {
-  // //       // If it can not determine the actual column type, return a dense_union type
-  // //       // covering any type SQLite supports.
-  // //       data_type = GetUnknownColumnDataType();
-  // //     }
-  // //   }
-  //   // ColumnMetadata column_metadata = GetColumnMetadata(column_type, table);
-
-  // //   fields.push_back(
-  // //       arrow::field(column_name, data_type, column_metadata.metadata_map()));
-  // }
-  // return arrow::schema(fields);
-
-  return schema_;
+    fields.push_back(
+        arrow::field(column_name, data_type, column_metadata.metadata_map()));
+  }
+  return arrow::schema(fields);
 }
 
 // arrow::Result<int> DuckDBStatement::Step() {
@@ -294,7 +248,7 @@ arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
 //   return rc;
 // }
 
-std::shared_ptr<duckdb::PreparedStatement> DuckDBStatement::GetDuckDBStmt() const { return stmt_; }
+// std::shared_ptr<duckdb::PreparedStatement> DuckDBStatement::GetDuckDBStmt() const { return stmt_; }
 
 // arrow::Result<int64_t> DuckDBStatement::ExecuteUpdate() {
 //   ARROW_RETURN_NOT_OK(Step());

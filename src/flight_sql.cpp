@@ -5,9 +5,6 @@
 #include <pthread.h>
 #include <filesystem>
 #include <vector>
-// #include <duckdb.h>
-
-// #include <arrow/api.h>
 #include <arrow/flight/client.h>
 #include <arrow/flight/sql/client.h>
 #include <arrow/flight/sql/server.h>
@@ -88,7 +85,7 @@ arrow::Status runQueries(
         ARROW_ASSIGN_OR_RAISE(auto flight_info, client->Execute(call_options, kQuery));
 
         if (flight_info != nullptr) {
-            printResults(flight_info, client, call_options);
+            ARROW_RETURN_NOT_OK(printResults(flight_info, client, call_options));
         }
     }
 
@@ -150,8 +147,8 @@ arrow::Status Main() {
     std::string db_path = "../data/TPC-H-small.duckdb";
     ARROW_ASSIGN_OR_RAISE(auto server, CreateServer("DuckDB", db_path));
 
-    // // std::string query_path = "../queries/sqlite";
-    // // std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
+    std::string query_path = "../queries/sqlite";
+    std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
     ARROW_ASSIGN_OR_RAISE(auto client, CreateClient());
 
     flight::FlightCallOptions call_options;
@@ -161,17 +158,7 @@ arrow::Status Main() {
         ARROW_RETURN_NOT_OK(printResults(tables, client, call_options));
     }
 
-    client->Execute(call_options, "SELECT * FROM LINEITEM LIMIT 10");
-
-    // runQueries(client, query_path, skip_queries, call_options);
-
-    // // std::shared_ptr<arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer> server;
-    // ARROW_ASSIGN_OR_RAISE(auto server,
-    //                         arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(
-    //                             db_path.c_str(),
-    //                             nullptr
-    //                         )
-    // );
+    ARROW_RETURN_NOT_OK(runQueries(client, query_path, skip_queries, call_options));
 
     return arrow::Status::OK();
 }
