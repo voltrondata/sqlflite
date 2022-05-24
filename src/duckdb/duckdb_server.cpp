@@ -109,7 +109,6 @@ class DuckDBFlightSqlServer::Impl {
 
   arrow::Result<std::unique_ptr<FlightDataStream>> DoGetStatement(
       const ServerCallContext& context, const StatementQueryTicket& command) {
-    std::cout << command.statement_handle << std::endl;
     const std::string& sql = command.statement_handle;
 
     ARROW_ASSIGN_OR_RAISE(auto statement, DuckDBStatement::Create(db_conn_, sql));

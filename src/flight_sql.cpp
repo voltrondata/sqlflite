@@ -25,7 +25,8 @@ int port = 31337;
 arrow::Status printResults(
     std::unique_ptr<flight::FlightInfo> &results, 
     std::unique_ptr<flightsql::FlightSqlClient> &client,
-    const flight::FlightCallOptions &call_options) {
+    const flight::FlightCallOptions &call_options,
+    const bool& print_results_flag) {
         // Fetch each partition sequentially (though this can be done in parallel)
         for (const flight::FlightEndpoint& endpoint : results->endpoints()) {
             // Here we assume each partition is on the same server we originally queried, but this
@@ -38,7 +39,8 @@ arrow::Status printResults(
             // Read all results into an Arrow Table, though we can iteratively process record
             // batches as they arrive as well
             ARROW_ASSIGN_OR_RAISE(auto table, stream->ToTable());
-            std::cout << table->ToString() << std::endl;
+
+            if(print_results_flag) std::cout << table->ToString() << std::endl;
         }
 
     return arrow::Status::OK();
@@ -70,11 +72,12 @@ arrow::Status runQueries(
         std::unique_ptr<flightsql::FlightSqlClient> &client, 
         const std::string &query_path, 
         const std::vector<int> &skip_queries, 
-        flight::FlightCallOptions &call_options
+        flight::FlightCallOptions &call_options,
+        const bool& print_results_flag
     ) {
     int skip_vector_it = 0;
     for (const auto & file : std::filesystem::directory_iterator(query_path)) {
-        std::cout << file.path() << std::endl;
+        std::cout << "Query: " << file.path() << std::endl;
         if (skip_vector_it < skip_queries.size()) {
             if (checkIfSkip(file.path(), skip_queries.at(skip_vector_it))) {
                 ++skip_vector_it;
@@ -83,11 +86,11 @@ arrow::Status runQueries(
         }
         std::string kQuery = readFileIntoString(file.path());
 
-        std::cout << "Executing query: '" << kQuery << "'" << std::endl;
+        if (print_results_flag) std::cout << "Executing query: '" << kQuery << "'" << std::endl;
         ARROW_ASSIGN_OR_RAISE(auto flight_info, client->Execute(call_options, kQuery));
 
         if (flight_info != nullptr) {
-            ARROW_RETURN_NOT_OK(printResults(flight_info, client, call_options));
+            ARROW_RETURN_NOT_OK(printResults(flight_info, client, call_options, print_results_flag));
         }
     }
 
@@ -145,21 +148,11 @@ arrow::Result<std::unique_ptr<flightsql::FlightSqlClient>> CreateClient() {
     return client;
 }
 
-arrow::Status Main(const std::string& backend) {
+arrow::Status Main(const std::string& backend, const bool& print_results_flag) {
     std::map<std::string, std::string> databases;
     databases["duckdb"] = "../data/TPC-H-small.duckdb";
     databases["sqlite"] = "../data/TPC-H-small.db";
 
-    // std::string db_path;
-    // switch (backend) {
-    //     case 'duckdb':
-    //         db_path = "../data/TPC-H-small.duckdb";
-    //         break;
-    //     case "sqlite":
-    //         db_path = "../data/TPC-H-small.db";
-    //         break;
-    // }
-    // std::string db_path = "../data/TPC-H-small.duckdb";
     ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(backend, databases[backend]));
 
     std::string query_path = "../queries";
@@ -169,13 +162,20 @@ arrow::Status Main(const std::string& backend) {
     flight::FlightCallOptions call_options;
     ARROW_ASSIGN_OR_RAISE(std::unique_ptr<flight::FlightInfo> tables, client->GetTables(call_options, NULL, NULL, NULL, NULL, NULL));
 
-    if (tables != nullptr) {
-        ARROW_RETURN_NOT_OK(printResults(tables, client, call_options));
+    if (tables != nullptr && print_results_flag) {
+        ARROW_RETURN_NOT_OK(printResults(tables, client, call_options, print_results_flag));
     }
 
-    ARROW_RETURN_NOT_OK(runQueries(client, query_path, skip_queries, call_options));
+    ARROW_RETURN_NOT_OK(runQueries(client, query_path, skip_queries, call_options, print_results_flag));
 
     return arrow::Status::OK();
+}
+
+bool string2bool(const std::string &v)
+{
+    return !v.empty () &&
+        (strcasecmp (v.c_str (), "true") == 0 ||
+         atoi (v.c_str ()) != 0);
 }
 
 int main(int argc, char** argv) {
@@ -185,6 +185,7 @@ int main(int argc, char** argv) {
     desc.add_options()
         ("help", "produce this help message")
         ("backend,B", po::value<std::string>()->default_value("duckdb"), "Specify the database backend. Allowed options: duckdb, sqlite.")
+        ("print", po::value<std::string>()->default_value("false"), "Print the results of running queries. Allowed options: false, true.")
     ;
 
     po::variables_map vm;
@@ -197,8 +198,9 @@ int main(int argc, char** argv) {
     }
 
     std::string backend = vm["backend"].as<std::string>();
+    bool print_results_flag = string2bool(vm["print"].as<std::string>());
 
-    auto status = Main(backend);
+    auto status = Main(backend, print_results_flag);
     if (!status.ok()) {
         std::cerr << status << std::endl;
         return 1;

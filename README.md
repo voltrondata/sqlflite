@@ -67,3 +67,24 @@ The above will produce the following:
 > Client created.
 > ...
 ```
+
+## Printing results of running query
+This example defaults to running the queries but does not print out
+the query itself nor does it print the results. To switch to printing
+results and queries set the `print` flag to `true`.
+
+```bash
+$ ./flight_sql --print true
+```
+
+## Print help
+To see all the available options run `./flight.sql --help`.
+
+```bash
+> Allowed options:
+>   --help                         produce this help message
+>   -B [ --backend ] arg (=duckdb) Specify the database backend. Allowed options:
+>                                  duckdb, sqlite.
+>   --print arg (=false)           Print the results of running queries. Allowed 
+>                                  options: false, true.
+```
