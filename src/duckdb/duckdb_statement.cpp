@@ -119,11 +119,11 @@ DuckDBStatement::~DuckDBStatement() {
 
 arrow::Result<int> DuckDBStatement::Execute() {
   auto res = stmt_->Execute();
+  auto timezone_config = QueryResult::GetConfigTimezone(*res);
 
   ArrowArray res_arr;
   ArrowSchema res_schema;
-  
-  QueryResult::ToArrowSchema(&res_schema, res->types, res->names);
+  QueryResult::ToArrowSchema(&res_schema, res->types, res->names, timezone_config);
   res->Fetch()->ToArrowArray(&res_arr);
   ARROW_ASSIGN_OR_RAISE(result_, arrow::ImportRecordBatch(&res_arr, &res_schema));
   schema_ = result_->schema();

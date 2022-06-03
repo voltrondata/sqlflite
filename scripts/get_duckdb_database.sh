@@ -1,9 +1,17 @@
-#/bin/bash
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+# Ensure that CONDA_PREFIX is set
+echo "Environment variable: CONDA_PREFIX=${CONDA_PREFIX:?is not set - aborting!}"
+
 TEMP_DIR="../temp"
 
 # check if temp directory exists
 if [ ! -d "$TEMP_DIR" ]; then
     echo "$TEMP_DIR doesn't exist. Creating."
+    mkdir "$TEMP_DIR"
 fi
 
 # move the database to temp
