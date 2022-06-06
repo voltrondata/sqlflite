@@ -1,9 +1,18 @@
 #!/bin/bash
+
+set -e
+set -o pipefail
+
+# Ensure that CONDA_PREFIX is set
+echo "Environment variable: CONDA_PREFIX=${CONDA_PREFIX:?is not set - aborting!}"
+echo "Environment variable: DUCKDB_COMMIT_HASH=${DUCKDB_COMMIT_HASH:-e9957d10ff11d32feb78f1601109a3c8a9f0578f}"
+
 TEMP_DIR="../temp"
 
 # check if temp directory exists
 if [ ! -d "$TEMP_DIR" ]; then
     echo "$TEMP_DIR doesn't exist. Creating."
+    mkdir "$TEMP_DIR"
 fi
 
 # clone the repository
@@ -15,6 +24,7 @@ fi
 
 cd duckdb
 if [ ! -d "build/release" ]; then
+    git reset --hard ${DUCKDB_COMMIT_HASH}
     echo "Building DuckDB"
     make
 fi

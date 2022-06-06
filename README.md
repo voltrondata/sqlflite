@@ -39,6 +39,25 @@ $ cmake .. -GNinja -DCMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/cmake/arrow
 $ ninja && ./flight_sql
 ```
 
+## Docker
+You can build a Docker container which performs all of the setup steps above.   
+
+### To build on an x86-based machine:
+```bash
+docker build . --build-arg BUILD_PLATFORM="linux/amd64" --tag=flight_sql_amd64:latest
+
+# Then run the container with:
+docker run -it flight_sql_amd64:latest
+```
+
+### To build on an M1 (ARM)-based Mac:
+```bash
+docker build . --build-arg BUILD_PLATFORM="linux/arm64" --tag=flight_sql_arm64:latest
+
+# Then run the container with:
+docker run -it flight_sql_arm64:latest
+```
+
 ## Selecting different backends
 This example allows chosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
