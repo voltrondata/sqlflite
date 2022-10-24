@@ -15,13 +15,13 @@ $
 ```
 4. Build and install Arrow
 ```bash
-$ cd scripts && ./install_arrow.sh
+$ cd scripts && ./build_arrow.sh
 ```
 7. Build and install `duckdb`. This is sometimes necessary as conda `compilers` 
 seem to be including incompatible GlibC library with the compiled binaries
 of `duckdb`.
 ```bash
-$ ./install_duckdb.sh
+$ ./build_duckdb.sh
 ```
 6. Get the data.
 ```bash
