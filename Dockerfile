@@ -9,7 +9,10 @@ RUN apt-get update && \
     cmake \
     wget \
     gcc \
-    git && \
+    git \
+    ninja-build \
+    libboost-all-dev \
+    vim && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -48,18 +51,19 @@ RUN mkdir data && \
     wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O data/TPC-H-small.db
 
 # Install requirements
-RUN pip install --requirement ./requirements.txt
+RUN . ~/.bashrc && \
+    pip install --requirement ./requirements.txt
 
 # Create duckdb database
 RUN . ~/.bashrc && \
     scripts/get_duckdb_database.sh
 
-# Build the example
-WORKDIR ${APP_DIR}
+## Build the example
+#WORKDIR ${APP_DIR}
 #RUN . ~/.bashrc && \
 #    mkdir build && \
 #    cd build && \
-#    cmake .. -GNinja -DCMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/cmake/arrow && \
+#    cmake .. -GNinja -DCMAKE_PREFIX_PATH=/opt/flight_sql/dist/lib/cmake && \
 #    ninja
 #
 #WORKDIR ${APP_DIR}/build

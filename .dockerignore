@@ -2,3 +2,4 @@ Dockerfile*
 .idea
 .git
 .gitignore
+docker_build_and_push.sh

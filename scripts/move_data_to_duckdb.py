@@ -3,8 +3,8 @@ import sqlite3
 import duckdb
 
 # establish all connections to databases
-con = sqlite3.connect('TPC-H-small.db')
-con_duck = duckdb.connect(database='TPC-H-small.duckdb', read_only=False)
+con = sqlite3.connect('data/TPC-H-small.db')
+con_duck = duckdb.connect(database='data/TPC-H-small.duckdb', read_only=False)
 
 cur = con.cursor()
 

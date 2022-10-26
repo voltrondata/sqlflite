@@ -17,7 +17,15 @@ if [ ! -d "build/release" ]; then
 fi
 popd
 
-# Install the python library from source
+# Build the python library from source
 pushd duckdb/tools/pythonpkg
 python setup.py install
+popd
+
+# Copy DuckDB shared libraries/headers to /usr/local
+pushd duckdb
+cp build/release/src/libduckdb.so /usr/local/lib/
+cp src/include/duckdb.h /usr/local/include/
+cp src/include/duckdb.hpp /usr/local/include/
+cp -R src/include/duckdb /usr/local/include/
 popd
