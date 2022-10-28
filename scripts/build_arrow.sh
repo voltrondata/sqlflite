@@ -3,7 +3,10 @@
 set -e
 set -o pipefail
 
-echo "Environment variable: ARROW_VERSION=${ARROW_VERSION:-"apache-arrow-10.0.0"}"
+ARROW_VERSION=${ARROW_VERSION:-"apache-arrow-10.0.0"}
+echo "Variable: ARROW_VERSION=${ARROW_VERSION}"
+
+rm -rf arrow
 
 # clone the repository
 if [ ! -d "arrow" ]; then
@@ -16,6 +19,7 @@ git submodule update --init
 popd
 
 pip install -r arrow/python/requirements-build.txt
+rm -rf dist
 mkdir dist
 export ARROW_HOME=$(pwd)/dist
 export LD_LIBRARY_PATH=${ARROW_HOME}/lib:$LD_LIBRARY_PATH
@@ -27,8 +31,16 @@ echo "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> ~/.bashrc
 #----------------------------------------------------------------------
 # Build C++ library
 
-mkdir arrow/cpp/build
-pushd arrow/cpp/build
+pushd arrow/cpp
+
+# Do some Mac stuff if needed...
+OS=$(uname)
+if [ "${OS}" == "Darwin" ]; then
+  echo "Running Mac-specific setup steps..."
+  brew update && brew bundle --file=Brewfile
+  export MACOSX_DEPLOYMENT_TARGET="12.0"
+fi
+
 cmake -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DCMAKE_BUILD_TYPE=Debug \
@@ -49,7 +61,8 @@ cmake -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
         -DARROW_WITH_ZLIB=ON \
         -DARROW_WITH_ZSTD=ON \
         -DPARQUET_REQUIRE_ENCRYPTION=ON \
-        ..
+        -DGTest_SOURCE=BUNDLED
+
 make -j4
 make install
 popd
@@ -66,3 +79,9 @@ export PYARROW_WITH_DATASET=1
 export PYARROW_PARALLEL=4
 python setup.py develop
 popd
+
+# Do some more Mac stuff if needed...
+if [ "${OS}" == "Darwin" ]; then
+  echo "Running Mac-specific PyArrow steps..."
+  cp $ARROW_HOME/lib/*.* /usr/local/lib
+fi

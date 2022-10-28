@@ -3,7 +3,8 @@
 set -e
 set -o pipefail
 
-echo "Environment variable: DUCKDB_VERSION=${DUCKDB_VERSION:-"v0.5.1"}"
+DUCKDB_VERSION=${DUCKDB_VERSION:-"v0.5.1"}
+echo "Variable: DUCKDB_VERSION=${DUCKDB_VERSION}"
 
 if [ ! -d "duckdb" ]; then
     echo "Cloning DuckDB."
@@ -24,7 +25,7 @@ popd
 
 # Copy DuckDB shared libraries/headers to /usr/local
 pushd duckdb
-cp build/release/src/libduckdb.so /usr/local/lib/
+cp build/release/src/libduckdb* /usr/local/lib/
 cp src/include/duckdb.h /usr/local/include/
 cp src/include/duckdb.hpp /usr/local/include/
 cp -R src/include/duckdb /usr/local/include/

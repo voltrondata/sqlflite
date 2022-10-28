@@ -18,3 +18,8 @@ CMakeFiles
 .vscode
 
 .idea
+
+venv
+dist
+arrow
+duckdb

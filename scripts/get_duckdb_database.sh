@@ -3,6 +3,8 @@
 set -e
 set -o pipefail
 
+mkdir -p data
+
 pushd data
 # check if duckdb database already exists
 if [ -f "TPC-H-small.duckdb" ]; then

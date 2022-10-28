@@ -3,15 +3,17 @@ project(flight_sql)
 
 set(CMAKE_CXX_STANDARD 17)
 
+list(APPEND CMAKE_PREFIX_PATH dist/lib/cmake)
+
 find_package(Threads REQUIRED)
-find_package(Arrow REQUIRED)
+find_package(Arrow REQUIRED PATHS)
 find_package(ArrowFlight REQUIRED)
 find_package(ArrowFlightSql REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(Boost COMPONENTS program_options REQUIRED)
 
 # find duckDB
-find_library(DUCKDB_LIB NAMES duckdb PATHS $ENV{CONDA_PREFIX}/lib/)
+find_library(DUCKDB_LIB NAMES duckdb PATHS /usr/local/lib/)
 set(DUCKDB ${DUCKDB_LIB})
 
 set(ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS
@@ -35,7 +37,7 @@ add_executable(flight_sql
     ${ARROW_FLIGHT_DUCKDB_SQLITE_SERVER_SRCS}
 )
 
-target_include_directories(flight_sql PRIVATE src/sqlite src/duckdb)
+target_include_directories(flight_sql PRIVATE src/sqlite src/duckdb /usr/local/include)
 # target_include_directories(flight_sql PRIVATE src/duckdb)
 target_link_libraries(flight_sql PRIVATE 
 		      arrow_shared

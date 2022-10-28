@@ -63,7 +63,7 @@ RUN . ~/.bashrc && \
 #RUN . ~/.bashrc && \
 #    mkdir build && \
 #    cd build && \
-#    cmake .. -GNinja -DCMAKE_PREFIX_PATH=/opt/flight_sql/dist/lib/cmake && \
+#    cmake .. -GNinja -DCMAKE_PREFIX_PATH=$ARROW_HOME/lib/cmake && \
 #    ninja
 #
 #WORKDIR ${APP_DIR}/build
