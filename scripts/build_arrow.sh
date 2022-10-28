@@ -41,7 +41,7 @@ if [ "${OS}" == "Darwin" ]; then
   export MACOSX_DEPLOYMENT_TARGET="12.0"
 fi
 
-cmake -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
+cmake -GNinja -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DCMAKE_BUILD_TYPE=Debug \
         -DARROW_BUILD_TESTS=ON \
@@ -63,8 +63,7 @@ cmake -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
         -DPARQUET_REQUIRE_ENCRYPTION=ON \
         -DGTest_SOURCE=BUNDLED
 
-make -j4
-make install
+ninja install
 popd
 
 #----------------------------------------------------------------------

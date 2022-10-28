@@ -58,12 +58,12 @@ RUN . ~/.bashrc && \
 RUN . ~/.bashrc && \
     scripts/get_duckdb_database.sh
 
-## Build the example
-#WORKDIR ${APP_DIR}
-#RUN . ~/.bashrc && \
-#    mkdir build && \
-#    cd build && \
-#    cmake .. -GNinja -DCMAKE_PREFIX_PATH=$ARROW_HOME/lib/cmake && \
-#    ninja
-#
-#WORKDIR ${APP_DIR}/build
+# Build the example
+WORKDIR ${APP_DIR}
+RUN . ~/.bashrc && \
+    mkdir build && \
+    cd build && \
+    cmake .. -GNinja -DCMAKE_PREFIX_PATH=$ARROW_HOME/lib/cmake && \
+    ninja
+
+WORKDIR ${APP_DIR}/build

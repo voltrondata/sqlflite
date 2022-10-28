@@ -3,3 +3,9 @@ Dockerfile*
 .git
 .gitignore
 docker_build_and_push.sh
+cmake-build-debug
+build
+data
+dist
+duckdb
+arrow
