@@ -18,11 +18,11 @@
 #include "sqlite_statement.h"
 
 #include <sqlite3.h>
-#include <iostream>
 
+#define BOOST_NO_CXX98_FUNCTION_BASE  // ARROW-17805
 #include <boost/algorithm/string.hpp>
 
-#include <arrow/flight/sql/column_metadata.h>
+#include "arrow/flight/sql/column_metadata.h"
 #include "sqlite_server.h"
 
 namespace arrow {
@@ -62,7 +62,6 @@ ColumnMetadata GetColumnMetadata(int column_type, const char* table) {
   ColumnMetadata::ColumnMetadataBuilder builder = ColumnMetadata::Builder();
 
   builder.Scale(15).IsAutoIncrement(false).IsReadOnly(false);
-
   if (table == NULLPTR) {
     return builder.Build();
   } else if (column_type == SQLITE_TEXT || column_type == SQLITE_BLOB) {
@@ -99,9 +98,7 @@ arrow::Result<std::shared_ptr<SqliteStatement>> SqliteStatement::Create(
 
 arrow::Result<std::shared_ptr<Schema>> SqliteStatement::GetSchema() const {
   std::vector<std::shared_ptr<Field>> fields;
-
   int column_count = sqlite3_column_count(stmt_);
-
   for (int i = 0; i < column_count; i++) {
     const char* column_name = sqlite3_column_name(stmt_, i);
 
@@ -118,11 +115,9 @@ arrow::Result<std::shared_ptr<Schema>> SqliteStatement::GetSchema() const {
     const int column_type = sqlite3_column_type(stmt_, i);
     const char* table = sqlite3_column_table_name(stmt_, i);
     std::shared_ptr<DataType> data_type = GetDataTypeFromSqliteType(column_type);
-
     if (data_type->id() == Type::NA) {
       // Try to retrieve column type from sqlite3_column_decltype
       const char* column_decltype = sqlite3_column_decltype(stmt_, i);
-
       if (column_decltype != NULLPTR) {
         data_type = GetArrowType(column_decltype);
       } else {
@@ -136,6 +131,7 @@ arrow::Result<std::shared_ptr<Schema>> SqliteStatement::GetSchema() const {
     fields.push_back(
         arrow::field(column_name, data_type, column_metadata.metadata_map()));
   }
+
   return arrow::schema(fields);
 }
 

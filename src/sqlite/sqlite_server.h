@@ -22,11 +22,10 @@
 #include <memory>
 #include <string>
 
-#include <arrow/api.h>
-#include <arrow/flight/sql/server.h>
-
+#include "arrow/api.h"
 #include "sqlite_statement.h"
 #include "sqlite_statement_batch_reader.h"
+#include "arrow/flight/sql/server.h"
 
 namespace arrow {
 namespace flight {
@@ -141,6 +140,12 @@ class SQLiteFlightSqlServer : public FlightSqlServerBase {
 
   arrow::Result<std::unique_ptr<FlightDataStream>> DoGetPrimaryKeys(
       const ServerCallContext& context, const GetPrimaryKeys& command) override;
+
+  arrow::Result<ActionBeginTransactionResult> BeginTransaction(
+      const ServerCallContext& context,
+      const ActionBeginTransactionRequest& request) override;
+  Status EndTransaction(const ServerCallContext& context,
+                        const ActionEndTransactionRequest& request) override;
 
  private:
   class Impl;

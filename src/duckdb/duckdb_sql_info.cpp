@@ -33,7 +33,7 @@ SqlInfoResultMap GetSqlInfoResultMap() {
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_VERSION,
        SqlInfoResult(std::string("duckdb"))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_ARROW_VERSION,
-       SqlInfoResult(std::string("8.0.0-SNAPSHOT" /* Only an example */))},
+       SqlInfoResult(std::string("8.0.0-SNAPSHOT" /* Only an sqlite */))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_READ_ONLY, SqlInfoResult(false)},
       {SqlInfoOptions::SqlInfo::SQL_DDL_CATALOG,
        SqlInfoResult(false)},

@@ -21,12 +21,12 @@
 
 #include <sstream>
 
-#include <arrow/flight/sql/column_metadata.h>
-#include <arrow/flight/sql/server.h>
-#include <arrow/ipc/writer.h>
-#include <arrow/record_batch.h>
+#include "arrow/flight/sql/column_metadata.h"
 #include "sqlite_server.h"
 #include "sqlite_statement.h"
+#include "arrow/flight/sql/server.h"
+#include "arrow/ipc/writer.h"
+#include "arrow/record_batch.h"
 
 namespace arrow {
 namespace flight {
@@ -44,9 +44,9 @@ Status SqliteTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>*
       << "SELECT table_name, name, type, [notnull] FROM pragma_table_info(table_name)"
       << "JOIN(" << main_query_ << ") order by table_name";
 
-  std::shared_ptr<SqliteStatement> schema_statement;
+  std::shared_ptr<sqlite::SqliteStatement> schema_statement;
   ARROW_ASSIGN_OR_RAISE(schema_statement,
-                        SqliteStatement::Create(db_, schema_query.str()))
+                        sqlite::SqliteStatement::Create(db_, schema_query.str()))
 
   std::shared_ptr<RecordBatch> first_batch;
 
@@ -92,8 +92,7 @@ Status SqliteTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>*
     ARROW_ASSIGN_OR_RAISE(schema_buffer, value);
 
     column_fields.clear();
-    ARROW_RETURN_NOT_OK(
-        schema_builder.Append(schema_buffer->data(), schema_buffer->size()));
+    ARROW_RETURN_NOT_OK(schema_builder.Append(::std::string_view(*schema_buffer)));
   }
 
   std::shared_ptr<Array> schema_array;

@@ -22,10 +22,9 @@
 #include <memory>
 #include <string>
 
-#include <arrow/record_batch.h>
-
 #include "sqlite_statement.h"
 #include "sqlite_statement_batch_reader.h"
+#include "arrow/record_batch.h"
 
 namespace arrow {
 namespace flight {
@@ -34,7 +33,7 @@ namespace sqlite {
 
 class SqliteTablesWithSchemaBatchReader : public RecordBatchReader {
  private:
-  std::shared_ptr<SqliteStatementBatchReader> reader_;
+  std::shared_ptr<sqlite::SqliteStatementBatchReader> reader_;
   std::string main_query_;
   sqlite3* db_;
 
@@ -44,8 +43,8 @@ class SqliteTablesWithSchemaBatchReader : public RecordBatchReader {
   /// \param main_query  SQL query that originated reader's data.
   /// \param db     a pointer to the sqlite3 db.
   SqliteTablesWithSchemaBatchReader(
-      std::shared_ptr<SqliteStatementBatchReader> reader, std::string main_query,
-      sqlite3* db)
+          std::shared_ptr<sqlite::SqliteStatementBatchReader> reader, std::string main_query,
+          sqlite3* db)
       : reader_(std::move(reader)), main_query_(std::move(main_query)), db_(db) {}
 
   std::shared_ptr<Schema> schema() const override;

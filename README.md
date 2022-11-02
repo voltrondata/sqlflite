@@ -1,8 +1,8 @@
-# Arrow FlightSQL example
+# Arrow FlightSQL sqlite
 
 ## Setup
 
-In order to run this example you need to set up a new environment on your machine. 
+In order to run this sqlite you need to set up a new environment on your machine. 
 Follow these steps to do so (thanks to David Li!).
 
 1. Make sure you have [miniconda](https://docs.conda.io/en/latest/miniconda.html) installed on your machine. 
@@ -32,7 +32,7 @@ $ wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small
 ```bash
 $ ./get_duckdb_database.sh
 ```
-9. Build the example.
+9. Build the sqlite.
 ```bash
 $ mkdir build && cd build
 $ cmake .. -GNinja -DCMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/cmake/arrow
@@ -59,7 +59,7 @@ docker run -it flight_sql_arm64:latest
 ```
 
 ## Selecting different backends
-This example allows chosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
+This sqlite allows chosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
 $ ./flight_sql
@@ -88,7 +88,7 @@ The above will produce the following:
 ```
 
 ## Printing results of running query
-This example defaults to running the queries but does not print out
+This sqlite defaults to running the queries but does not print out
 the query itself nor does it print the results. To switch to printing
 results and queries set the `print` flag to `true`.
 

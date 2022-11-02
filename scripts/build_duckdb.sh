@@ -12,6 +12,7 @@ if [ ! -d "duckdb" ]; then
 fi
 
 pushd duckdb
+rm -rf .git
 if [ ! -d "build/release" ]; then
     echo "Building DuckDB"
     make

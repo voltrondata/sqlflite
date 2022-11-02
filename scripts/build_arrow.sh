@@ -16,6 +16,7 @@ fi
 
 pushd arrow
 git submodule update --init
+rm -rf .git
 popd
 
 pip install -r arrow/python/requirements-build.txt
