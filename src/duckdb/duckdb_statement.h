@@ -30,6 +30,10 @@ namespace flight {
 namespace sql {
 namespace duckdbflight {
 
+std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
+        const duckdb::LogicalType duckdb_type
+);
+
 /// \brief Create an object ColumnMetadata using the column type and
 ///        table name.
 /// \param column_type  The DuckDB type.
@@ -55,6 +59,8 @@ class DuckDBStatement {
   arrow::Result<int> Execute();
   arrow::Result<std::shared_ptr<RecordBatch>> GetResult();
   // arrow::Result<std::shared_ptr<Schema>> GetArrowSchema();
+
+  std::shared_ptr<duckdb::PreparedStatement> GetDuckDBStmt() const;
 
  private:
   std::shared_ptr<duckdb::Connection> con_;

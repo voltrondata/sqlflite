@@ -55,7 +55,27 @@ class DuckDBFlightSqlServer : public FlightSqlServerBase {
   arrow::Result<std::unique_ptr<FlightDataStream>> DoGetStatement(
       const ServerCallContext& context, const StatementQueryTicket& command) override;
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoTables(
+  arrow::Result<ActionCreatePreparedStatementResult> CreatePreparedStatement(
+      const ServerCallContext& context,
+      const ActionCreatePreparedStatementRequest& request) override;
+   Status ClosePreparedStatement(
+      const ServerCallContext& context,
+      const ActionClosePreparedStatementRequest& request) override;
+
+    arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoPreparedStatement(
+            const ServerCallContext& context, const PreparedStatementQuery& command,
+            const FlightDescriptor& descriptor) override;
+    arrow::Result<std::unique_ptr<FlightDataStream>> DoGetPreparedStatement(
+            const ServerCallContext& context, const PreparedStatementQuery& command) override;
+    Status DoPutPreparedStatementQuery(const ServerCallContext& context,
+                                       const PreparedStatementQuery& command,
+                                       FlightMessageReader* reader,
+                                       FlightMetadataWriter* writer) override;
+//    arrow::Result<int64_t> DoPutPreparedStatementUpdate(
+//            const ServerCallContext& context, const PreparedStatementUpdate& command,
+//            FlightMessageReader* reader) override;
+//
+    arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoTables(
       const ServerCallContext& context, const GetTables& command,
       const FlightDescriptor& descriptor) override;
 

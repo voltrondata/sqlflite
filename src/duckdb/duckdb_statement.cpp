@@ -35,16 +35,16 @@ namespace sql {
 namespace duckdbflight {
 
 std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
-  const duckdb::LogicalTypeId column_type,
-  const duckdb::LogicalType column
+  const duckdb::LogicalType duckdb_type
 ) {
-  switch (column_type) {
-    case duckdb::LogicalTypeId::INTEGER:
+  const duckdb::LogicalTypeId column_type_id = duckdb_type.id();
+  switch (column_type_id) {
+      case duckdb::LogicalTypeId::INTEGER:
       return int32();
     case duckdb::LogicalTypeId::DECIMAL: {
         uint8_t width = 0;
         uint8_t scale = 0;
-        bool dec_properties = column.GetDecimalProperties(width, scale);
+        bool dec_properties = duckdb_type.GetDecimalProperties(width, scale);
         return decimal(scale, width);
       }
     case duckdb::LogicalTypeId::FLOAT:
@@ -137,6 +137,10 @@ arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::GetResult() {
   return result_;
 }
 
+std::shared_ptr<duckdb::PreparedStatement> DuckDBStatement::GetDuckDBStmt() const {
+  return stmt_;
+}
+
 arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
   std::vector<std::shared_ptr<Field>> fields;
 
@@ -146,7 +150,7 @@ arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
 
   for (int i = 0; i < column_count; i++) {
     std::string column_name = column_names[i];
-    std::shared_ptr<arrow::DataType> data_type = GetDataTypeFromDuckDbType(column_types[i].id(), column_types[i]);
+    std::shared_ptr<arrow::DataType> data_type = GetDataTypeFromDuckDbType(column_types[i]);
     ColumnMetadata column_metadata = ColumnMetadata::Builder().Build();
 
     fields.push_back(
