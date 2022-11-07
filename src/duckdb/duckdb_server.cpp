@@ -213,8 +213,6 @@ class DuckDBFlightSqlServer::Impl {
     return std::unique_ptr<FlightDataStream>(new RecordBatchStream(reader));
   }
 
-// Begin new stuff
-
     arrow::Result<ActionCreatePreparedStatementResult> CreatePreparedStatement(
             const ServerCallContext& context,
             const ActionCreatePreparedStatementRequest& request) {
@@ -235,7 +233,7 @@ class DuckDBFlightSqlServer::Impl {
 
         for (idx_t i = 0; i < parameter_count; i++) {
             std::string parameter_name = std::string("parameter_") + std::to_string(i + 1);
-            auto parameter_duckdb_type = parameter_data->GetType(i);
+            auto parameter_duckdb_type = parameter_data->GetType(i+1);
             auto parameter_arrow_type = GetDataTypeFromDuckDbType(parameter_duckdb_type);
             parameter_fields.push_back(field(parameter_name, parameter_arrow_type));
         }
@@ -313,21 +311,19 @@ class DuckDBFlightSqlServer::Impl {
         return Status::OK();
     }
 
-//    arrow::Result<int64_t> DoPutPreparedStatementUpdate(
-//            const ServerCallContext& context, const PreparedStatementUpdate& command,
-//            FlightMessageReader* reader) {
-//        const std::string& prepared_statement_handle = command.prepared_statement_handle;
-//        ARROW_ASSIGN_OR_RAISE(
-//                auto statement,
-//                GetStatementByHandle(prepared_statements_, prepared_statement_handle));
-//
-//        sqlite3_stmt* stmt = statement->GetSqlite3Stmt();
-//        ARROW_RETURN_NOT_OK(SetParametersOnSQLiteStatement(stmt, reader));
-//
-//        return statement->ExecuteUpdate();
-//    }
+    arrow::Result<int64_t> DoPutPreparedStatementUpdate(
+            const ServerCallContext& context, const PreparedStatementUpdate& command,
+            FlightMessageReader* reader) {
+        const std::string& prepared_statement_handle = command.prepared_statement_handle;
+        ARROW_ASSIGN_OR_RAISE(
+                auto statement,
+                GetStatementByHandle(prepared_statement_handle));
 
-// End new stuff
+        std::shared_ptr<duckdb::PreparedStatement> stmt = statement->GetDuckDBStmt();
+        ARROW_RETURN_NOT_OK(SetParametersOnDuckDBStatement(stmt, reader));
+
+        return statement->ExecuteUpdate();
+    }
 
     arrow::Result<std::unique_ptr<FlightDataStream>> DoGetTables(
       const ServerCallContext& context, const GetTables& command) {
@@ -439,6 +435,13 @@ Status DuckDBFlightSqlServer::DoPutPreparedStatementQuery(
         FlightMessageReader* reader, FlightMetadataWriter* writer) {
     return impl_->DoPutPreparedStatementQuery(context, command, reader, writer);
 }
+
+arrow::Result<int64_t> DuckDBFlightSqlServer::DoPutPreparedStatementUpdate(
+        const ServerCallContext& context, const PreparedStatementUpdate& command,
+        FlightMessageReader* reader) {
+    return impl_->DoPutPreparedStatementUpdate(context, command, reader);
+}
+
 
 }  // namespace sqlite
 }  // namespace sql

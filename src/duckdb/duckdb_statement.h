@@ -62,6 +62,10 @@ class DuckDBStatement {
 
   std::shared_ptr<duckdb::PreparedStatement> GetDuckDBStmt() const;
 
+  /// \brief Executes an UPDATE, INSERT or DELETE statement.
+  /// \return              The number of rows changed by execution.
+  arrow::Result<int64_t> ExecuteUpdate();
+
  private:
   std::shared_ptr<duckdb::Connection> con_;
   std::shared_ptr<duckdb::PreparedStatement> stmt_;

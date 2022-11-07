@@ -71,10 +71,10 @@ class DuckDBFlightSqlServer : public FlightSqlServerBase {
                                        const PreparedStatementQuery& command,
                                        FlightMessageReader* reader,
                                        FlightMetadataWriter* writer) override;
-//    arrow::Result<int64_t> DoPutPreparedStatementUpdate(
-//            const ServerCallContext& context, const PreparedStatementUpdate& command,
-//            FlightMessageReader* reader) override;
-//
+    arrow::Result<int64_t> DoPutPreparedStatementUpdate(
+            const ServerCallContext& context, const PreparedStatementUpdate& command,
+            FlightMessageReader* reader) override;
+
     arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoTables(
       const ServerCallContext& context, const GetTables& command,
       const FlightDescriptor& descriptor) override;
