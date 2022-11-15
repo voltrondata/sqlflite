@@ -16,6 +16,7 @@ fi
 
 pushd arrow
 git submodule update --init
+export ARROW_TEST_DATA="${PWD}/testing/data"
 rm -rf .git
 popd
 
@@ -28,6 +29,7 @@ export LD_LIBRARY_PATH=${ARROW_HOME}/lib:$LD_LIBRARY_PATH
 # Add exports to the .bashrc for future sessions
 echo "export ARROW_HOME=${ARROW_HOME}" >> ~/.bashrc
 echo "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> ~/.bashrc
+echo "export ARROW_TEST_DATA=${ARROW_TEST_DATA}" >> ~/.bashrc
 
 #----------------------------------------------------------------------
 # Build C++ library

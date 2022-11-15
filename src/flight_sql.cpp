@@ -15,6 +15,8 @@
 
 #include "sqlite/sqlite_server.h"
 #include "duckdb/duckdb_server.h"
+#include "FlightAuthHandler.h"
+
 
 namespace flight = arrow::flight;
 namespace flightsql = arrow::flight::sql;
@@ -97,6 +99,9 @@ arrow::Status runQueries(
     return arrow::Status::OK();
 }
 
+
+
+
 arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateServer(
         const std::string &db_type, 
         const std::string &db_path
@@ -104,6 +109,15 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     ARROW_ASSIGN_OR_RAISE(auto location,
                         arrow::flight::Location::ForGrpcTcp("0.0.0.0", port));
     arrow::flight::FlightServerOptions options(location);
+
+    auto header_middleware = std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>();
+    auto bearer_middleware = std::make_shared<arrow::flight::BearerAuthServerMiddlewareFactory>();
+
+    options.auth_handler = std::make_unique<arrow::flight::NoOpAuthHandler>();
+    options.middleware.push_back({"header-auth-server", header_middleware});
+    options.middleware.push_back({"bearer-auth-server", bearer_middleware});
+
+    //auto cert_status = arrow::flight::ExampleTlsCertificates(&options.tls_certificates);
 
     std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server = nullptr;
 
