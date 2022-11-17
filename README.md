@@ -2,41 +2,47 @@
 
 ## Setup
 
-In order to run this sqlite you need to set up a new environment on your machine. 
+In order to run this SQLite and DuckDB Flight SQL server, you need to set up a new Python 3.8+ virtual environment on your machine. 
 Follow these steps to do so (thanks to David Li!).
 
-1. Make sure you have [miniconda](https://docs.conda.io/en/latest/miniconda.html) installed on your machine. 
-2. Install Mamba: `conda install -c conda-forge mamba`.
-3. Now, create a new dev environment
+1. Ensure you have Python 3.8+ installed, then create a virtual environment from the root of this repo
 ```bash
-$ mamba create -n flight-sql -c conda-forge python=3.9
-$ conda activate flight-sql
-$ 
+python -m venv ./venv
 ```
-4. Build and install Arrow
+
+2. Build and install Arrow
 ```bash
-$ cd scripts && ./build_arrow.sh
+scripts/build_arrow.sh
 ```
-7. Build and install `duckdb`. This is sometimes necessary as conda `compilers` 
+
+3. Build and install `duckdb`. This is sometimes necessary as conda `compilers` 
 seem to be including incompatible GlibC library with the compiled binaries
 of `duckdb`.
 ```bash
-$ ./build_duckdb.sh
+scripts/build_duckdb.sh
 ```
-6. Get the data.
+
+4. Get the data.
 ```bash
-$ mkdir ../data
-$ wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O ../data/TPC-H-small.db
+mkdir data
+wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O ./data/TPC-H-small.db
 ```
-7. Create duckdb database.
+
+5. Create duckdb database.
 ```bash
-$ ./get_duckdb_database.sh
+pushd scripts
+get_duckdb_database.sh
+popd
 ```
-9. Build the sqlite.
+
+6. Build the Flight SQL Server executable.
 ```bash
-$ mkdir build && cd build
-$ cmake .. -GNinja -DCMAKE_PREFIX_PATH=$CONDA_PREFIX/lib/cmake/arrow
-$ ninja && ./flight_sql
+. ~/.bashrc
+mkdir build
+pushd build
+cmake .. -GNinja -DCMAKE_PREFIX_PATH=$ARROW_HOME/lib/cmake
+ninja && ./flight_sql
+popd
 ```
 
 ## Docker
@@ -72,11 +78,11 @@ $ ./flight_sql
 The above call is equivalent to running `./flight_sql -B duckdb` or `./flight_sql --backend duckdb`. To select SQLite run
 
 ```bash
-$ ./flight_sql -B sqlite
+./flight_sql -B sqlite
 ```
 or 
 ```bash
-$ ./flight_sql --backend sqlite
+./flight_sql --backend sqlite
 ```
 The above will produce the following:
 
@@ -93,7 +99,7 @@ the query itself nor does it print the results. To switch to printing
 results and queries set the `print` flag to `true`.
 
 ```bash
-$ ./flight_sql --print true
+./flight_sql --print true
 ```
 
 ## Print help

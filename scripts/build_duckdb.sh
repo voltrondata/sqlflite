@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-DUCKDB_VERSION=${DUCKDB_VERSION:-"v0.5.1"}
+DUCKDB_VERSION=${DUCKDB_VERSION:-"v0.6.0"}
 echo "Variable: DUCKDB_VERSION=${DUCKDB_VERSION}"
 
 if [ ! -d "duckdb" ]; then
@@ -12,7 +12,6 @@ if [ ! -d "duckdb" ]; then
 fi
 
 pushd duckdb
-rm -rf .git
 if [ ! -d "build/release" ]; then
     echo "Building DuckDB"
     make
@@ -30,4 +29,8 @@ cp build/release/src/libduckdb* /usr/local/lib/
 cp src/include/duckdb.h /usr/local/include/
 cp src/include/duckdb.hpp /usr/local/include/
 cp -R src/include/duckdb /usr/local/include/
+
+# Remove git stuff
+rm -rf .git
+
 popd
