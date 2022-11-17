@@ -5,9 +5,12 @@
 In order to run this SQLite and DuckDB Flight SQL server, you need to set up a new Python 3.8+ virtual environment on your machine. 
 Follow these steps to do so (thanks to David Li!).
 
-1. Ensure you have Python 3.8+ installed, then create a virtual environment from the root of this repo
+1. Ensure you have Python 3.8+ installed, then create a virtual environment from the root of this repo and install requirements...
 ```bash
-python -m venv ./venv
+python3 -m venv ./venv
+. ./venv/bin/activate
+pip install --upgrade pip
+pip install --requirement ./requirements.txt
 ```
 
 2. Build and install Arrow
