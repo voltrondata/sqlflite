@@ -58,7 +58,7 @@ RUN . ~/.bashrc && \
 RUN . ~/.bashrc && \
     scripts/get_duckdb_database.sh
 
-# Build the sqlite
+# Build the Flight SQL application
 WORKDIR ${APP_DIR}
 RUN . ~/.bashrc && \
     mkdir build && \

@@ -44,7 +44,7 @@ popd
 mkdir build
 pushd build
 cmake .. -GNinja -DCMAKE_PREFIX_PATH=$ARROW_HOME/lib/cmake
-ninja && ./flight_sql
+ninja
 popd
 ```
 

@@ -224,14 +224,14 @@ class DuckDBFlightSqlServer::Impl {
         ARROW_ASSIGN_OR_RAISE(auto dataset_schema, statement->GetSchema());
 
         std::shared_ptr<duckdb::PreparedStatement> stmt = statement->GetDuckDBStmt();
-        const idx_t parameter_count = stmt->n_param;
+        const id_t parameter_count = stmt->n_param;
         FieldVector parameter_fields;
         parameter_fields.reserve(parameter_count);
 
         std::shared_ptr<duckdb::PreparedStatementData> parameter_data = stmt->data;
         auto bind_parameter_map = parameter_data->value_map;
 
-        for (idx_t i = 0; i < parameter_count; i++) {
+        for (id_t i = 0; i < parameter_count; i++) {
             std::string parameter_name = std::string("parameter_") + std::to_string(i + 1);
             auto parameter_duckdb_type = parameter_data->GetType(i+1);
             auto parameter_arrow_type = GetDataTypeFromDuckDbType(parameter_duckdb_type);
