@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-ARROW_VERSION=${ARROW_VERSION:-"apache-arrow-10.0.0"}
+ARROW_VERSION=${1:-"apache-arrow-10.0.0"}
 echo "Variable: ARROW_VERSION=${ARROW_VERSION}"
 
 rm -rf arrow

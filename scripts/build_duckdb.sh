@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-DUCKDB_VERSION=${DUCKDB_VERSION:-"v0.6.0"}
+DUCKDB_VERSION=${1:-"v0.6.0"}
 echo "Variable: DUCKDB_VERSION=${DUCKDB_VERSION}"
 
 if [ ! -d "duckdb" ]; then

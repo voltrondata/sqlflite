@@ -27,30 +27,29 @@ RUN mkdir --parents ${APP_DIR} &&\
 
 WORKDIR ${APP_DIR}
 
-# Copy the source code into the image
-COPY . ./
+# Copy the scripts directory into the image
+COPY ./scripts ./scripts
 
 # This version of Arrow was tested successfully and will be used by default
-ARG ARG_ARROW_VERSION="apache-arrow-10.0.0"
-ENV ARROW_VERSION=${ARG_ARROW_VERSION}
+ARG ARROW_VERSION="apache-arrow-10.0.0"
 
 # Build and install Arrow
 RUN . ~/.bashrc && \
-    scripts/build_arrow.sh
+    scripts/build_arrow.sh "${ARROW_VERSION}"
 
 # This version of DuckDB was tested successfully and will be used by default
-ARG ARG_DUCKDB_VERSION="v0.6.0"
-ENV DUCKDB_VERSION=${ARG_DUCKDB_VERSION}
+ARG DUCKDB_VERSION="v0.6.0"
 
 # Build and install DuckDB
 RUN . ~/.bashrc && \
-    scripts/build_duckdb.sh
+    scripts/build_duckdb.sh "${DUCKDB_VERSION}"
 
 # Get the data
 RUN mkdir data && \
     wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O data/TPC-H-small.db
 
 # Install requirements
+COPY ./requirements.txt ./
 RUN . ~/.bashrc && \
     pip install --requirement ./requirements.txt
 
@@ -59,6 +58,8 @@ RUN . ~/.bashrc && \
     scripts/get_duckdb_database.sh
 
 # Build the Flight SQL application
+COPY ./CMakeLists.txt ./
+COPY ./src ./src
 WORKDIR ${APP_DIR}
 RUN . ~/.bashrc && \
     mkdir build && \
@@ -70,4 +71,4 @@ WORKDIR ${APP_DIR}/build
 
 EXPOSE 31337
 
-ENTRYPOINT ["./flight_sql"]
+ENTRYPOINT ./flight_sql --backend=duckdb --database_file_path="../data" --database_file_name="TPC-H-small.duckdb"

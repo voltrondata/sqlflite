@@ -119,6 +119,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
 
     //auto cert_status = arrow::flight::ExampleTlsCertificates(&options.tls_certificates);
 
+    std::cout << "Using database file: " << db_path << std::endl;
+
     std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server = nullptr;
 
     if (db_type == "sqlite") {
@@ -162,12 +164,12 @@ arrow::Result<std::unique_ptr<flightsql::FlightSqlClient>> CreateClient() {
     return client;
 }
 
-arrow::Status Main(const std::string& backend, const bool& print_results_flag) {
-    std::map<std::string, std::string> databases;
-    databases["duckdb"] = "../data/TPC-H-small.duckdb";
-    databases["sqlite"] = "../data/TPC-H-small.db";
+arrow::Status Main(const std::string& backend,
+                   const std::string& database_file_path,
+                   const std::string& database_file_name) {
+    std::string database_file_uri = database_file_path + "/" + database_file_name;
 
-    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(backend, databases[backend]));
+    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(backend, database_file_uri));
 
 //    std::string query_path = "../queries";
 //    std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
@@ -195,18 +197,19 @@ bool string2bool(const std::string &v)
 }
 
 int main(int argc, char** argv) {
-    
+
     // Declare the supported options.
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help", "produce this help message")
         ("backend,B", po::value<std::string>()->default_value("duckdb"), "Specify the database backend. Allowed options: duckdb, sqlite.")
-        ("print", po::value<std::string>()->default_value("false"), "Print the results of running queries. Allowed options: false, true.")
+        ("database_file_path,P", po::value<std::string>()->default_value("../data"), "Specify the search path for the database file." )
+        ("database_file_name,D", po::value<std::string>()->default_value(""), "Specify the database filename (the file must be in search path)" )
     ;
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);    
+    po::notify(vm);
 
     if (vm.count("help")) {
         std::cout << desc << "\n";
@@ -214,9 +217,15 @@ int main(int argc, char** argv) {
     }
 
     std::string backend = vm["backend"].as<std::string>();
-    bool print_results_flag = string2bool(vm["print"].as<std::string>());
+    std::string database_file_path = vm["database_file_path"].as<std::string>();
+    std::string database_file_name = vm["database_file_name"].as<std::string>();
 
-    auto status = Main(backend, print_results_flag);
+    if (database_file_name.empty()) {
+        std::cout << "--database_file_name (-D) was not provided on the command line!" << std::endl;
+        return 1;
+    }
+
+    auto status = Main(backend, database_file_path, database_file_name);
     if (!status.ok()) {
         std::cerr << status << std::endl;
         return 1;
