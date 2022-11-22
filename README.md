@@ -56,7 +56,11 @@ You can build a Docker container which performs all of the setup steps above.
 docker build . --build-arg BUILD_PLATFORM="linux/amd64" --tag=flight_sql_amd64:latest
 
 # Then run the container with:
-docker run -it flight_sql_amd64:latest
+docker run --interactive \
+           --tty \
+           --init \
+           --publish 31337:31337 \
+           flight_sql_amd64:latest bash
 ```
 
 ### To build on an M1 (ARM)-based Mac:
@@ -64,7 +68,11 @@ docker run -it flight_sql_amd64:latest
 docker build . --build-arg BUILD_PLATFORM="linux/arm64" --tag=flight_sql_arm64:latest
 
 # Then run the container with:
-docker run -it flight_sql_arm64:latest
+docker run --interactive \
+           --tty \
+           --init \
+           --publish 31337:31337 \
+           flight_sql_arm64:latest
 ```
 
 ## Selecting different backends

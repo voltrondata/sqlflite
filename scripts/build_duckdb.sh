@@ -23,8 +23,9 @@ pushd duckdb/tools/pythonpkg
 python setup.py install
 popd
 
-# Copy DuckDB shared libraries/headers to /usr/local
+# Copy DuckDB executable and shared libraries/headers to /usr/local
 pushd duckdb
+cp build/release/duckdb /usr/local/bin
 cp build/release/src/libduckdb* /usr/local/lib/
 cp src/include/duckdb.h /usr/local/include/
 cp src/include/duckdb.hpp /usr/local/include/

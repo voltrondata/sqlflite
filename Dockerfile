@@ -67,3 +67,7 @@ RUN . ~/.bashrc && \
     ninja
 
 WORKDIR ${APP_DIR}/build
+
+EXPOSE 31337
+
+ENTRYPOINT ["./flight_sql"]
