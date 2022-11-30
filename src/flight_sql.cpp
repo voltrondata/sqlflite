@@ -107,7 +107,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
         const std::string &db_path
     ) {
     ARROW_ASSIGN_OR_RAISE(auto location,
-                        arrow::flight::Location::ForGrpcTcp("0.0.0.0", port));
+                        arrow::flight::Location::ForGrpcTls("localhost", port));
     arrow::flight::FlightServerOptions options(location);
 
     auto header_middleware = std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>();
@@ -117,7 +117,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     options.middleware.push_back({"header-auth-server", header_middleware});
     options.middleware.push_back({"bearer-auth-server", bearer_middleware});
 
-    //auto cert_status = arrow::flight::ExampleTlsCertificates(&options.tls_certificates);
+    // Setup TLS
+    ARROW_CHECK_OK(FlightServerTlsCertificates(&options.tls_certificates));
 
     std::cout << "Using database file: " << db_path << std::endl;
 

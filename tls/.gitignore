@@ -1,0 +1,5 @@
+*.csr
+*.key
+*.pkcs1
+*.pem
+*.srl

@@ -31,15 +31,18 @@ set(ARROW_FLIGHT_DUCKDB_SQLITE_SERVER_SRCS
     src/duckdb/duckdb_server.cpp
         src/FlightAuthHandler.h)
 
-add_executable(flight_sql 
-    src/flight_sql.cpp 
+add_subdirectory(jwt-cpp)
+
+add_executable(flight_sql
+    src/flight_sql.cpp
     ${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
     ${ARROW_FLIGHT_DUCKDB_SQLITE_SERVER_SRCS}
 )
 
 target_include_directories(flight_sql PRIVATE src/sqlite src/duckdb /usr/local/include)
 # target_include_directories(flight_sql PRIVATE src/duckdb)
-target_link_libraries(flight_sql PRIVATE 
+target_link_libraries(flight_sql PRIVATE
+		      jwt-cpp
 		      arrow_shared
 		      arrow_flight_shared
 		      arrow_flight_sql_shared

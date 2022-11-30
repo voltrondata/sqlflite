@@ -48,6 +48,13 @@ ninja
 popd
 ```
 
+7. Generate TLS certificates for encrypting traffic to/from the Flight SQL server
+```bash
+pushd tls
+./gen-certs.sh
+popd
+```
+
 ## Docker
 You can build a Docker container which performs all of the setup steps above.   
 
@@ -60,7 +67,7 @@ docker run --interactive \
            --tty \
            --init \
            --publish 31337:31337 \
-           flight_sql_amd64:latest bash
+           flight_sql_amd64:latest
 ```
 
 ### To build on an M1 (ARM)-based Mac:

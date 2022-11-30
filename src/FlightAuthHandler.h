@@ -7,29 +7,92 @@
 #include <arrow/flight/server_middleware.h>
 #include <arrow/util/base64.h>
 #include <sstream>
+#include <iostream>
+#include "jwt-cpp/jwt.h"
 
 
 namespace arrow {
     namespace flight {
 
+        const char kJWTIssuer[] = "flight_sql";
         const char kValidUsername[] = "flight_username";
-        const char kValidPassword[] = "flight_password";
-        const char kInvalidUsername[] = "invalid_flight_username";
-        const char kInvalidPassword[] = "invalid_flight_password";
-        const char kBearerToken[] = "honeybadger";
         const char kBasicPrefix[] = "Basic ";
         const char kBearerPrefix[] = "Bearer ";
         const char kAuthHeader[] = "authorization";
 
+        Status GetFlightServerPassword(std::string *out) {
+            const char *c_flight_password = std::getenv("FLIGHT_PASSWORD");
+            if (!c_flight_password) {
+                return Status::IOError(
+                        "Flight SQL Server env var: FLIGHT_PASSWORD is not set, set this variable to secure the server.");
+            }
+            *out = std::string(c_flight_password);
+            return Status::OK();
+        }
+
+        Status FlightServerTlsCertificates(std::vector<CertKeyPair> *out) {
+            std::string root = "../tls";
+
+            *out = std::vector<CertKeyPair>();
+            try {
+                std::stringstream cert_path;
+                cert_path << root << "/cert0.pem";
+                std::stringstream key_path;
+                key_path << root << "/cert0.key";
+
+                std::ifstream cert_file(cert_path.str());
+                if (!cert_file) {
+                    return Status::IOError("Could not open certificate: " + cert_path.str());
+                }
+                std::stringstream cert;
+                cert << cert_file.rdbuf();
+
+                std::ifstream key_file(key_path.str());
+                if (!key_file) {
+                    return Status::IOError("Could not open key: " + key_path.str());
+                }
+                std::stringstream key;
+                key << key_file.rdbuf();
+
+                out->push_back(CertKeyPair{cert.str(), key.str()});
+            } catch (const std::ifstream::failure &e) {
+                return Status::IOError(e.what());
+            }
+            return Status::OK();
+        }
+
         class HeaderAuthServerMiddleware : public ServerMiddleware {
         public:
+            HeaderAuthServerMiddleware(std::string username) {
+                ARROW_CHECK_OK(FlightServerTlsCertificates(&tls_certs_));
+                username_ = username;
+            }
+
+            std::string CreateJWTToken() {
+                auto token = jwt::create()
+                        .set_issuer(std::string(kJWTIssuer))
+                        .set_type("JWT")
+                        .set_id("flight_sql-server")
+                        .set_issued_at(std::chrono::system_clock::now())
+                        .set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds{3600})
+                        .set_payload_claim("username", jwt::claim(username_))
+                        .sign(jwt::algorithm::rs256("", tls_certs_[0].pem_key, "", ""));
+
+                return token;
+            }
+
             void SendingHeaders(AddCallHeaders *outgoing_headers) override {
-                outgoing_headers->AddHeader(kAuthHeader, std::string(kBearerPrefix) + kBearerToken);
+                auto token = CreateJWTToken();
+                outgoing_headers->AddHeader(kAuthHeader, std::string(kBearerPrefix) + token);
             }
 
             void CallCompleted(const Status &status) override {}
 
             std::string name() const override { return "HeaderAuthServerMiddleware"; }
+
+        private:
+            std::vector<CertKeyPair> tls_certs_;
+            std::string username_;
         };
 
         // Function to look in CallHeaders for a key that has a value starting with prefix and
@@ -56,6 +119,19 @@ namespace arrow {
             return "";
         }
 
+        Status GetHeaderType(const CallHeaders &incoming_headers, std::string *out) {
+            if ( not FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBasicPrefix).empty() ) {
+                *out = "Basic";
+            }
+            else if ( not FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBearerPrefix).empty() ) {
+                *out = "Bearer";
+            }
+            else {
+                return Status::IOError("Invalid Authorization Header type!");
+            }
+            return Status::OK();
+        }
+
         void ParseBasicHeader(const CallHeaders &incoming_headers, std::string &username,
                               std::string &password) {
             std::string encoded_credentials =
@@ -65,28 +141,37 @@ namespace arrow {
             std::getline(decoded_stream, password, ':');
         }
 
-        std::string ParseBearerHeader(const CallHeaders &incoming_headers) {
-            return FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBearerPrefix);
-        }
-
         // Factory for base64 header authentication testing.
         class HeaderAuthServerMiddlewareFactory : public ServerMiddlewareFactory {
         public:
-            HeaderAuthServerMiddlewareFactory() {}
+            HeaderAuthServerMiddlewareFactory() {
+                ARROW_CHECK_OK(FlightServerTlsCertificates(&tls_certs_));
+            }
 
             Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
                              std::shared_ptr<ServerMiddleware> *middleware) override {
-                std::string username, password;
 
-                ParseBasicHeader(incoming_headers, username, password);
-                std::string bearer_token = ParseBearerHeader(incoming_headers);
-                if ((username == kValidUsername) && (password == kValidPassword)) {
-                    *middleware = std::make_shared<HeaderAuthServerMiddleware>();
-                } else if (bearer_token != kBearerToken) {
-                    return MakeFlightError(FlightStatusCode::Unauthenticated, "Invalid credentials");
+                std::string header_type;
+                ARROW_RETURN_NOT_OK (GetHeaderType(incoming_headers, &header_type));
+                if ( header_type == "Basic" ) {
+                    std::string username, password;
+
+                    ParseBasicHeader(incoming_headers, username, password);
+                    std::string flight_server_password;
+                    ARROW_RETURN_NOT_OK (GetFlightServerPassword(&flight_server_password));
+
+                    if ((username == kValidUsername) && (password == flight_server_password)) {
+                        *middleware = std::make_shared<HeaderAuthServerMiddleware>(username);
+                    }
+                    else {
+                        return MakeFlightError(FlightStatusCode::Unauthenticated, "Invalid credentials");
+                    }
                 }
                 return Status::OK();
             }
+
+        private:
+            std::vector<CertKeyPair> tls_certs_;
         };
 
         // A server middleware for validating incoming bearer header authentication.
@@ -95,12 +180,33 @@ namespace arrow {
             explicit BearerAuthServerMiddleware(const CallHeaders &incoming_headers, bool *isValid)
                     : isValid_(isValid) {
                 incoming_headers_ = incoming_headers;
+                ARROW_CHECK_OK(FlightServerTlsCertificates(&tls_certs_));
+            }
+
+            bool VerifyToken(const std::string &token, const std::string &rsa_pub_key) {
+                if (token.empty()) {
+                    return false;
+                }
+                auto verify = jwt::verify()
+                        .allow_algorithm(jwt::algorithm::rs256(rsa_pub_key, "", "", ""))
+                        .with_issuer(std::string(kJWTIssuer));
+
+                try {
+                    auto decoded = jwt::decode(token);
+                    verify.verify(decoded);
+                    // If we got this far, the token verified successfully...
+                    return true;
+                }
+                catch (const std::exception &e) {
+                    std::cout << "Bearer Token verification failed with exception: " << e.what() << std::endl;
+                    return false;
+                }
             }
 
             void SendingHeaders(AddCallHeaders *outgoing_headers) override {
                 std::string bearer_token =
                         FindKeyValPrefixInCallHeaders(incoming_headers_, kAuthHeader, kBearerPrefix);
-                *isValid_ = (bearer_token == std::string(kBearerToken));
+                *isValid_ = (VerifyToken(bearer_token, tls_certs_[0].pem_cert));
             }
 
             void CallCompleted(const Status &status) override {}
@@ -110,20 +216,28 @@ namespace arrow {
         private:
             CallHeaders incoming_headers_;
             bool *isValid_;
+            std::vector<CertKeyPair> tls_certs_;
         };
 
         // Factory for base64 header authentication testing.
         class BearerAuthServerMiddlewareFactory : public ServerMiddlewareFactory {
         public:
-            BearerAuthServerMiddlewareFactory() : isValid_(false) {}
+            BearerAuthServerMiddlewareFactory() : isValid_(true) {}
 
             Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
                              std::shared_ptr<ServerMiddleware> *middleware) override {
                 const std::pair<CallHeaders::const_iterator, CallHeaders::const_iterator> &iter_pair =
                         incoming_headers.equal_range(kAuthHeader);
                 if (iter_pair.first != iter_pair.second) {
-                    *middleware =
-                            std::make_shared<BearerAuthServerMiddleware>(incoming_headers, &isValid_);
+                    std::string header_type;
+                    ARROW_RETURN_NOT_OK (GetHeaderType(incoming_headers, &header_type));
+                    if ( header_type == "Bearer" ) {
+                        *middleware =
+                                std::make_shared<BearerAuthServerMiddleware>(incoming_headers, &isValid_);
+                    }
+                }
+                if ( not isValid_ ) {
+                    return MakeFlightError(FlightStatusCode::Unauthenticated, "Invalid bearer token provided");
                 }
                 return Status::OK();
             }
@@ -134,11 +248,28 @@ namespace arrow {
             bool isValid_;
         };
 
-        ARROW_FLIGHT_EXPORT
-        Status ExampleTlsCertificates(std::vector<CertKeyPair> *out);
 
-        ARROW_FLIGHT_EXPORT
-        Status ExampleTlsCertificateRoot(CertKeyPair *out);
+//        Status ExampleTlsCertificateRoot(CertKeyPair* out) {
+//            std::string root;
+//            RETURN_NOT_OK(GetTestResourceRoot(&root));
+//
+//            std::stringstream path;
+//            path << root << "/flight/root-ca.pem";
+//
+//            try {
+//                std::ifstream cert_file(path.str());
+//                if (!cert_file) {
+//                    return Status::IOError("Could not open certificate: " + path.str());
+//                }
+//                std::stringstream cert;
+//                cert << cert_file.rdbuf();
+//                out->pem_cert = cert.str();
+//                out->pem_key = "";
+//                return Status::OK();
+//            } catch (const std::ifstream::failure& e) {
+//                return Status::IOError(e.what());
+//            }
+//        }
 
     }
 }
