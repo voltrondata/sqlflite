@@ -107,7 +107,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
         const std::string &db_path
     ) {
     ARROW_ASSIGN_OR_RAISE(auto location,
-                        arrow::flight::Location::ForGrpcTls("localhost", port));
+                        arrow::flight::Location::ForGrpcTls(arrow::flight::GetFlightServerHostname(), port));
     arrow::flight::FlightServerOptions options(location);
 
     auto header_middleware = std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>();
@@ -142,7 +142,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
         // Exit with a clean error code (0) on SIGTERM
         ARROW_CHECK_OK(server->SetShutdownOnSignals({SIGTERM}));
 
-        std::cout << db_type << " server listening on localhost:" << server->port() << std::endl;
+        std::cout << db_type << " server listening on " << location.ToString() << std::endl;
         return server;
     } else {
         std::string err_msg = "Unable to start the server";

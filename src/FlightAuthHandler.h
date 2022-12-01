@@ -9,6 +9,10 @@
 #include <sstream>
 #include <iostream>
 #include "jwt-cpp/jwt.h"
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
 
 
 namespace arrow {
@@ -19,6 +23,16 @@ namespace arrow {
         const char kBasicPrefix[] = "Basic ";
         const char kBearerPrefix[] = "Bearer ";
         const char kAuthHeader[] = "authorization";
+
+        std::string GetFlightServerHostname() {
+            const char *c_flight_hostname = std::getenv("FLIGHT_HOSTNAME");
+            if (!c_flight_hostname) {
+                return "localhost";
+            }
+            else {
+                return std::string(c_flight_hostname);
+            }
+        }
 
         Status GetFlightServerPassword(std::string *out) {
             const char *c_flight_password = std::getenv("FLIGHT_PASSWORD");
@@ -68,19 +82,6 @@ namespace arrow {
                 username_ = username;
             }
 
-            std::string CreateJWTToken() {
-                auto token = jwt::create()
-                        .set_issuer(std::string(kJWTIssuer))
-                        .set_type("JWT")
-                        .set_id("flight_sql-server")
-                        .set_issued_at(std::chrono::system_clock::now())
-                        .set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds{3600})
-                        .set_payload_claim("username", jwt::claim(username_))
-                        .sign(jwt::algorithm::rs256("", tls_certs_[0].pem_key, "", ""));
-
-                return token;
-            }
-
             void SendingHeaders(AddCallHeaders *outgoing_headers) override {
                 auto token = CreateJWTToken();
                 outgoing_headers->AddHeader(kAuthHeader, std::string(kBearerPrefix) + token);
@@ -93,6 +94,19 @@ namespace arrow {
         private:
             std::vector<CertKeyPair> tls_certs_;
             std::string username_;
+
+            std::string CreateJWTToken() {
+                auto token = jwt::create()
+                        .set_issuer(std::string(kJWTIssuer))
+                        .set_type("JWT")
+                        .set_id("flight_sql-server-" + boost::uuids::to_string(boost::uuids::random_generator()()))
+                        .set_issued_at(std::chrono::system_clock::now())
+                        .set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds{3600})
+                        .set_payload_claim("username", jwt::claim(username_))
+                        .sign(jwt::algorithm::rs256("", tls_certs_[0].pem_key, "", ""));
+
+                return token;
+            }
         };
 
         // Function to look in CallHeaders for a key that has a value starting with prefix and
@@ -183,12 +197,27 @@ namespace arrow {
                 ARROW_CHECK_OK(FlightServerTlsCertificates(&tls_certs_));
             }
 
-            bool VerifyToken(const std::string &token, const std::string &rsa_pub_key) {
+            void SendingHeaders(AddCallHeaders *outgoing_headers) override {
+                std::string bearer_token =
+                        FindKeyValPrefixInCallHeaders(incoming_headers_, kAuthHeader, kBearerPrefix);
+                *isValid_ = (VerifyToken(bearer_token));
+            }
+
+            void CallCompleted(const Status &status) override {}
+
+            std::string name() const override { return "BearerAuthServerMiddleware"; }
+
+        private:
+            CallHeaders incoming_headers_;
+            bool *isValid_;
+            std::vector<CertKeyPair> tls_certs_;
+
+            bool VerifyToken(const std::string &token) {
                 if (token.empty()) {
                     return false;
                 }
                 auto verify = jwt::verify()
-                        .allow_algorithm(jwt::algorithm::rs256(rsa_pub_key, "", "", ""))
+                        .allow_algorithm(jwt::algorithm::rs256(tls_certs_[0].pem_cert, "", "", ""))
                         .with_issuer(std::string(kJWTIssuer));
 
                 try {
@@ -202,21 +231,6 @@ namespace arrow {
                     return false;
                 }
             }
-
-            void SendingHeaders(AddCallHeaders *outgoing_headers) override {
-                std::string bearer_token =
-                        FindKeyValPrefixInCallHeaders(incoming_headers_, kAuthHeader, kBearerPrefix);
-                *isValid_ = (VerifyToken(bearer_token, tls_certs_[0].pem_cert));
-            }
-
-            void CallCompleted(const Status &status) override {}
-
-            std::string name() const override { return "BearerAuthServerMiddleware"; }
-
-        private:
-            CallHeaders incoming_headers_;
-            bool *isValid_;
-            std::vector<CertKeyPair> tls_certs_;
         };
 
         // Factory for base64 header authentication testing.
