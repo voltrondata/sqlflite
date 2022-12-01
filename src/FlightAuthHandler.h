@@ -133,7 +133,7 @@ namespace arrow {
             return "";
         }
 
-        Status GetHeaderType(const CallHeaders &incoming_headers, std::string *out) {
+        Status GetAuthHeaderType(const CallHeaders &incoming_headers, std::string *out) {
             if ( not FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBasicPrefix).empty() ) {
                 *out = "Basic";
             }
@@ -165,9 +165,9 @@ namespace arrow {
             Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
                              std::shared_ptr<ServerMiddleware> *middleware) override {
 
-                std::string header_type;
-                ARROW_RETURN_NOT_OK (GetHeaderType(incoming_headers, &header_type));
-                if ( header_type == "Basic" ) {
+                std::string auth_header_type;
+                ARROW_RETURN_NOT_OK (GetAuthHeaderType(incoming_headers, &auth_header_type));
+                if (auth_header_type == "Basic" ) {
                     std::string username, password;
 
                     ParseBasicHeader(incoming_headers, username, password);
@@ -243,9 +243,9 @@ namespace arrow {
                 const std::pair<CallHeaders::const_iterator, CallHeaders::const_iterator> &iter_pair =
                         incoming_headers.equal_range(kAuthHeader);
                 if (iter_pair.first != iter_pair.second) {
-                    std::string header_type;
-                    ARROW_RETURN_NOT_OK (GetHeaderType(incoming_headers, &header_type));
-                    if ( header_type == "Bearer" ) {
+                    std::string auth_header_type;
+                    ARROW_RETURN_NOT_OK (GetAuthHeaderType(incoming_headers, &auth_header_type));
+                    if (auth_header_type == "Bearer" ) {
                         *middleware =
                                 std::make_shared<BearerAuthServerMiddleware>(incoming_headers, &isValid_);
                     }
