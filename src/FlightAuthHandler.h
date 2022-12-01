@@ -27,7 +27,7 @@ namespace arrow {
         std::string GetFlightServerHostname() {
             const char *c_flight_hostname = std::getenv("FLIGHT_HOSTNAME");
             if (!c_flight_hostname) {
-                return "localhost";
+                return "0.0.0.0";
             }
             else {
                 return std::string(c_flight_hostname);

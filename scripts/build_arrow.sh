@@ -4,6 +4,8 @@ set -e
 set -o pipefail
 
 ARROW_VERSION=${1:-"apache-arrow-10.0.0"}
+REMOVE_SOURCE_FILES=${2:-"N"}
+
 echo "Variable: ARROW_VERSION=${ARROW_VERSION}"
 
 rm -rf arrow
@@ -86,4 +88,10 @@ popd
 if [ "${OS}" == "Darwin" ]; then
   echo "Running Mac-specific PyArrow steps..."
   cp $ARROW_HOME/lib/*.* /usr/local/lib
+fi
+
+# Remove source files
+if [ "${REMOVE_SOURCE_FILES}" == "Y" ]; then
+  echo "Removing Arrow source files..."
+  rm -rf ./arrow
 fi

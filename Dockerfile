@@ -1,5 +1,13 @@
-ARG BUILD_PLATFORM
-FROM --platform=${BUILD_PLATFORM} python:3.10
+FROM python:3.10
+
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG TARGETVARIANT
+RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
+    && printf ", TARGETARCH=${TARGETARCH}" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
+    && printf "With uname -s : " && uname -s \
+    && printf "and  uname -m : " && uname -m
 
 # Install base utilities
 RUN apt-get update && \
@@ -16,40 +24,60 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Setup the AWS Client (so we can copy S3 files to the container if needed)
+WORKDIR /tmp
+
+RUN case ${TARGETPLATFORM} in \
+         "linux/amd64")  AWSCLI_FILE=https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip  ;; \
+         "linux/arm64")  AWSCLI_FILE=https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip  ;; \
+    esac && \
+    curl "${AWSCLI_FILE}" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -f awscliv2.zip
+
+# Create an application user
+RUN useradd app_user --create-home
+
 ARG APP_DIR=/opt/flight_sql
 
-RUN mkdir --parents ${APP_DIR} &&\
-    cd ${APP_DIR} && \
-    python3 -m venv ${APP_DIR}/venv && \
+RUN mkdir --parents ${APP_DIR} && \
+    chown app_user:app_user ${APP_DIR} && \
+    chown --recursive app_user:app_user /usr/local
+
+# Switch to a less privileged user...
+USER app_user
+
+WORKDIR ${APP_DIR}
+
+RUN python3 -m venv ${APP_DIR}/venv && \
     echo ". ${APP_DIR}/venv/bin/activate" >> ~/.bashrc && \
     . ~/.bashrc && \
     pip install --upgrade pip
 
-WORKDIR ${APP_DIR}
-
-# Copy the scripts directory into the image
-COPY ./scripts ./scripts
+# Copy the scripts directory into the image (we copy directory-by-directory in order to maximize Docker caching)
+COPY --chown=app_user:app_user ./scripts ./scripts
 
 # This version of Arrow was tested successfully and will be used by default
 ARG ARROW_VERSION="apache-arrow-10.0.0"
 
 # Build and install Arrow
 RUN . ~/.bashrc && \
-    scripts/build_arrow.sh "${ARROW_VERSION}"
+    scripts/build_arrow.sh "${ARROW_VERSION}" "Y"
 
 # This version of DuckDB was tested successfully and will be used by default
 ARG DUCKDB_VERSION="v0.6.0"
 
 # Build and install DuckDB
 RUN . ~/.bashrc && \
-    scripts/build_duckdb.sh "${DUCKDB_VERSION}"
+    scripts/build_duckdb.sh "${DUCKDB_VERSION}" "Y"
 
 # Get the data
 RUN mkdir data && \
     wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O data/TPC-H-small.db
 
 # Install requirements
-COPY ./requirements.txt ./
+COPY --chown=app_user:app_user ./requirements.txt ./
 RUN . ~/.bashrc && \
     pip install --requirement ./requirements.txt
 
@@ -58,8 +86,9 @@ RUN . ~/.bashrc && \
     scripts/get_duckdb_database.sh
 
 # Build the Flight SQL application
-COPY ./CMakeLists.txt ./
-COPY ./src ./src
+COPY --chown=app_user:app_user ./CMakeLists.txt ./
+COPY --chown=app_user:app_user ./src ./src
+COPY --chown=app_user:app_user ./jwt-cpp ./jwt-cpp
 WORKDIR ${APP_DIR}
 RUN . ~/.bashrc && \
     mkdir build && \
@@ -67,8 +96,10 @@ RUN . ~/.bashrc && \
     cmake .. -GNinja -DCMAKE_PREFIX_PATH=$ARROW_HOME/lib/cmake && \
     ninja
 
-WORKDIR ${APP_DIR}/build
+COPY --chown=app_user:app_user ./tls ./tls
+
+WORKDIR ${APP_DIR}/scripts
 
 EXPOSE 31337
 
-ENTRYPOINT ./flight_sql --backend=duckdb --database_file_path="../data" --database_file_name="TPC-H-small.duckdb"
+ENTRYPOINT ./start_flight_sql.sh

@@ -9,3 +9,10 @@ data
 dist
 duckdb
 arrow
+
+# Ignore TLS certs/keys
+tls/*.csr
+tls/*.key
+tls/*.pkcs1
+tls/*.pem
+tls/*.srl

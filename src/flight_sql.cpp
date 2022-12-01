@@ -117,6 +117,10 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     options.middleware.push_back({"header-auth-server", header_middleware});
     options.middleware.push_back({"bearer-auth-server", bearer_middleware});
 
+    // Ensure a password is set for the server
+    std::string flight_server_password;
+    ARROW_CHECK_OK (arrow::flight::GetFlightServerPassword(&flight_server_password));
+
     // Setup TLS
     ARROW_CHECK_OK(FlightServerTlsCertificates(&options.tls_certificates));
 

@@ -4,6 +4,8 @@ set -e
 set -o pipefail
 
 DUCKDB_VERSION=${1:-"v0.6.0"}
+REMOVE_SOURCE_FILES=${2:-"N"}
+
 echo "Variable: DUCKDB_VERSION=${DUCKDB_VERSION}"
 
 if [ ! -d "duckdb" ]; then
@@ -35,3 +37,9 @@ cp -R src/include/duckdb /usr/local/include/
 rm -rf .git
 
 popd
+
+# Remove source files
+if [ "${REMOVE_SOURCE_FILES}" == "Y" ]; then
+  echo "Removing DuckDB source files..."
+  rm -rf ./duckdb
+fi

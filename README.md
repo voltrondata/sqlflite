@@ -67,6 +67,7 @@ docker run --interactive \
            --tty \
            --init \
            --publish 31337:31337 \
+           --env FLIGHT_PASSWORD="test123" \
            flight_sql_amd64:latest
 ```
 
@@ -79,11 +80,22 @@ docker run --interactive \
            --tty \
            --init \
            --publish 31337:31337 \
-           flight_sql_arm64:latest
+           --env FLIGHT_PASSWORD="test123" \
+           --entrypoint /bin/bash \
+           prmoorevoltron/flight-sql:latest
 ```
 
+### Connecting to the server via JDBC
+Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)   
+
+You can then use the JDBC driver to connect to a locally running Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
+```bash
+jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=test123&disableCertificateVerification=true
+````
+
+
 ## Selecting different backends
-This sqlite allows chosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
+This sqlite allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
 $ ./flight_sql
