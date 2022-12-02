@@ -12,6 +12,7 @@
 #include <arrow/util/logging.h>
 #include <arrow/record_batch.h>
 #include <boost/program_options.hpp>
+#include <unistd.h>
 
 #include "sqlite/sqlite_server.h"
 #include "duckdb/duckdb_server.h"
@@ -169,9 +170,27 @@ arrow::Result<std::unique_ptr<flightsql::FlightSqlClient>> CreateClient() {
     return client;
 }
 
+void chdir_string(const std::string& path) {
+    // Convert the string to a char array
+    // Navigate to the database file directory
+    int n = path.length();
+    // declaring character array
+    char char_array[n + 1];
+
+    // copying the contents of the
+    // string to char array
+    strcpy(char_array, path.c_str());
+
+    chdir(char_array);
+}
+
 arrow::Status Main(const std::string& backend,
                    const std::string& database_file_path,
                    const std::string& database_file_name) {
+
+    // Navigate to the database file directory
+    chdir_string(database_file_path);
+
     std::string database_file_uri = database_file_path + "/" + database_file_name;
 
     ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(backend, database_file_uri));
