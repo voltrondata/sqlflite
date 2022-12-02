@@ -101,7 +101,7 @@ namespace arrow {
                         .set_type("JWT")
                         .set_id("flight_sql-server-" + boost::uuids::to_string(boost::uuids::random_generator()()))
                         .set_issued_at(std::chrono::system_clock::now())
-                        .set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds{3600})
+                        .set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds{36000})
                         .set_payload_claim("username", jwt::claim(username_))
                         .sign(jwt::algorithm::rs256("", tls_certs_[0].pem_key, "", ""));
 
