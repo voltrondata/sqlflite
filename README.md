@@ -1,8 +1,59 @@
-# Arrow FlightSQL sqlite
+# Arrow Flight SQL server - DuckDB / SQLite
 
-## Setup
+## Option 1 - Running from the published Docker image
 
-In order to run this SQLite and DuckDB Flight SQL server, you need to set up a new Python 3.8+ virtual environment on your machine. 
+Open a terminal, then pull and run the published Docker image which has everything setup (change: "--detach" to "--interactive" if you wish to see the stdout on your screen) - with command:
+
+```bash
+docker run --name flight-sql \
+           --detach \
+           --rm \
+           --tty \
+           --init \
+           --publish 31337:31337 \
+           --env FLIGHT_PASSWORD="testing123" \
+           --pull missing \
+           prmoorevoltron/flight-sql:latest
+````
+
+The above command will automatically mount a very small TPC-H DuckDB database file.
+
+### Optional - open a different database file
+When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.6.0).   
+
+Here is a command to run the docker image with DuckDB database file: /tmp/test.duckdb
+
+```bash
+docker run --name flight-sql \
+           --detach \
+           --rm \
+           --tty \
+           --init \
+           --publish 31337:31337 \
+           --env FLIGHT_PASSWORD="testing123" \
+           --pull missing \
+           --mount type=bind,source=/tmp,target=/opt/flight_sql/data \
+           --env DATABASE_FILE_NAME="test.duckdb" \
+           prmoorevoltron/flight-sql:latest
+````
+
+### Connecting to the server via JDBC
+Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)
+
+You can then use the JDBC driver to connect from your host computer to the locally running Docker Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
+```bash
+jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=testing123&disableCertificateVerification=true
+````
+
+### Tear-down
+Stop the docker image with:
+```bash
+docker kill flight-sql
+```
+
+## Option 2 - Steps to build the solution manually
+
+In order to run build the solution manually, and run SQLite and DuckDB Flight SQL server, you need to set up a new Python 3.8+ virtual environment on your machine. 
 Follow these steps to do so (thanks to David Li!).
 
 1. Ensure you have Python 3.8+ installed, then create a virtual environment from the root of this repo and install requirements...
@@ -63,11 +114,13 @@ You can build a Docker container which performs all of the setup steps above.
 docker build . --build-arg BUILD_PLATFORM="linux/amd64" --tag=flight_sql_amd64:latest
 
 # Then run the container with:
-docker run --interactive \
+docker run --name flight-sql \
+           --rm \
+           --interactive \
            --tty \
            --init \
            --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="test123" \
+           --env FLIGHT_PASSWORD="testing123" \
            flight_sql_amd64:latest
 ```
 
@@ -76,13 +129,14 @@ docker run --interactive \
 docker build . --build-arg BUILD_PLATFORM="linux/arm64" --tag=flight_sql_arm64:latest
 
 # Then run the container with:
-docker run --interactive \
+docker run --name flight-sql \
+           --rm \
+           --interactive \
            --tty \
            --init \
            --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="test123" \
-           --entrypoint /bin/bash \
-           prmoorevoltron/flight-sql:latest
+           --env FLIGHT_PASSWORD="testing123" \
+           flight_sql_arm64:latest
 ```
 
 ### Connecting to the server via JDBC
@@ -90,7 +144,7 @@ Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/sear
 
 You can then use the JDBC driver to connect to a locally running Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
 ```bash
-jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=test123&disableCertificateVerification=true
+jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=testing123&disableCertificateVerification=true
 ````
 
 
@@ -123,23 +177,18 @@ The above will produce the following:
 > ...
 ```
 
-## Printing results of running query
-This sqlite defaults to running the queries but does not print out
-the query itself nor does it print the results. To switch to printing
-results and queries set the `print` flag to `true`.
-
-```bash
-./flight_sql --print true
-```
-
 ## Print help
 To see all the available options run `./flight.sql --help`.
 
 ```bash
-> Allowed options:
->   --help                         produce this help message
->   -B [ --backend ] arg (=duckdb) Specify the database backend. Allowed options:
->                                  duckdb, sqlite.
->   --print arg (=false)           Print the results of running queries. Allowed 
->                                  options: false, true.
+./flight_sql --help
+Allowed options:
+  --help                                produce this help message
+  -B [ --backend ] arg (=duckdb)        Specify the database backend. Allowed 
+                                        options: duckdb, sqlite.
+  -P [ --database_file_path ] arg (=../data)
+                                        Specify the search path for the 
+                                        database file.
+  -D [ --database_file_name ] arg       Specify the database filename (the file
+                                        must be in search path)
 ```

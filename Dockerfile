@@ -59,7 +59,7 @@ RUN python3 -m venv ${APP_DIR}/venv && \
 COPY --chown=app_user:app_user ./scripts ./scripts
 
 # This version of Arrow was tested successfully and will be used by default
-ARG ARROW_VERSION="apache-arrow-10.0.0"
+ARG ARROW_VERSION="apache-arrow-10.0.1"
 
 # Build and install Arrow
 RUN . ~/.bashrc && \

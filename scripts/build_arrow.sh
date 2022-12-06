@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-ARROW_VERSION=${1:-"apache-arrow-10.0.0"}
+ARROW_VERSION=${1:-"apache-arrow-10.0.1"}
 REMOVE_SOURCE_FILES=${2:-"N"}
 
 echo "Variable: ARROW_VERSION=${ARROW_VERSION}"
