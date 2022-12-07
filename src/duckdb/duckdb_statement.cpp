@@ -84,7 +84,7 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
     case duckdb::LogicalTypeId::UINTEGER:
       return uint32();
     case duckdb::LogicalTypeId::UBIGINT:
-      return uint64();
+      return int64();
     case duckdb::LogicalTypeId::INVALID:
     case duckdb::LogicalTypeId::SQLNULL:
     case duckdb::LogicalTypeId::UNKNOWN:
@@ -93,6 +93,7 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
     case duckdb::LogicalTypeId::TIMESTAMP_TZ:
     case duckdb::LogicalTypeId::TIME_TZ:
     case duckdb::LogicalTypeId::HUGEINT:
+      return int64(); // This isn't ideal, it can be overflowed, we should find a way to represent a 65+ bit integer...
     case duckdb::LogicalTypeId::POINTER:
     case duckdb::LogicalTypeId::VALIDITY:
     case duckdb::LogicalTypeId::UUID:
