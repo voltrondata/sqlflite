@@ -13,4 +13,4 @@ fi
 popd
 
 # move the data to DuckDB
-python scripts/move_data_to_duckdb.py
+python move_data_to_duckdb.py

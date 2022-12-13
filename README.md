@@ -85,7 +85,7 @@ wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.d
 5. Create duckdb database.
 ```bash
 pushd scripts
-get_duckdb_database.sh
+./get_duckdb_database.sh
 popd
 ```
 

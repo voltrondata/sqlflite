@@ -1,0 +1,36 @@
+name: flight-sql
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - compilers
+  - aws-sdk-cpp=1.8.186
+  - benchmark>=1.6.0
+  - boost-cpp>=1.68.0
+  - brotli
+  - bzip2
+  - c-ares
+  - cmake
+  - gflags
+  - glog
+  - gmock>=1.10.0
+  - google-cloud-cpp>=1.34.0
+  - grpc-cpp>=1.27.3,<1.45.0
+  - gtest>=1.10.0
+  - libprotobuf
+  - libutf8proc
+  - lz4-c
+  - make
+  - ninja
+  - nlohmann_json
+  - pkg-config
+  - protobuf
+  - python<3.11
+  - rapidjson
+  - re2
+  - snappy
+  - thrift-cpp>=0.11.0
+  - zlib
+  - zstd
+  - flatbuffers
+  - xsimd

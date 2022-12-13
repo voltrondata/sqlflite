@@ -23,15 +23,6 @@ rm -rf .git
 popd
 
 pip install -r arrow/python/requirements-build.txt
-rm -rf dist
-mkdir dist
-export ARROW_HOME=$(pwd)/dist
-export LD_LIBRARY_PATH=${ARROW_HOME}/lib:$LD_LIBRARY_PATH
-
-# Add exports to the .bashrc for future sessions
-echo "export ARROW_HOME=${ARROW_HOME}" >> ~/.bashrc
-echo "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> ~/.bashrc
-echo "export ARROW_TEST_DATA=${ARROW_TEST_DATA}" >> ~/.bashrc
 
 #----------------------------------------------------------------------
 # Build C++ library
@@ -46,7 +37,8 @@ if [ "${OS}" == "Darwin" ]; then
   export MACOSX_DEPLOYMENT_TARGET="12.0"
 fi
 
-cmake -GNinja -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
+cmake -GNinja \
+        -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DCMAKE_BUILD_TYPE=Debug \
         -DARROW_BUILD_TESTS=ON \
@@ -77,21 +69,21 @@ pushd arrow/python
 
 rm -rf build/  # remove any pesky pre-existing build directory
 
-export CMAKE_PREFIX_PATH=${ARROW_HOME}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}
+export CMAKE_PREFIX_PATH=${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}
 export PYARROW_WITH_PARQUET=1
 export PYARROW_WITH_DATASET=1
 export PYARROW_PARALLEL=4
 python setup.py develop
 popd
 
-# Do some more Mac stuff if needed...
-if [ "${OS}" == "Darwin" ]; then
-  echo "Running Mac-specific PyArrow steps..."
-  cp $ARROW_HOME/lib/*.* /usr/local/lib
-fi
+# # Do some more Mac stuff if needed...
+# if [ "${OS}" == "Darwin" ]; then
+#   echo "Running Mac-specific PyArrow steps..."
+#   cp $ARROW_HOME/lib/*.* /usr/local/lib
+# fi
 
-# Remove source files
-if [ "${REMOVE_SOURCE_FILES}" == "Y" ]; then
-  echo "Removing Arrow source files..."
-  rm -rf ./arrow
-fi
+# # Remove source files
+# if [ "${REMOVE_SOURCE_FILES}" == "Y" ]; then
+#   echo "Removing Arrow source files..."
+#   rm -rf ./arrow
+# fi
