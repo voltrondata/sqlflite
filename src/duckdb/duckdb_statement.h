@@ -66,7 +66,9 @@ class DuckDBStatement {
   /// \return              The number of rows changed by execution.
   arrow::Result<int64_t> ExecuteUpdate();
 
- private:
+  std::vector<duckdb::Value> bind_parameters;
+
+private:
   std::shared_ptr<duckdb::Connection> con_;
   std::shared_ptr<duckdb::PreparedStatement> stmt_;
   std::shared_ptr<RecordBatch> result_;

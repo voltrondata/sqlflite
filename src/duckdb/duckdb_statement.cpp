@@ -109,10 +109,11 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
 
 arrow::Result<std::shared_ptr<DuckDBStatement>> DuckDBStatement::Create(
     std::shared_ptr<duckdb::Connection> con, const std::string& sql) {
+
   std::shared_ptr<duckdb::PreparedStatement> stmt = con->Prepare(sql);
 
   if (not stmt->success) {
-      std::string err_msg = "Can't prepare statement: " + stmt->error.Message();
+      std::string err_msg = "Can't prepare statement: '" + sql + "' - Error: " + stmt->error.Message();
       return Status::Invalid(err_msg);
   }
 
@@ -125,7 +126,7 @@ DuckDBStatement::~DuckDBStatement() {
 }
 
 arrow::Result<int> DuckDBStatement::Execute() {
-  auto res = stmt_->Execute();
+  auto res = stmt_->Execute(bind_parameters);
   auto timezone_config = QueryResult::GetConfigTimezone(*res);
 
   ArrowArray res_arr;
@@ -133,9 +134,11 @@ arrow::Result<int> DuckDBStatement::Execute() {
   duckdb::ArrowConverter::ToArrowSchema(&res_schema, res->types, res->names, timezone_config);
   auto data_chunk = res->Fetch();
   data_chunk->Verify();
-  duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr);
-  ARROW_ASSIGN_OR_RAISE(result_, arrow::ImportRecordBatch(&res_arr, &res_schema));
-  schema_ = result_->schema();
+  if (data_chunk != nullptr) {
+      duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr);
+      ARROW_ASSIGN_OR_RAISE(result_, arrow::ImportRecordBatch(&res_arr, &res_schema));
+      schema_ = result_->schema();
+  }
 
   return 0;
 }
