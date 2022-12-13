@@ -66,7 +66,7 @@ RUN . ~/.bashrc && \
     scripts/build_arrow.sh "${ARROW_VERSION}" "Y"
 
 # This version of DuckDB was tested successfully and will be used by default
-ARG DUCKDB_VERSION="v0.6.0"
+ARG DUCKDB_VERSION="v0.6.1"
 
 # Build and install DuckDB
 RUN . ~/.bashrc && \
