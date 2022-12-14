@@ -8,13 +8,14 @@ REMOVE_SOURCE_FILES=${2:-"N"}
 
 echo "Variable: ARROW_VERSION=${ARROW_VERSION}"
 
+SCRIPT_DIR=$(dirname ${0})
+
+pushd "${SCRIPT_DIR}/.."
+
 rm -rf arrow
 
-# clone the repository
-if [ ! -d "arrow" ]; then
-    echo "Cloning Arrow."
-    git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VERSION}
-fi
+echo "Cloning Arrow."
+git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VERSION}
 
 pushd arrow
 git submodule update --init
@@ -95,3 +96,5 @@ if [ "${REMOVE_SOURCE_FILES}" == "Y" ]; then
   echo "Removing Arrow source files..."
   rm -rf ./arrow
 fi
+
+popd

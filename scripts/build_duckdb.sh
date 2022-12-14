@@ -8,10 +8,14 @@ REMOVE_SOURCE_FILES=${2:-"N"}
 
 echo "Variable: DUCKDB_VERSION=${DUCKDB_VERSION}"
 
-if [ ! -d "duckdb" ]; then
-    echo "Cloning DuckDB."
-    git clone --depth 1 https://github.com/duckdb/duckdb.git --branch ${DUCKDB_VERSION}
-fi
+SCRIPT_DIR=$(dirname ${0})
+
+pushd "${SCRIPT_DIR}/.."
+
+rm -rf duckdb
+
+echo "Cloning DuckDB."
+git clone --depth 1 https://github.com/duckdb/duckdb.git --branch ${DUCKDB_VERSION}
 
 pushd duckdb
 if [ ! -d "build/release" ]; then
@@ -43,3 +47,5 @@ if [ "${REMOVE_SOURCE_FILES}" == "Y" ]; then
   echo "Removing DuckDB source files..."
   rm -rf ./duckdb
 fi
+
+popd
