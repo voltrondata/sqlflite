@@ -1,10 +1,19 @@
 import pandas as pd
 import sqlite3
 import duckdb
+import os
+from pathlib import Path
+
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+data_dir_path = Path(dir_path) / ".." / "data"
+sqlite_db_file = data_dir_path / "TPC-H-small.db"
+duckdb_db_file = data_dir_path / "TPC-H-small.duckdb"
 
 # establish all connections to databases
-con = sqlite3.connect('../data/TPC-H-small.db')
-con_duck = duckdb.connect(database='../data/TPC-H-small.duckdb', read_only=False)
+con = sqlite3.connect(sqlite_db_file.as_posix())
+con_duck = duckdb.connect(database=duckdb_db_file.as_posix(), read_only=False)
 
 cur = con.cursor()
 
@@ -36,3 +45,7 @@ for table in tables:
 # close the connections
 con_duck.close()
 con.close()
+
+print(f"Successfully created DuckDB database file: {duckdb_db_file.as_posix()} "
+      f"from SQLite3 database file: {sqlite_db_file.as_posix()}"
+      )

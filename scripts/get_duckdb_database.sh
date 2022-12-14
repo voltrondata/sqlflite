@@ -12,5 +12,7 @@ if [ -f "TPC-H-small.duckdb" ]; then
 fi
 popd
 
+SCRIPT_DIR=$(dirname ${0})
+
 # move the data to DuckDB
-python move_data_to_duckdb.py
+python ${SCRIPT_DIR}/move_data_to_duckdb.py
