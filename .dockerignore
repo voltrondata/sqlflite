@@ -9,6 +9,7 @@ data
 dist
 duckdb
 arrow
+venv
 
 # Ignore TLS certs/keys
 tls/*.csr
