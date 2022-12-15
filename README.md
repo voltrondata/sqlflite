@@ -11,7 +11,7 @@ docker run --name flight-sql \
            --tty \
            --init \
            --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="testing123" \
+           --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
            prmoorevoltron/flight-sql:latest
 ````
@@ -19,21 +19,32 @@ docker run --name flight-sql \
 The above command will automatically mount a very small TPC-H DuckDB database file.
 
 ### Optional - open a different database file
-When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.6.0).   
+When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.6.1).   
 
-Here is a command to run the docker image with DuckDB database file: /tmp/test.duckdb
+In this example, we'll generate a new TPC-H Scale Factor 1 (1GB) database file, and then run the docker image to mount it:
 
 ```bash
+# Generate a TPC-H database in the host's /tmp directory
+duckdb /tmp/tpch_sf1.duckdb << EOF
+.bail on
+.echo on
+SELECT VERSION();
+INSTALL tpch;
+LOAD tpch;
+CALL dbgen(sf=1);
+EOF
+
+# Run the flight-sql docker container image - and mount the host's DuckDB database file created above inside the container
 docker run --name flight-sql \
            --detach \
            --rm \
            --tty \
            --init \
            --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="testing123" \
+           --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
            --mount type=bind,source=/tmp,target=/opt/flight_sql/data \
-           --env DATABASE_FILE_NAME="test.duckdb" \
+           --env DATABASE_FILE_NAME="tpch_sf1.duckdb" \
            prmoorevoltron/flight-sql:latest
 ````
 
@@ -42,8 +53,10 @@ Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/sear
 
 You can then use the JDBC driver to connect from your host computer to the locally running Docker Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
 ```bash
-jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=testing123&disableCertificateVerification=true
+jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=flight_password&disableCertificateVerification=true
 ````
+
+Note - if you stop/restart the Flight SQL Docker container, and attempt to connect via JDBC with the same password - you could get error: "Invalid bearer token provided. Detail: Unauthenticated".  This is because the client JDBC driver caches the bearer token signed with the previous instance's RSA private key.  Just change the password in the new container by changing the "FLIGHT_PASSWORD" env var setting - and then use that to connect via JDBC.  
 
 ### Tear-down
 Stop the docker image with:
@@ -120,7 +133,7 @@ docker run --name flight-sql \
            --tty \
            --init \
            --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="testing123" \
+           --env FLIGHT_PASSWORD="flight_password" \
            flight_sql_amd64:latest
 ```
 
@@ -135,7 +148,7 @@ docker run --name flight-sql \
            --tty \
            --init \
            --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="testing123" \
+           --env FLIGHT_PASSWORD="flight_password" \
            flight_sql_arm64:latest
 ```
 
@@ -144,7 +157,7 @@ Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/sear
 
 You can then use the JDBC driver to connect to a locally running Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
 ```bash
-jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=testing123&disableCertificateVerification=true
+jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=flight_password&disableCertificateVerification=true
 ````
 
 
