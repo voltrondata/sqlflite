@@ -97,9 +97,8 @@ of `duckdb`.
 scripts/build_duckdb.sh
 ```
 
-4. Get the data.
+4. Get some sample data.
 ```bash
-mkdir data
 wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O ./data/TPC-H-small.db
 ```
 
@@ -113,7 +112,7 @@ popd
 6. Build the Flight SQL Server executable.
 ```bash
 . ~/.bashrc
-mkdir build
+mkdir -p build
 pushd build
 cmake .. -GNinja -DCMAKE_PREFIX_PATH=$ARROW_HOME/lib/cmake
 ninja
@@ -173,29 +172,25 @@ jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&
 This sqlite allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
-$ ./flight_sql
-> duckdb server listening on localhost:31337
-> Connected to server: localhost:31337
-> Client created.
-> ...
+$ FLIGHT_PASSWORD="flight_password" ./flight_sql --database_file_name "TPC-H-small.duckdb"
+> Using database file: ../data/TPC-H-small.duckdb
+> duckdb server listening on grpc+tls://0.0.0.0:31337
 ```
 
 The above call is equivalent to running `./flight_sql -B duckdb` or `./flight_sql --backend duckdb`. To select SQLite run
 
 ```bash
-./flight_sql -B sqlite
+FLIGHT_PASSWORD="flight_password" ./flight_sql -B sqlite -D "TPC-H-small.db" 
 ```
 or 
 ```bash
-./flight_sql --backend sqlite
+FLIGHT_PASSWORD="flight_password" ./flight_sql --backend sqlite --database_file_name "TPC-H-small.db"
 ```
 The above will produce the following:
 
 ```bash
-> sqlite server listening on localhost:31337
-> Connected to server: localhost:31337
-> Client created.
-> ...
+> Using database file: ../data/TPC-H-small.db
+> sqlite server listening on grpc+tls://0.0.0.0:31337
 ```
 
 ## Print help
