@@ -127,12 +127,19 @@ DuckDBStatement::~DuckDBStatement() {
 
 arrow::Result<int> DuckDBStatement::Execute() {
   auto res = stmt_->Execute(bind_parameters);
+
   auto timezone_config = QueryResult::GetConfigTimezone(*res);
 
   ArrowArray res_arr;
   ArrowSchema res_schema;
   duckdb::ArrowConverter::ToArrowSchema(&res_schema, res->types, res->names, timezone_config);
-  auto data_chunk = res->Fetch();
+  duckdb::unique_ptr<duckdb::DataChunk> data_chunk;
+  duckdb::PreservedError fetch_error;
+  auto fetch_success = res->TryFetch(data_chunk, fetch_error);
+  if ( ! fetch_success ) {
+      ARROW_RETURN_NOT_OK(arrow::Status::ExecutionError(fetch_error.Message()));
+  }
+
   data_chunk->Verify();
   if (data_chunk != nullptr) {
       duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr);
