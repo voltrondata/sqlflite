@@ -14,7 +14,7 @@ docker run --name flight-sql \
            --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
            prmoorevoltron/flight-sql:latest
-````
+```
 
 The above command will automatically mount a very small TPC-H DuckDB database file.
 
@@ -52,9 +52,9 @@ docker run --name flight-sql \
            --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
            --mount type=bind,source=/tmp,target=/opt/flight_sql/data \
-           --env DATABASE_FILE_NAME="tpch_sf1.duckdb" \
+           --env DATABASE_FILE_NAME="ibis_testing.duckdb" \
            prmoorevoltron/flight-sql:latest
-````
+```
 
 ### Connecting to the server via JDBC
 Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)
@@ -62,7 +62,7 @@ Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/sear
 You can then use the JDBC driver to connect from your host computer to the locally running Docker Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
 ```bash
 jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=flight_password&disableCertificateVerification=true
-````
+```
 
 Note - if you stop/restart the Flight SQL Docker container, and attempt to connect via JDBC with the same password - you could get error: "Invalid bearer token provided. Detail: Unauthenticated".  This is because the client JDBC driver caches the bearer token signed with the previous instance's RSA private key.  Just change the password in the new container by changing the "FLIGHT_PASSWORD" env var setting - and then use that to connect via JDBC.  
 
@@ -165,7 +165,7 @@ Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/sear
 You can then use the JDBC driver to connect to a locally running Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
 ```bash
 jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=flight_password&disableCertificateVerification=true
-````
+```
 
 
 ## Selecting different backends

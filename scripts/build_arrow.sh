@@ -20,7 +20,6 @@ git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VERSION
 pushd arrow
 git submodule update --init
 export ARROW_TEST_DATA="${PWD}/testing/data"
-rm -rf .git
 popd
 
 pip install -r arrow/python/requirements-build.txt
