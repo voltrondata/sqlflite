@@ -34,7 +34,7 @@ jobs:
           push: true
           tags: prmoorevoltron/flight-sql:latest-${{ matrix.platform }}
           with:
-            no-cache: true
+            no-cache
       - name: Create and push manifest images
         uses: Noelware/docker-manifest-action@master # or use a pinned version in the Releases tab
 
