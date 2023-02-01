@@ -40,6 +40,7 @@ jobs:
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms
+    needs: docker
     runs-on: ubuntu-latest
     steps:
       - name: Login to Docker Hub
