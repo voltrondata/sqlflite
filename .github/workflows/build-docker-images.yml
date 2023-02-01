@@ -33,8 +33,6 @@ jobs:
           tags: prmoorevoltron/flight-sql:latest-${{ matrix.platform }}
           with:
             no-cache
-      - name: Create and push manifest images
-        uses: Noelware/docker-manifest-action@master # or use a pinned version in the Releases tab
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms
