@@ -62,7 +62,7 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 COPY --chown=app_user:app_user ./scripts ./scripts
 
 # This version of Arrow was tested successfully and will be used by default
-ARG ARROW_VERSION="apache-arrow-10.0.1"
+ARG ARROW_VERSION="apache-arrow-11.0.0"
 
 # Build and install Arrow
 RUN scripts/build_arrow.sh "${ARROW_VERSION}" "Y"
