@@ -26,13 +26,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           platforms: linux/${{ matrix.platform }}
           push: true
           tags: prmoorevoltron/flight-sql:latest-${{ matrix.platform }}
-          with:
-            no-cache
+          no-cache
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms
