@@ -31,7 +31,7 @@ jobs:
           platforms: linux/${{ matrix.platform }}
           push: true
           tags: prmoorevoltron/flight-sql:latest-${{ matrix.platform }}
-          no-cache
+          no-cache: true
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms
