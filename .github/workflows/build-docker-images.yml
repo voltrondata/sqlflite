@@ -6,6 +6,9 @@ on:
     branches:
       - 'main'
 
+env:
+  DOCKER_IMAGE_NAME: voltrondata/flight-sql
+
 jobs:
   docker:
     name: Build Docker images
@@ -30,7 +33,7 @@ jobs:
         with:
           platforms: linux/${{ matrix.platform }}
           push: true
-          tags: prmoorevoltron/flight-sql:latest-${{ matrix.platform }}
+          tags: ${{ env.DOCKER_IMAGE_NAME }}:latest-${{ matrix.platform }}
           no-cache: true
 
   update-image-manifest:
@@ -46,6 +49,6 @@ jobs:
       - name: Create and push manifest images
         uses: Noelware/docker-manifest-action@master # or use a pinned version in the Releases tab
         with:
-          inputs: prmoorevoltron/flight-sql:latest
-          images: prmoorevoltron/flight-sql:latest-amd64,prmoorevoltron/flight-sql:latest-arm64
+          inputs: ${{ env.DOCKER_IMAGE_NAME }}:latest
+          images: ${{ env.DOCKER_IMAGE_NAME }}:latest-amd64,${{ env.DOCKER_IMAGE_NAME }}:latest-arm64
           push: true
