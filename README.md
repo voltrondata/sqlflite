@@ -97,16 +97,18 @@ of `duckdb`.
 scripts/build_duckdb.sh
 ```
 
-4. Get some sample data.
+4. Get some SQLite3 sample data.
 ```bash
 wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O ./data/TPC-H-small.db
 ```
 
-5. Create duckdb database.
+5. Create a DuckDB database.
 ```bash
-pushd scripts
-./get_duckdb_database.sh
-popd
+python "scripts/create_duckdb_database_file.py" \
+       --file-name="TPC-H-small.duckdb" \
+       --file-path="data" \
+       --overwrite-file=true \
+       --scale-factor=0.01
 ```
 
 6. Build the Flight SQL Server executable.

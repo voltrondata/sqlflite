@@ -84,7 +84,7 @@ RUN pip install --requirement ./requirements.txt
 # Create DuckDB database file
 RUN python "scripts/create_duckdb_database_file.py" \
            --file-name="TPC-H-small.duckdb" \
-           --file-path="scripts/../data" \
+           --file-path="data" \
            --overwrite-file=true \
            --scale-factor=0.01
 
