@@ -13,7 +13,7 @@ docker run --name flight-sql \
            --publish 31337:31337 \
            --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
-           prmoorevoltron/flight-sql:latest
+           voltrondata/flight-sql:latest
 ```
 
 The above command will automatically mount a very small TPC-H DuckDB database file.
@@ -53,7 +53,7 @@ docker run --name flight-sql \
            --pull missing \
            --mount type=bind,source=/tmp,target=/opt/flight_sql/data \
            --env DATABASE_FILE_NAME="ibis_testing.duckdb" \
-           prmoorevoltron/flight-sql:latest
+           voltrondata/flight-sql:latest
 ```
 
 ### Connecting to the server via JDBC
@@ -128,39 +128,6 @@ pushd tls
 popd
 ```
 
-## Docker
-You can build a Docker container which performs all of the setup steps above.   
-
-### To build on an x86-based machine:
-```bash
-docker build . --build-arg BUILD_PLATFORM="linux/amd64" --tag=flight_sql_amd64:latest
-
-# Then run the container with:
-docker run --name flight-sql \
-           --rm \
-           --interactive \
-           --tty \
-           --init \
-           --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="flight_password" \
-           flight_sql_amd64:latest
-```
-
-### To build on an M1 (ARM)-based Mac:
-```bash
-docker build . --build-arg BUILD_PLATFORM="linux/arm64" --tag=flight_sql_arm64:latest
-
-# Then run the container with:
-docker run --name flight-sql \
-           --rm \
-           --interactive \
-           --tty \
-           --init \
-           --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="flight_password" \
-           flight_sql_arm64:latest
-```
-
 ### Connecting to the server via JDBC
 Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)   
 
@@ -168,7 +135,6 @@ You can then use the JDBC driver to connect to a locally running Flight SQL serv
 ```bash
 jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=flight_password&disableCertificateVerification=true
 ```
-
 
 ## Selecting different backends
 This sqlite allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
