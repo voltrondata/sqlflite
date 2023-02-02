@@ -20,6 +20,8 @@ RUN apt-get update && \
     git \
     ninja-build \
     libboost-all-dev \
+    libsqlite3-dev \
+    sqlite3 \
     vim && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -64,14 +66,34 @@ COPY --chown=app_user:app_user ./scripts ./scripts
 # This version of Arrow was tested successfully and will be used by default
 ARG ARROW_VERSION="apache-arrow-11.0.0"
 
-# Build and install Arrow
+# Build and install Arrow (we build from source until issue: https://github.com/apache/arrow/issues/33934 - is resolved.
 RUN scripts/build_arrow.sh "${ARROW_VERSION}" "Y"
 
-# This version of DuckDB was tested successfully and will be used by default
+# Install DuckDB libraries
 ARG DUCKDB_VERSION="v0.6.1"
+RUN TMP_DIR=/tmp/duckdb && \
+    mkdir --parents ${TMP_DIR} && \
+    cd ${TMP_DIR} && \
+    case ${TARGETPLATFORM} in \
+         "linux/amd64")  DUCKDB_FILE=https://github.com/duckdb/duckdb/releases/download/${DUCKDB_VERSION}/libduckdb-linux-amd64.zip  ;; \
+         "linux/arm64")  DUCKDB_FILE=https://github.com/duckdb/duckdb/releases/download/${DUCKDB_VERSION}/libduckdb-linux-aarch64.zip  ;; \
+    esac && \
+    curl --location ${DUCKDB_FILE} --output duckdb_lib.zip && \
+    unzip duckdb_lib.zip && \
+    mv libduckdb.so /usr/local/lib && \
+    mv duckdb.h /usr/local/include && \
+    mv duckdb.hpp /usr/local/include && \
+    cd /tmp && \
+    rm -rf ${TMP_DIR}
 
-# Build and install DuckDB
-RUN scripts/build_duckdb.sh "${DUCKDB_VERSION}" "Y"
+# Install DuckDB CLI
+RUN case ${TARGETPLATFORM} in \
+         "linux/amd64")  DUCKDB_FILE=https://github.com/duckdb/duckdb/releases/download/${DUCKDB_VERSION}/duckdb_cli-linux-amd64.zip  ;; \
+         "linux/arm64")  DUCKDB_FILE=https://github.com/duckdb/duckdb/releases/download/${DUCKDB_VERSION}/duckdb_cli-linux-aarch64.zip  ;; \
+    esac && \
+    curl --location ${DUCKDB_FILE} --output /tmp/duckdb.zip && \
+    unzip /tmp/duckdb.zip -d /usr/local/bin && \
+    rm /tmp/duckdb.zip
 
 # Get the SQLite3 database file
 RUN mkdir data && \

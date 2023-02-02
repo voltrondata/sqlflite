@@ -35,6 +35,7 @@ jobs:
           push: true
           tags: ${{ env.DOCKER_IMAGE_NAME }}:latest-${{ matrix.platform }}
           no-cache: true
+          provenance: false
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms
