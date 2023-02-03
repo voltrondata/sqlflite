@@ -150,7 +150,7 @@ jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&
 ```
 
 ## Selecting different backends
-This sqlite allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
+This option allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
 $ FLIGHT_PASSWORD="flight_password" ./flight_sql --database_file_name "TPC-H-small.duckdb"
