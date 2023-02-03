@@ -141,6 +141,12 @@ pushd tls
 popd
 ```
 
+
+8. Start the Flight SQL server
+```bash
+./flight_sql
+```
+
 ### Connecting to the server via JDBC
 Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)   
 
