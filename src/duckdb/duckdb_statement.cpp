@@ -65,7 +65,7 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
     case duckdb::LogicalTypeId::BOOLEAN:
       return boolean();
     case duckdb::LogicalTypeId::DATE:
-      return date64();
+      return date32();
     case duckdb::LogicalTypeId::TIME:
     case duckdb::LogicalTypeId::TIMESTAMP_MS:
       return timestamp(arrow::TimeUnit::MILLI);
