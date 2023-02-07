@@ -64,7 +64,7 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build and install Arrow (we build from source until issue: https://github.com/apache/arrow/issues/33934 - is resolved.
-ARG ARROW_VERSION="apache-arrow-11.0.0"
+ARG ARROW_VERSION="apache-arrow-10.0.1"
 RUN scripts/build_arrow.sh "${ARROW_VERSION}" "Y"
 
 # Build and install DuckDB

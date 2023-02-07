@@ -24,7 +24,7 @@ docker run --name flight-sql \
            --tty \
            --init \
            --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="flight_password" \
+           --env FLIGHT_PASSWORD="flight_password2" \
            --pull missing \
            voltrondata/flight-sql:latest
 ```
@@ -90,8 +90,10 @@ docker kill flight-sql
 In order to run build the solution manually, and run SQLite and DuckDB Flight SQL server, you need to set up a new Python 3.8+ virtual environment on your machine. 
 Follow these steps to do so (thanks to David Li!).
 
-1. Ensure you have Python 3.8+ installed, then create a virtual environment from the root of this repo and install requirements...
+1. Clone the repo, ensure you have Python 3.8+ installed, then create a virtual environment from the root of this repo and install requirements...
 ```bash
+git clone https://github.com/voltrondata/flight-sql-server-example --recurse-submodules
+cd flight-sql-server-example
 python3 -m venv ./venv
 . ./venv/bin/activate
 pip install --upgrade pip
