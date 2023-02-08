@@ -9,7 +9,7 @@ L_PRINT_QUERIES=${4:-${PRINT_QUERIES:-"1"}}
 
 # Setup the print_queries option
 PRINT_QUERIES_FLAG=""
-if [ "${PRINT_QUERIES}" == "1" ]
+if [ "${L_PRINT_QUERIES}" == "1" ]
 then
   PRINT_QUERIES_FLAG="--print_queries"
 fi
