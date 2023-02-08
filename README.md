@@ -24,7 +24,7 @@ docker run --name flight-sql \
            --tty \
            --init \
            --publish 31337:31337 \
-           --env FLIGHT_PASSWORD="flight_password2" \
+           --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
            voltrondata/flight-sql:latest
 ```
