@@ -25,6 +25,7 @@ docker run --name flight-sql \
            --init \
            --publish 31337:31337 \
            --env FLIGHT_PASSWORD="flight_password" \
+           --env PRINT_QUERIES="1" \
            --pull missing \
            voltrondata/flight-sql:latest
 ```
@@ -82,7 +83,7 @@ Note - if you stop/restart the Flight SQL Docker container, and attempt to conne
 ### Tear-down
 Stop the docker image with:
 ```bash
-docker kill flight-sql
+docker stop flight-sql
 ```
 
 ## Option 2 - Steps to build the solution manually
