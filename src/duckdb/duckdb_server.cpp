@@ -121,6 +121,7 @@ namespace arrow {
                 private:
                     std::shared_ptr<duckdb::DuckDB> db_instance_;
                     std::shared_ptr<duckdb::Connection> db_conn_;
+                    bool print_queries_;
                     std::map<std::string, std::shared_ptr<DuckDBStatement>> prepared_statements_;
                     std::default_random_engine gen_;
                     std::mutex mutex_;
@@ -138,8 +139,10 @@ namespace arrow {
                 public:
                     explicit Impl(
                             std::shared_ptr<duckdb::DuckDB> db_instance,
-                            std::shared_ptr<duckdb::Connection> db_connection
+                            std::shared_ptr<duckdb::Connection> db_connection,
+                            const bool &print_queries
                     ) : db_instance_(std::move(db_instance)), db_conn_(std::move(db_connection)) {
+                        print_queries_ = print_queries;
                     }
 
                     ~Impl() {
@@ -212,6 +215,10 @@ namespace arrow {
                         ActionCreatePreparedStatementResult result{.dataset_schema = dataset_schema,
                                 .parameter_schema = parameter_schema,
                                 .prepared_statement_handle = handle};
+
+                        if (print_queries_) {
+                            std::cout << "Client running SQL command: \n" << request.query << ";\n" << std::endl;
+                        };
 
                         return result;
                     }
@@ -328,7 +335,8 @@ namespace arrow {
 
                 arrow::Result<std::shared_ptr<DuckDBFlightSqlServer>> DuckDBFlightSqlServer::Create(
                         const std::string &path,
-                        const duckdb::DBConfig &config
+                        const duckdb::DBConfig &config,
+                        const bool &print_queries
                 ) {
                     std::shared_ptr<duckdb::DuckDB> db;
                     std::shared_ptr<duckdb::Connection> con;
@@ -336,7 +344,7 @@ namespace arrow {
                     db = std::make_shared<duckdb::DuckDB>(path);
                     con = std::make_shared<duckdb::Connection>(*db);
 
-                    std::shared_ptr<Impl> impl = std::make_shared<Impl>(db, con);
+                    std::shared_ptr<Impl> impl = std::make_shared<Impl>(db, con, print_queries);
                     std::shared_ptr<DuckDBFlightSqlServer> result(new DuckDBFlightSqlServer(impl));
 
                     for (const auto &id_to_result: GetSqlInfoResultMap()) {

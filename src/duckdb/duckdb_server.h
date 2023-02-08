@@ -42,7 +42,7 @@ class DuckDBFlightSqlServer : public FlightSqlServerBase {
   ~DuckDBFlightSqlServer() override;
 
   static arrow::Result<std::shared_ptr<DuckDBFlightSqlServer>> Create(const std::string &path,
-    const duckdb::DBConfig &config);
+    const duckdb::DBConfig &config, const bool &print_queries);
 
   /// \brief Auxiliary method used to execute an arbitrary SQL statement on the underlying
   ///        SQLite database.

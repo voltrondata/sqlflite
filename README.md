@@ -144,9 +144,9 @@ popd
 ```
 
 
-8. Start the Flight SQL server
+8. Start the Flight SQL server (and print client SQL commands as they run using the --print_queries option)
 ```bash
-./flight_sql
+FLIGHT_PASSWORD="flight_password" ./flight_sql --database_file_name "TPC-H-small.duckdb" --print_queries
 ```
 
 ### Connecting to the server via JDBC
@@ -196,4 +196,5 @@ Allowed options:
                                         database file.
   -D [ --database_file_name ] arg       Specify the database filename (the file
                                         must be in search path)
+  -Q [ --print_queries ]                Print queries run by clients to stdout
 ```

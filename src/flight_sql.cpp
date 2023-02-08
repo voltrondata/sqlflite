@@ -105,7 +105,8 @@ arrow::Status runQueries(
 
 arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateServer(
         const std::string &db_type, 
-        const std::string &db_path
+        const std::string &db_path,
+        const bool &print_queries
     ) {
     ARROW_ASSIGN_OR_RAISE(auto location,
                         arrow::flight::Location::ForGrpcTls(arrow::flight::GetFlightServerHostname(), port));
@@ -127,6 +128,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
 
     std::cout << "Using database file: " << db_path << std::endl;
 
+    std::cout << "Print Queries option is set to: " << std::boolalpha << print_queries << std::endl;
+
     std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server = nullptr;
 
     if (db_type == "sqlite") {
@@ -135,7 +138,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     } else if (db_type == "duckdb") {
         duckdb::DBConfig config;
         ARROW_ASSIGN_OR_RAISE(server,
-                                arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(db_path, config));
+                                arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(db_path, config, print_queries));
     } else {
         std::string err_msg = "Unknown server type: --> ";
         err_msg += db_type;
@@ -186,14 +189,16 @@ void chdir_string(const std::string& path) {
 
 arrow::Status Main(const std::string& backend,
                    const std::string& database_file_path,
-                   const std::string& database_file_name) {
+                   const std::string& database_file_name,
+                   const bool &print_queries
+                   ) {
 
     // Navigate to the database file directory
     chdir_string(database_file_path);
 
     std::string database_file_uri = database_file_path + "/" + database_file_name;
 
-    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(backend, database_file_uri));
+    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(backend, database_file_uri, print_queries));
 
 //    std::string query_path = "../queries";
 //    std::vector<int> skip_queries = {17}; // the rest of the code assumes this is ORDERED vector!
@@ -229,7 +234,8 @@ int main(int argc, char** argv) {
         ("backend,B", po::value<std::string>()->default_value("duckdb"), "Specify the database backend. Allowed options: duckdb, sqlite.")
         ("database_file_path,P", po::value<std::string>()->default_value("../data"), "Specify the search path for the database file." )
         ("database_file_name,D", po::value<std::string>()->default_value(""), "Specify the database filename (the file must be in search path)" )
-    ;
+        ("print_queries,Q", po::bool_switch()->default_value(false), "Print queries run by clients to stdout")
+        ;
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -243,13 +249,14 @@ int main(int argc, char** argv) {
     std::string backend = vm["backend"].as<std::string>();
     std::string database_file_path = vm["database_file_path"].as<std::string>();
     std::string database_file_name = vm["database_file_name"].as<std::string>();
+    bool print_queries = vm["print_queries"].as<bool>();
 
     if (database_file_name.empty()) {
         std::cout << "--database_file_name (-D) was not provided on the command line!" << std::endl;
         return 1;
     }
 
-    auto status = Main(backend, database_file_path, database_file_name);
+    auto status = Main(backend, database_file_path, database_file_name, print_queries);
     if (!status.ok()) {
         std::cerr << status << std::endl;
         return 1;
