@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:3.11
 
 ARG TARGETPLATFORM
 ARG TARGETARCH
@@ -68,7 +68,7 @@ ARG ARROW_VERSION="apache-arrow-11.0.0"
 RUN scripts/build_arrow.sh "${ARROW_VERSION}" "Y"
 
 # Build and install DuckDB
-ARG DUCKDB_VERSION="v0.6.1"
+ARG DUCKDB_VERSION="v0.7.0"
 RUN scripts/build_duckdb.sh "${DUCKDB_VERSION}" "Y"
 
 # Get the SQLite3 database file
