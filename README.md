@@ -81,6 +81,58 @@ jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&
 
 Note - if you stop/restart the Flight SQL Docker container, and attempt to connect via JDBC with the same password - you could get error: "Invalid bearer token provided. Detail: Unauthenticated".  This is because the client JDBC driver caches the bearer token signed with the previous instance's RSA private key.  Just change the password in the new container by changing the "FLIGHT_PASSWORD" env var setting - and then use that to connect via JDBC.  
 
+### Connecting to the server via the new [ADBC Python Flight SQL driver](https://pypi.org/project/adbc-driver-flightsql/)
+
+You can now use the new Apache Arrow Python ADBC Flight SQL driver to query the Flight SQL server.  ADBC offers performance advantages over JDBC - because it minimizes serialization/deserialization, and data stays in columnar format at all phases.
+
+You can learn more about ADBC and Flight SQL [here](https://voltrondata.com/resources/simplifying-database-connectivity-with-arrow-flight-sql-and-adbc).
+
+Ensure you have Python 3.9+ installed, then open a terminal, then run:
+```bash
+# Create a Python virtual environment
+python3 -m venv ./venv
+
+# Activate the virtual environment
+. ./venv/bin/activate
+
+# Install the requirements including the new Arrow ADBC Flight SQL driver
+pip install --upgrade pip
+pip install pandas pyarrow adbc_driver_flightsql
+
+# Start the python interactive shell
+python
+```
+
+In the Python shell - you can then run:
+```python
+import adbc_driver_flightsql.dbapi as flight_sql
+
+flight_password = "flight_password" # Use an env var in production code!
+
+with flight_sql.connect(uri="grpc+tls://localhost:31337",
+                        db_kwargs={"username": "flight_username",
+                                   "password": flight_password,
+                                   "adbc.flight.sql.client_option.tls_skip_verify": "true" # Not needed if you use a trusted CA-signed TLS cert
+                                   }
+                        ) as conn:
+   with conn.cursor() as cur:
+       cur.execute("SELECT n_nationkey, n_name FROM nation WHERE n_nationkey = ?",
+                   parameters=[24]
+                   )
+       x = cur.fetch_arrow_table()
+       print(x)
+```
+
+You should see results:
+```text
+pyarrow.Table
+n_nationkey: int32
+n_name: string
+----
+n_nationkey: [[24]]
+n_name: [["UNITED STATES"]]
+```
+
 ### Tear-down
 Stop the docker image with:
 ```bash
@@ -149,66 +201,6 @@ popd
 8. Start the Flight SQL server (and print client SQL commands as they run using the --print_queries option)
 ```bash
 FLIGHT_PASSWORD="flight_password" ./flight_sql --database_file_name "TPC-H-small.duckdb" --print_queries
-```
-
-### Connecting to the server via JDBC
-Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)   
-
-You can then use the JDBC driver to connect to a locally running Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
-```bash
-jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=flight_password&disableCertificateVerification=true
-```
-
-### Connecting to the server via the new [ADBC Python Flight SQL driver](https://pypi.org/project/adbc-driver-flightsql/)
-
-You can now use the new Apache Arrow Python ADBC Flight SQL driver to query the Flight SQL server.  ADBC offers performance advantages over JDBC - because data is in Arrow columnar format at all stages of transfer.      
-
-You can learn more about ADBC and Flight SQL [here](https://voltrondata.com/resources/simplifying-database-connectivity-with-arrow-flight-sql-and-adbc).
-
-Ensure you have Python 3.9+ installed, then open a terminal, then run:   
-```bash
-# Create a Python virtual environment
-python3 -m venv ./venv
-
-# Activate the virtual environment
-. ./venv/bin/activate
-
-# Install the requirements including the new Arrow ADBC Flight SQL driver
-pip install --upgrade pip
-pip install pandas pyarrow adbc_driver_flightsql
-
-# Start the python interactive shell
-python
-```
-
-In the Python shell - you can then run:
-```python
-import adbc_driver_flightsql.dbapi as flight_sql
-
-flight_password = "flight_password" # Use an env var in production code!
-
-with flight_sql.connect(uri="grpc+tls://localhost:31337",
-                        db_kwargs={"username": "flight_username",
-                                   "password": flight_password,
-                                   "adbc.flight.sql.client_option.tls_skip_verify": "true" # Not needed if you use a trusted CA-signed TLS cert
-                                   }
-                        ) as conn:
-   with conn.cursor() as cur:
-       cur.execute("SELECT n_nationkey, n_name FROM nation WHERE n_nationkey = ?",
-                   parameters=[24]
-                   )
-       x = cur.fetch_arrow_table()
-       print(x)
-```
-
-You should see results:   
-```text
-pyarrow.Table
-n_nationkey: int32
-n_name: string
-----
-n_nationkey: [[24]]
-n_name: [["UNITED STATES"]]
 ```
 
 ## Selecting different backends
