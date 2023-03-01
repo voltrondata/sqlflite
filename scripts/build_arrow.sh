@@ -15,10 +15,9 @@ pushd "${SCRIPT_DIR}/.."
 rm -rf arrow
 
 echo "Cloning Arrow."
-git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VERSION}
+git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VERSION} --recurse-submodules
 
 pushd arrow
-git submodule update --init
 export ARROW_TEST_DATA="${PWD}/testing/data"
 popd
 

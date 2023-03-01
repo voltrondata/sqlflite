@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-DUCKDB_VERSION=${1:-"v0.7.0"}
+DUCKDB_VERSION=${1:-"v0.7.1"}
 REMOVE_SOURCE_FILES=${2:-"N"}
 
 echo "Variable: DUCKDB_VERSION=${DUCKDB_VERSION}"
@@ -15,7 +15,7 @@ pushd "${SCRIPT_DIR}/.."
 rm -rf duckdb
 
 echo "Cloning DuckDB."
-git clone --depth 1 https://github.com/duckdb/duckdb.git --branch ${DUCKDB_VERSION}
+git clone --depth 1 https://github.com/duckdb/duckdb.git --branch ${DUCKDB_VERSION} --recurse-submodules
 
 pushd duckdb
 if [ ! -d "build/release" ]; then

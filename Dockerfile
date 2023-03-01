@@ -68,7 +68,7 @@ ARG ARROW_VERSION="apache-arrow-11.0.0"
 RUN scripts/build_arrow.sh "${ARROW_VERSION}" "Y"
 
 # Build and install DuckDB
-ARG DUCKDB_VERSION="v0.7.0"
+ARG DUCKDB_VERSION="v0.7.1"
 RUN scripts/build_duckdb.sh "${DUCKDB_VERSION}" "Y"
 
 # Get the SQLite3 database file
