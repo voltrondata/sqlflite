@@ -53,7 +53,7 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
       return float64();
     case duckdb::LogicalTypeId::CHAR:
     case duckdb::LogicalTypeId::VARCHAR:
-      return utf8(); 
+      return utf8();
     case duckdb::LogicalTypeId::BLOB:
       return binary();
     case duckdb::LogicalTypeId::TINYINT:
@@ -164,21 +164,18 @@ arrow::Result<int64_t> DuckDBStatement::ExecuteUpdate() {
 }
 
 arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
-  std::vector<std::shared_ptr<Field>> fields;
+    // get the names and types of the result schema
+    auto names = stmt_->GetNames();
+    auto types = stmt_->GetTypes();
 
-  int column_count = stmt_->ColumnCount();
-  auto column_names = stmt_->GetNames();
-  auto column_types = stmt_->GetTypes();
+    duckdb::string config_timezone = ""; // set this to your desired timezone
+    // create Arrow schema from DuckDB schema
+    ArrowSchema arrow_schema;
+    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, config_timezone);
 
-  for (int i = 0; i < column_count; i++) {
-    std::string column_name = column_names[i];
-    std::shared_ptr<arrow::DataType> data_type = GetDataTypeFromDuckDbType(column_types[i]);
-    ColumnMetadata column_metadata = ColumnMetadata::Builder().Build();
+    auto return_value = arrow::ImportSchema(&arrow_schema);
 
-    fields.push_back(
-        arrow::field(column_name, data_type, column_metadata.metadata_map()));
-  }
-  return arrow::schema(fields);
+    return return_value;
 }
 
 }  // namespace sqlite
