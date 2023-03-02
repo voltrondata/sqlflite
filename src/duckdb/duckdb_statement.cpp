@@ -168,10 +168,11 @@ arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
     auto names = stmt_->GetNames();
     auto types = stmt_->GetTypes();
 
-    duckdb::string config_timezone = ""; // set this to your desired timezone
-    // create Arrow schema from DuckDB schema
+    auto& context = stmt_->context;
+    auto client_properties = context->GetClientProperties();
+
     ArrowSchema arrow_schema;
-    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, config_timezone);
+    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, client_properties.timezone);
 
     auto return_value = arrow::ImportSchema(&arrow_schema);
 
