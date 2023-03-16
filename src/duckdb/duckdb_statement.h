@@ -57,7 +57,7 @@ class DuckDBStatement {
   arrow::Result<std::shared_ptr<Schema>> GetSchema() const;
 
   arrow::Result<int> Execute();
-  arrow::Result<std::shared_ptr<RecordBatch>> GetResult();
+  arrow::Result<std::shared_ptr<RecordBatch>> FetchResult();
   // arrow::Result<std::shared_ptr<Schema>> GetArrowSchema();
 
   std::shared_ptr<duckdb::PreparedStatement> GetDuckDBStmt() const;
@@ -71,8 +71,7 @@ class DuckDBStatement {
 private:
   std::shared_ptr<duckdb::Connection> con_;
   std::shared_ptr<duckdb::PreparedStatement> stmt_;
-  std::shared_ptr<RecordBatch> result_;
-  std::shared_ptr<Schema> schema_;
+  duckdb::unique_ptr<duckdb::QueryResult> query_result_;
 
   DuckDBStatement(
     std::shared_ptr<duckdb::Connection> con, 

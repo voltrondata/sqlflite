@@ -126,32 +126,33 @@ DuckDBStatement::~DuckDBStatement() {
 }
 
 arrow::Result<int> DuckDBStatement::Execute() {
-  auto res = stmt_->Execute(bind_parameters);
-
-  auto timezone_config = QueryResult::GetConfigTimezone(*res);
-
-  ArrowArray res_arr;
-  ArrowSchema res_schema;
-  duckdb::ArrowConverter::ToArrowSchema(&res_schema, res->types, res->names, timezone_config);
-  duckdb::unique_ptr<duckdb::DataChunk> data_chunk;
-  duckdb::PreservedError fetch_error;
-  auto fetch_success = res->TryFetch(data_chunk, fetch_error);
-  if ( ! fetch_success ) {
-      ARROW_RETURN_NOT_OK(arrow::Status::ExecutionError(fetch_error.Message()));
-  }
-
-  data_chunk->Verify();
-  if (data_chunk != nullptr) {
-      duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr);
-      ARROW_ASSIGN_OR_RAISE(result_, arrow::ImportRecordBatch(&res_arr, &res_schema));
-      schema_ = result_->schema();
-  }
+  query_result_ = stmt_->Execute(bind_parameters);
 
   return 0;
 }
 
-arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::GetResult() {
-  return result_;
+arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::FetchResult() {
+    std::shared_ptr<RecordBatch> record_batch;
+    ArrowArray res_arr;
+    ArrowSchema res_schema;
+
+    auto timezone_config = QueryResult::GetConfigTimezone(*query_result_);
+
+    duckdb::ArrowConverter::ToArrowSchema(&res_schema, query_result_->types, query_result_->names, timezone_config);
+    duckdb::unique_ptr<duckdb::DataChunk> data_chunk;
+    duckdb::PreservedError fetch_error;
+    auto fetch_success = query_result_->TryFetch(data_chunk, fetch_error);
+    if ( ! fetch_success ) {
+        ARROW_RETURN_NOT_OK(arrow::Status::ExecutionError(fetch_error.Message()));
+    }
+
+    data_chunk->Verify();
+    if (data_chunk != nullptr) {
+        duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr);
+        ARROW_ASSIGN_OR_RAISE(record_batch, arrow::ImportRecordBatch(&res_arr, &res_schema));
+    }
+
+    return record_batch;
 }
 
 std::shared_ptr<duckdb::PreparedStatement> DuckDBStatement::GetDuckDBStmt() const {
@@ -160,7 +161,8 @@ std::shared_ptr<duckdb::PreparedStatement> DuckDBStatement::GetDuckDBStmt() cons
 
 arrow::Result<int64_t> DuckDBStatement::ExecuteUpdate() {
     ARROW_RETURN_NOT_OK(Execute());
-    return result_->num_rows();
+    auto result = FetchResult();
+    return result->get()->num_rows();
 }
 
 arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {

@@ -69,13 +69,7 @@ Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
     ARROW_ASSIGN_OR_RAISE(rc_, statement_->Execute());
     already_executed_ = true;
   }
-    if(!results_read_) {
-      ARROW_ASSIGN_OR_RAISE(*out, statement_->GetResult());
-      results_read_ = true;
-
-    } else {
-      *out = nullptr;
-    }
+  ARROW_ASSIGN_OR_RAISE(*out, statement_->FetchResult());
 
   return Status::OK();
 }
