@@ -67,7 +67,7 @@ docker run --name flight-sql \
            --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
            --mount type=bind,source=$(pwd),target=/opt/flight_sql/data \
-           --env DATABASE_FILE_NAME="tpch_sf10.duckdb" \
+           --env DATABASE_FILE_NAME="tpch_sf1.duckdb" \
            voltrondata/flight-sql:latest
 ```
 
