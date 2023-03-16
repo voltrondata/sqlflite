@@ -42,7 +42,7 @@ OS=$(uname)
 if [ "${OS}" == "Darwin" ]; then
   echo "Running Mac-specific setup steps..."
   brew update && brew bundle --file=Brewfile
-  export MACOSX_DEPLOYMENT_TARGET="12.0"
+  export MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion)
 fi
 
 cmake -GNinja -DCMAKE_INSTALL_PREFIX=$ARROW_HOME \
