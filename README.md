@@ -48,7 +48,9 @@ In this example, we'll generate a new TPC-H Scale Factor 1 (1GB) database file, 
 
 ```bash
 # Generate a TPC-H database in the host's /tmp directory
-duckdb /tmp/tpch_sf1.duckdb << EOF
+pushd /tmp
+
+duckdb ./tpch_sf1.duckdb << EOF
 .bail on
 .echo on
 SELECT VERSION();
