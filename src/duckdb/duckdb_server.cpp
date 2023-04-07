@@ -148,14 +148,20 @@ namespace arrow {
                     ~Impl() {
                     }
 
-                    std::string GenerateRandomString() {
-                        uint32_t length = 16;
+                    std::string GenerateRandomString(int length = 16) {
+                        const char charset[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                        const int charsetLength = sizeof(charset) - 1;
 
-                        std::uniform_int_distribution<char> dist('0', 'z');
-                        std::string ret(length, 0);
-                        auto get_random_char = [&]() { return dist(gen_); };
-                        std::generate_n(ret.begin(), length, get_random_char);
-                        return ret;
+                        std::random_device rd; // Create a random device to seed the generator
+                        std::mt19937 gen(rd()); // Create a Mersenne Twister generator
+                        std::uniform_int_distribution<> dis(0, charsetLength - 1); // Create a uniform distribution over the character set
+
+                        std::string randomString;
+                        for (int i = 0; i < length; i++) {
+                            randomString += charset[dis(gen)];
+                        }
+
+                        return randomString;
                     }
 
                     arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoStatement(
