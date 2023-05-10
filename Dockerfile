@@ -64,9 +64,11 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build and install Arrow (we build from source until issue: https://github.com/apache/arrow/issues/33934 - is resolved.
+COPY --chown=app_user:app_user ./arrow ./arrow
 RUN scripts/build_arrow.sh
 
 # Build and install DuckDB
+COPY --chown=app_user:app_user ./duckdb ./duckdb
 RUN scripts/build_duckdb.sh
 
 # Get the SQLite3 database file
