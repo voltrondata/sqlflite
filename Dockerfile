@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.11.3
 
 ARG TARGETPLATFORM
 ARG TARGETARCH
@@ -64,12 +64,10 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build and install Arrow (we build from source until issue: https://github.com/apache/arrow/issues/33934 - is resolved.
-ARG ARROW_VERSION="apache-arrow-11.0.0"
-RUN scripts/build_arrow.sh "${ARROW_VERSION}" "Y"
+RUN scripts/build_arrow.sh
 
 # Build and install DuckDB
-ARG DUCKDB_VERSION="v0.7.1"
-RUN scripts/build_duckdb.sh "${DUCKDB_VERSION}" "Y"
+RUN scripts/build_duckdb.sh
 
 # Get the SQLite3 database file
 RUN mkdir data && \

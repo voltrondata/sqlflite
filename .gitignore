@@ -18,7 +18,5 @@ CMakeFiles
 
 venv
 dist
-arrow
-duckdb
 cmake-build-debug
 data

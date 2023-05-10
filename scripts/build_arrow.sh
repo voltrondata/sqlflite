@@ -3,20 +3,6 @@
 set -e
 set -o pipefail
 
-ARROW_VERSION=${1:-"apache-arrow-11.0.0"}
-REMOVE_SOURCE_FILES=${2:-"N"}
-
-echo "Variable: ARROW_VERSION=${ARROW_VERSION}"
-
-SCRIPT_DIR=$(dirname ${0})
-
-pushd "${SCRIPT_DIR}/.."
-
-rm -rf arrow
-
-echo "Cloning Arrow."
-git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VERSION} --recurse-submodules
-
 pushd arrow
 export ARROW_TEST_DATA="${PWD}/testing/data"
 popd
@@ -88,11 +74,3 @@ if [ "${OS}" == "Darwin" ]; then
   echo "Running Mac-specific PyArrow steps..."
   cp $ARROW_HOME/lib/*.* /usr/local/lib
 fi
-
-# Remove source files
-if [ "${REMOVE_SOURCE_FILES}" == "Y" ]; then
-  echo "Removing Arrow source files..."
-  rm -rf ./arrow
-fi
-
-popd

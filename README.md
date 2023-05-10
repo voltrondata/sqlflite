@@ -154,7 +154,7 @@ git clone https://github.com/voltrondata/flight-sql-server-example --recurse-sub
 cd flight-sql-server-example
 python3 -m venv ./venv
 . ./venv/bin/activate
-pip install --upgrade pip
+pip install --upgrade pip setuptools wheel
 pip install --requirement ./requirements.txt
 ```
 
