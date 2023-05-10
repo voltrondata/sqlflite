@@ -8,6 +8,7 @@ build
 data
 dist
 arrow
+duckdb
 venv
 
 # Ignore TLS certs/keys
