@@ -63,12 +63,10 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 # Copy the scripts directory into the image (we copy directory-by-directory in order to maximize Docker caching)
 COPY --chown=app_user:app_user ./scripts ./scripts
 
-# Build and install Arrow (we build from source until issue: https://github.com/apache/arrow/issues/33934 - is resolved.
-COPY --chown=app_user:app_user ./arrow ./arrow
-# Copy the arrow submodule .git info to the arrow folder b/c the build needs it to determine the Arrow version
-RUN rm ./arrow/.git
-COPY --chown=app_user:app_user ./.git/modules/arrow/ ./arrow/.git
-RUN scripts/build_arrow.sh && \
+# Build and install Arrow (we clone in Docker to avoid .git issues, and build from source to freeze the version)
+ARG ARROW_VERSION="apache-arrow-12.0.0"
+RUN git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VERSION} --recurse-submodules && \
+    scripts/build_arrow.sh && \
     rm -rf ./arrow
 
 # Build and install DuckDB (cleanup source files afterward)
