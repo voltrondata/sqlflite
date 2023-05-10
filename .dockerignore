@@ -1,14 +1,11 @@
 Dockerfile*
 .idea
-.git
 .gitignore
 docker_build_and_push.sh
 cmake-build-debug
 build
 data
 dist
-duckdb
-arrow
 venv
 
 # Ignore TLS certs/keys

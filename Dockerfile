@@ -65,6 +65,9 @@ COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build and install Arrow (we build from source until issue: https://github.com/apache/arrow/issues/33934 - is resolved.
 COPY --chown=app_user:app_user ./arrow ./arrow
+# Copy the arrow submodule .git info to the arrow folder b/c the build needs it to determine the Arrow version
+RUN rm ./arrow/.git
+COPY --chown=app_user:app_user ./.git/modules/arrow/ ./arrow/.git
 RUN scripts/build_arrow.sh && \
     rm -rf ./arrow
 
