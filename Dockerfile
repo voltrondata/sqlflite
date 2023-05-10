@@ -65,11 +65,13 @@ COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build and install Arrow (we build from source until issue: https://github.com/apache/arrow/issues/33934 - is resolved.
 COPY --chown=app_user:app_user ./arrow ./arrow
-RUN scripts/build_arrow.sh
+RUN scripts/build_arrow.sh && \
+    rm -rf ./arrow
 
-# Build and install DuckDB
+# Build and install DuckDB (cleanup source files afterward)
 COPY --chown=app_user:app_user ./duckdb ./duckdb
-RUN scripts/build_duckdb.sh
+RUN scripts/build_duckdb.sh && \
+    rm -rf ./duckdb
 
 # Get the SQLite3 database file
 RUN mkdir data && \
