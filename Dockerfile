@@ -55,7 +55,7 @@ WORKDIR ${APP_DIR}
 RUN python3 -m venv ${APP_DIR}/venv && \
     echo ". ${APP_DIR}/venv/bin/activate" >> ~/.bashrc && \
     . ~/.bashrc && \
-    pip install --upgrade pip
+    pip install --upgrade pip setuptools wheel
 
 # Set the PATH so that the Python Virtual environment is referenced for subsequent RUN steps (hat tip: https://pythonspeed.com/articles/activate-virtualenv-dockerfile/)
 ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
