@@ -70,7 +70,7 @@ RUN git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VER
     rm -rf ./arrow
 
 # Build and install DuckDB (we clone in Docker to avoid .git issues), cleanup source files afterward)
-ARG DUCKDB_VERSION="v0.7.1"
+ARG DUCKDB_VERSION="v0.8.0"
 RUN git clone --depth 1 https://github.com/duckdb/duckdb.git --branch ${DUCKDB_VERSION} --recurse-submodules && \
     scripts/build_duckdb.sh && \
     rm -rf ./duckdb
