@@ -1,11 +1,3 @@
 [submodule "jwt-cpp"]
 	path = jwt-cpp
 	url = https://github.com/Thalhammer/jwt-cpp
-
-[submodule "duckdb"]
-	path = duckdb
-	url = https://github.com/duckdb/duckdb
-
-[submodule "arrow"]
-	path = arrow
-	url = https://github.com/apache/arrow
