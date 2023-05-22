@@ -146,7 +146,6 @@ arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::FetchResult() {
         ARROW_RETURN_NOT_OK(arrow::Status::ExecutionError(fetch_error.Message()));
     }
 
-    data_chunk->Verify();
     if (data_chunk != nullptr) {
         duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr);
         ARROW_ASSIGN_OR_RAISE(record_batch, arrow::ImportRecordBatch(&res_arr, &res_schema));
