@@ -174,7 +174,7 @@ arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
     auto client_properties = context->GetClientProperties();
 
     ArrowSchema arrow_schema;
-    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, client_properties.timezone);
+    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, client_properties.time_zone);
 
     auto return_value = arrow::ImportSchema(&arrow_schema);
 

@@ -65,15 +65,11 @@ COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build and install Arrow (we clone in Docker to avoid .git issues, and build from source to freeze the version)
 ARG ARROW_VERSION="apache-arrow-12.0.0"
-RUN git clone --depth 1 https://github.com/apache/arrow.git --branch ${ARROW_VERSION} --recurse-submodules && \
-    scripts/build_arrow.sh && \
-    rm -rf ./arrow
+RUN scripts/build_arrow.sh ${ARROW_VERSION} "Y"
 
 # Build and install DuckDB (we clone in Docker to avoid .git issues), cleanup source files afterward)
 ARG DUCKDB_VERSION="v0.8.0"
-RUN git clone --depth 1 https://github.com/duckdb/duckdb.git --branch ${DUCKDB_VERSION} --recurse-submodules && \
-    scripts/build_duckdb.sh && \
-    rm -rf ./duckdb
+RUN scripts/build_duckdb.sh ${DUCKDB_VERSION} "Y"
 
 # Get the SQLite3 database file
 RUN mkdir data && \
