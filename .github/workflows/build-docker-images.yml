@@ -18,7 +18,7 @@ jobs:
           - platform: amd64
             runner: ubuntu-latest
           - platform: arm64
-            runner: ["self-hosted", "ubuntu-22.04-arm"] # This is self-hosted, change later...
+            runner: buildjet-2vcpu-ubuntu-2204
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Set up Docker Buildx
