@@ -18,7 +18,7 @@ jobs:
           - platform: amd64
             runner: ubuntu-latest
           - platform: arm64
-            runner: buildjet-2vcpu-ubuntu-2204
+            runner: buildjet-2vcpu-ubuntu-2204-arm
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Set up Docker Buildx
