@@ -64,7 +64,7 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build and install Arrow (we clone in Docker to avoid .git issues, and build from source to freeze the version)
-ARG ARROW_VERSION="apache-arrow-12.0.1"
+ARG ARROW_VERSION="apache-arrow-12.0.0"
 RUN scripts/build_arrow.sh ${ARROW_VERSION} "Y"
 
 # Build and install DuckDB (we clone in Docker to avoid .git issues), cleanup source files afterward)
