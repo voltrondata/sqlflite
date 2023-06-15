@@ -135,10 +135,11 @@ arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::FetchResult() {
     std::shared_ptr<RecordBatch> record_batch;
     ArrowArray res_arr;
     ArrowSchema res_schema;
+    duckdb::ArrowOptions res_options;
+    res_options.time_zone = QueryResult::GetConfigTimezone(*query_result_);
 
-    auto timezone_config = QueryResult::GetConfigTimezone(*query_result_);
+    duckdb::ArrowConverter::ToArrowSchema(&res_schema, query_result_->types, query_result_->names, res_options);
 
-    duckdb::ArrowConverter::ToArrowSchema(&res_schema, query_result_->types, query_result_->names, timezone_config);
     duckdb::unique_ptr<duckdb::DataChunk> data_chunk;
     duckdb::PreservedError fetch_error;
     auto fetch_success = query_result_->TryFetch(data_chunk, fetch_error);
@@ -147,7 +148,7 @@ arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::FetchResult() {
     }
 
     if (data_chunk != nullptr) {
-        duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr);
+        duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr, res_options);
         ARROW_ASSIGN_OR_RAISE(record_batch, arrow::ImportRecordBatch(&res_arr, &res_schema));
     }
 
@@ -171,9 +172,12 @@ arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
 
     auto& context = stmt_->context;
     auto client_properties = context->GetClientProperties();
+    duckdb::ArrowOptions arrow_options;
+
+    arrow_options.time_zone = client_properties.time_zone;
 
     ArrowSchema arrow_schema;
-    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, client_properties.time_zone);
+    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, arrow_options);
 
     auto return_value = arrow::ImportSchema(&arrow_schema);
 
