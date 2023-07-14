@@ -198,14 +198,14 @@ namespace arrow {
                     arrow::Result<ActionCreatePreparedStatementResult> CreatePreparedStatement(
                             const ServerCallContext &context,
                             const ActionCreatePreparedStatementRequest &request) {
+                        std::shared_ptr<DuckDBStatement> statement;
+                        ARROW_ASSIGN_OR_RAISE(statement, DuckDBStatement::Create(db_conn_, request.query));
+
                         // DuckDB isn't designed for multi-user concurrency, so we lock a mutex here to prevent multiple threads from Flight SQL server
                         // from running multiple queries at the same time.  This essentially means we have a query queue/pool of size 1
                         // This avoids error: cfjd.org.apache.arrow.flight.FlightRuntimeException: UNKNOWN: Invalid Input Error: Attempting to execute an unsuccessful or closed pending query result
                         // when running long-running queries in multiple sessions...
                         global_mutex.lock();
-
-                        std::shared_ptr<DuckDBStatement> statement;
-                        ARROW_ASSIGN_OR_RAISE(statement, DuckDBStatement::Create(db_conn_, request.query));
                         const std::string handle = GenerateRandomString();
                         prepared_statements_[handle] = statement;
 
