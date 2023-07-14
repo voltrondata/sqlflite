@@ -103,4 +103,7 @@ WORKDIR ${APP_DIR}/scripts
 
 EXPOSE 31337
 
+# Run a test to ensure that the server works...
+RUN ./test_flight_sql.sh
+
 ENTRYPOINT ./start_flight_sql.sh
