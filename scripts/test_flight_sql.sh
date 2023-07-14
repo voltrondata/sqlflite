@@ -7,7 +7,7 @@ export FLIGHT_PASSWORD="testing123"
 ./start_flight_sql.sh &
 
 # Sleep for a few seconds to allow the server to have time for initialization...
-sleep 5
+sleep 20
 
 python "test_flight_sql.py"
 
