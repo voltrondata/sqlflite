@@ -31,6 +31,7 @@
 #include "duckdb_sql_info.h"
 #include "duckdb_statement.h"
 #include "duckdb_statement_batch_reader.h"
+#include "duckdb_tables_schema_batch_reader.h"
 #include "duckdb/main/prepared_statement.hpp"
 #include "duckdb/main/prepared_statement_data.hpp"
 
@@ -55,7 +56,7 @@ namespace arrow {
                         }
 
                         if (command.db_schema_filter_pattern.has_value()) {
-                            table_query << " and table_schame LIKE '" << command.db_schema_filter_pattern.value()
+                            table_query << " and table_schema LIKE '" << command.db_schema_filter_pattern.value()
                                         << "'";
                         }
 
@@ -91,10 +92,10 @@ namespace arrow {
                             const int64_t num_rows = record_batch->num_rows();
                             const int &num_columns = record_batch->num_columns();
 
-                            for (int i = 0; i < num_rows; ++i) {
-                                for (int c = 0; c < num_columns; ++c) {
-                                    const std::shared_ptr<Array> &column = record_batch->column(c);
-                                    ARROW_ASSIGN_OR_RAISE(std::shared_ptr<Scalar> scalar, column->GetScalar(i));
+                            for (int row_index = 0; row_index < num_rows; ++row_index) {
+                                for (int column_index = 0; column_index < num_columns; ++column_index) {
+                                    const std::shared_ptr<Array> &column = record_batch->column(column_index);
+                                    ARROW_ASSIGN_OR_RAISE(std::shared_ptr<Scalar> scalar, column->GetScalar(row_index));
 
                                     stmt->bind_parameters.push_back(scalar->ToString());
                                 }
@@ -313,7 +314,14 @@ namespace arrow {
                         std::shared_ptr<DuckDBStatementBatchReader> reader;
                         ARROW_ASSIGN_OR_RAISE(reader, DuckDBStatementBatchReader::Create(
                                 statement, SqlSchema::GetTablesSchema()));
-                        return std::unique_ptr<FlightDataStream>(new RecordBatchStream(reader));
+
+                        if (command.include_schema) {
+                            std::shared_ptr<DuckDBTablesWithSchemaBatchReader> table_schema_reader =
+                                    std::make_shared<DuckDBTablesWithSchemaBatchReader>(reader, query, db_conn_);
+                            return std::make_unique<RecordBatchStream>(table_schema_reader);
+                        } else {
+                            return std::unique_ptr<FlightDataStream>(new RecordBatchStream(reader));
+                        }
                     }
 
 
