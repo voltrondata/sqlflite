@@ -24,6 +24,7 @@
 #include <random>
 #include <sstream>
 #include <iostream>
+#include <mutex>
 
 #include <arrow/api.h>
 #include <arrow/flight/sql/server.h>
@@ -34,6 +35,10 @@
 #include "duckdb_tables_schema_batch_reader.h"
 #include "duckdb/main/prepared_statement.hpp"
 #include "duckdb/main/prepared_statement_data.hpp"
+
+// We use this mutex to disallow running multiple SQL statements by multiple threads at the same time.
+// This is because DuckDB is not thread-safe
+static std::mutex global_mutex;
 
 
 namespace arrow {
@@ -125,11 +130,9 @@ namespace arrow {
                     bool print_queries_;
                     std::map<std::string, std::shared_ptr<DuckDBStatement>> prepared_statements_;
                     std::default_random_engine gen_;
-                    std::mutex mutex_;
 
                     arrow::Result<std::shared_ptr<DuckDBStatement>> GetStatementByHandle(
                             const std::string &handle) {
-                        std::lock_guard<std::mutex> guard(mutex_);
                         auto search = prepared_statements_.find(handle);
                         if (search == prepared_statements_.end()) {
                             return Status::KeyError("Prepared statement not found");
@@ -195,6 +198,12 @@ namespace arrow {
                     arrow::Result<ActionCreatePreparedStatementResult> CreatePreparedStatement(
                             const ServerCallContext &context,
                             const ActionCreatePreparedStatementRequest &request) {
+                        // DuckDB isn't designed for multi-user concurrency, so we lock a mutex here to prevent multiple threads from Flight SQL server
+                        // from running multiple queries at the same time.  This essentially means we have a query queue/pool of size 1
+                        // This avoids error: cfjd.org.apache.arrow.flight.FlightRuntimeException: UNKNOWN: Invalid Input Error: Attempting to execute an unsuccessful or closed pending query result
+                        // when running long-running queries in multiple sessions...
+                        global_mutex.lock();
+
                         std::shared_ptr<DuckDBStatement> statement;
                         ARROW_ASSIGN_OR_RAISE(statement, DuckDBStatement::Create(db_conn_, request.query));
                         const std::string handle = GenerateRandomString();
@@ -240,6 +249,9 @@ namespace arrow {
                         } else {
                             return Status::Invalid("Prepared statement not found");
                         }
+
+                        // Unlock our mutex so that other threads can run queries...
+                        global_mutex.unlock();
 
                         return Status::OK();
                     }
