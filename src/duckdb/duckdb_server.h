@@ -82,6 +82,9 @@ class DuckDBFlightSqlServer : public FlightSqlServerBase {
   arrow::Result<std::unique_ptr<FlightDataStream>> DoGetTables(
       const ServerCallContext& context, const GetTables& command) override;
 
+  arrow::Result<CancelResult> CancelQuery(
+      const ServerCallContext& context, const ActionCancelQueryRequest& request) override;
+
  private:
   class Impl;
   std::shared_ptr<Impl> impl_;

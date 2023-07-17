@@ -241,17 +241,18 @@ namespace arrow {
 
                     Status ClosePreparedStatement(const ServerCallContext &context,
                                                   const ActionClosePreparedStatementRequest &request) {
+                        // Unlock our mutex so that other threads can run queries...
+                        global_mutex.unlock();
+
                         const std::string &prepared_statement_handle = request.prepared_statement_handle;
 
                         auto search = prepared_statements_.find(prepared_statement_handle);
+
                         if (search != prepared_statements_.end()) {
                             prepared_statements_.erase(prepared_statement_handle);
                         } else {
                             return Status::Invalid("Prepared statement not found");
                         }
-
-                        // Unlock our mutex so that other threads can run queries...
-                        global_mutex.unlock();
 
                         return Status::OK();
                     }
@@ -354,6 +355,14 @@ namespace arrow {
                         return std::unique_ptr<FlightInfo>(new FlightInfo(result));
                     }
 
+                    arrow::Result<CancelResult> CancelQuery(
+                            const ServerCallContext &context, const ActionCancelQueryRequest &request) {
+                        // Release the global mutex
+                        global_mutex.unlock();
+
+                        return Status::OK();
+                    }
+
                 };
 
                 DuckDBFlightSqlServer::DuckDBFlightSqlServer(std::shared_ptr<Impl> impl)
@@ -443,6 +452,10 @@ namespace arrow {
                     return impl_->DoPutPreparedStatementUpdate(context, command, reader);
                 }
 
+                arrow::Result<CancelResult> DuckDBFlightSqlServer::CancelQuery(
+                        const ServerCallContext &context, const ActionCancelQueryRequest &request) {
+                    return impl_->CancelQuery(context, request);
+                }
 
             }  // namespace sqlite
         }  // namespace sql
