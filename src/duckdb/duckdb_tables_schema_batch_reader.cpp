@@ -69,7 +69,7 @@ Status DuckDBTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>*
           // Just get the schema from a prepared statement
           std::shared_ptr<DuckDBStatement> table_schema_statement;
           ARROW_ASSIGN_OR_RAISE(table_schema_statement,
-                                DuckDBStatement::Create(db_conn_, "SELECT * FROM " + table_name));
+                                DuckDBStatement::Create(db_conn_, "SELECT * FROM " + table_name + " WHERE 1 = 0"));
 
           ARROW_ASSIGN_OR_RAISE(auto table_schema, table_schema_statement->GetSchema());
 
