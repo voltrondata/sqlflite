@@ -126,9 +126,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     // Setup TLS
     ARROW_CHECK_OK(FlightServerTlsCertificates(&options.tls_certificates));
 
-    std::cout << "Using database file: " << db_path << std::endl;
-
-    std::cout << "Print Queries option is set to: " << std::boolalpha << print_queries << std::endl;
+    std::cout << "Apache Arrow version: " << ARROW_VERSION_STRING << std::endl;
 
     std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server = nullptr;
 
@@ -145,12 +143,17 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
         return arrow::Status::Invalid(err_msg);
     }
 
+    auto db_realpath = realpath(db_path.c_str(), NULL);
+    std::cout << "Using database file: " << db_realpath << " (resolved from: " << db_path << ")" << std::endl;
+
+    std::cout << "Print Queries option is set to: " << std::boolalpha << print_queries << std::endl;
+
     if (server != nullptr) {
         ARROW_CHECK_OK(server->Init(options));
         // Exit with a clean error code (0) on SIGTERM
         ARROW_CHECK_OK(server->SetShutdownOnSignals({SIGTERM}));
 
-        std::cout << db_type << " server listening on " << location.ToString() << std::endl;
+        std::cout << "Apache Arrow Flight SQL server - with engine: " << db_type << " - listening on " << location.ToString() << std::endl;
         return server;
     } else {
         std::string err_msg = "Unable to start the server";

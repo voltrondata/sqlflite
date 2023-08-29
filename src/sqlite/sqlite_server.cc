@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include <iostream>
 #include "sqlite_server.h"
 
 #include <sqlite3.h>
@@ -748,6 +749,8 @@ SQLiteFlightSqlServer::SQLiteFlightSqlServer(std::shared_ptr<Impl> impl)
     : impl_(std::move(impl)) {}
 
 arrow::Result<std::shared_ptr<SQLiteFlightSqlServer>> SQLiteFlightSqlServer::Create(std::string path) {
+  std::cout << "SQLite version: " << sqlite3_libversion() << std::endl;
+
   sqlite3* db = nullptr;
   char* db_location;
 
