@@ -26,9 +26,39 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Setup the AWS Client (so we can copy S3 files to the container if needed)
+# Install Apache Arrow (per https://arrow.apache.org/install/)
+RUN apt update && \
+    apt install -y -V ca-certificates lsb-release wget && \
+    wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
+    apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
+    apt update && \
+    apt install -y -V \
+       libarrow-dev \
+       libarrow-glib-dev \
+       libarrow-dataset-dev \
+       libarrow-dataset-glib-dev \
+       libarrow-acero-dev \
+       libarrow-flight-dev \
+       libarrow-flight-glib-dev \
+       libarrow-flight-sql-dev \
+       libarrow-flight-sql-glib-dev \
+       libgandiva-dev \
+       libgandiva-glib-dev \
+       libparquet-dev \
+       libparquet-glib-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the scripts directory into the image (we copy directory-by-directory in order to maximize Docker caching)
+COPY --chown=app_user:app_user ./scripts ./scripts
+
+# Build/Install DuckDB
+ARG DUCKDB_VERSION="v0.8.1"
+RUN scripts/build_duckdb.sh ${DUCKDB_VERSION} "Y"
+
 WORKDIR /tmp
 
+# Setup the AWS Client (so we can copy S3 files to the container if needed)
 RUN case ${TARGETPLATFORM} in \
          "linux/amd64")  AWSCLI_FILE=https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip  ;; \
          "linux/arm64")  AWSCLI_FILE=https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip  ;; \
@@ -62,14 +92,6 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 
 # Copy the scripts directory into the image (we copy directory-by-directory in order to maximize Docker caching)
 COPY --chown=app_user:app_user ./scripts ./scripts
-
-# Build and install Arrow (we clone in Docker to avoid .git issues, and build from source to freeze the version)
-ARG ARROW_VERSION="apache-arrow-13.0.0"
-RUN scripts/build_arrow.sh ${ARROW_VERSION} "Y"
-
-# Build and install DuckDB (we clone in Docker to avoid .git issues), cleanup source files afterward)
-ARG DUCKDB_VERSION="v0.8.1"
-RUN scripts/build_duckdb.sh ${DUCKDB_VERSION} "Y"
 
 # Get the SQLite3 database file
 RUN mkdir data && \

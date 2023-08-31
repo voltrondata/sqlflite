@@ -53,8 +53,6 @@ def main(file_name: str,
     # establish all connections to database
     con = duckdb.connect(database=duckdb_db_file.as_posix(), read_only=False)
 
-    con.install_extension("tpch")
-    con.load_extension("tpch")
     con.execute(f"CALL dbgen(sf={scale_factor})")
     con.execute(f"VACUUM ANALYZE")
 
