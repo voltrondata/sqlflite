@@ -373,6 +373,8 @@ namespace arrow {
                         const duckdb::DBConfig &config,
                         const bool &print_queries
                 ) {
+                    std::cout << "DuckDB version: " << duckdb_library_version() << std::endl;
+
                     std::shared_ptr<duckdb::DuckDB> db;
                     std::shared_ptr<duckdb::Connection> con;
 
