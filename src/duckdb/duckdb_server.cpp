@@ -221,7 +221,7 @@ namespace arrow {
 
                         for (id_t i = 0; i < parameter_count; i++) {
                             std::string parameter_name = std::string("parameter_") + std::to_string(i + 1);
-                            auto parameter_duckdb_type = parameter_data->GetType(i + 1);
+                            auto parameter_duckdb_type = parameter_data->GetType(parameter_name);
                             auto parameter_arrow_type = GetDataTypeFromDuckDbType(parameter_duckdb_type);
                             parameter_fields.push_back(field(parameter_name, parameter_arrow_type));
                         }

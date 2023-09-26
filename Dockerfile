@@ -53,7 +53,7 @@ RUN apt update && \
 COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build/Install DuckDB
-ARG DUCKDB_VERSION="v0.8.1"
+ARG DUCKDB_VERSION="v0.9.0"
 RUN scripts/build_duckdb.sh ${DUCKDB_VERSION} "Y"
 
 WORKDIR /tmp
