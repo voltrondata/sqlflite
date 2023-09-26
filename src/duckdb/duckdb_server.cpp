@@ -220,8 +220,9 @@ namespace arrow {
                         auto bind_parameter_map = parameter_data->value_map;
 
                         for (id_t i = 0; i < parameter_count; i++) {
-                            std::string parameter_name = std::string("parameter_") + std::to_string(i + 1);
-                            auto parameter_duckdb_type = parameter_data->GetType(parameter_name);
+                            std::string parameter_idx_str = std::to_string(i + 1);
+                            std::string parameter_name = std::string("parameter_") + parameter_idx_str;
+                            auto parameter_duckdb_type = parameter_data->GetType(parameter_idx_str);
                             auto parameter_arrow_type = GetDataTypeFromDuckDbType(parameter_duckdb_type);
                             parameter_fields.push_back(field(parameter_name, parameter_arrow_type));
                         }
