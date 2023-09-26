@@ -34,10 +34,10 @@ docker run --name flight-sql \
 The above command will automatically mount a very small TPC-H DuckDB database file.
 
 ### Optional - open a different database file
-When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.8.1).   
+When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.9.0).   
 
 Prerequisite: DuckDB CLI   
-Install DuckDB CLI version [0.9.0](https://github.com/duckdb/duckdb/releases/tag/v0.8.1) - and make sure the executable is on your PATH.
+Install DuckDB CLI version [0.9.0](https://github.com/duckdb/duckdb/releases/tag/v0.9.0) - and make sure the executable is on your PATH.
 
 Platform Downloads:   
 [Linux x86-64](https://github.com/duckdb/duckdb/releases/download/v0.9.0/duckdb_cli-linux-amd64.zip)   
