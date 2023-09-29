@@ -73,6 +73,29 @@ docker run --name flight-sql \
            voltrondata/flight-sql:latest
 ```
 
+### Running initialization SQL commands
+You can now run initialization commands upon container startup by setting environment variable: `INIT_SQL_COMMANDS` to a string of SQL commands separated by semicolons - example value:   
+
+`SET threads = 1; SET memory_limit = '1GB';`.      
+
+Here is a full example of running the Docker image with initialization SQL commands:
+```bash
+docker run --name flight-sql \
+           --detach \
+           --rm \
+           --tty \
+           --init \
+           --publish 31337:31337 \
+           --env FLIGHT_PASSWORD="flight_password" \
+           --env PRINT_QUERIES="1" \
+           --env INIT_SQL_COMMANDS="SET threads = 1; SET memory_limit = '1GB';" \
+           --pull missing \
+           voltrondata/flight-sql:latest
+```
+
+**Note**: for the DuckDB back-end - the following init commands are automatically run for you:   
+`SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;`
+
 ### Connecting to the server via JDBC
 Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)
 
@@ -83,7 +106,7 @@ jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&
 
 For instructions on setting up the JDBC driver in popular Database IDE tool: [DBeaver Community Edition](https://dbeaver.io) - see this [repo](https://github.com/voltrondata/setup-arrow-jdbc-driver-in-dbeaver).
 
-Note - if you stop/restart the Flight SQL Docker container, and attempt to connect via JDBC with the same password - you could get error: "Invalid bearer token provided. Detail: Unauthenticated".  This is because the client JDBC driver caches the bearer token signed with the previous instance's RSA private key.  Just change the password in the new container by changing the "FLIGHT_PASSWORD" env var setting - and then use that to connect via JDBC.  
+**Note** - if you stop/restart the Flight SQL Docker container, and attempt to connect via JDBC with the same password - you could get error: "Invalid bearer token provided. Detail: Unauthenticated".  This is because the client JDBC driver caches the bearer token signed with the previous instance's RSA private key.  Just change the password in the new container by changing the "FLIGHT_PASSWORD" env var setting - and then use that to connect via JDBC.  
 
 ### Connecting to the server via the new [ADBC Python Flight SQL driver](https://pypi.org/project/adbc-driver-flightsql/)
 
