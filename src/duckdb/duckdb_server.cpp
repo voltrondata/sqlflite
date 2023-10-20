@@ -364,6 +364,13 @@ namespace arrow {
                         return Status::OK();
                     }
 
+                    Status ExecuteSql(const std::string &sql) {
+                        std::unique_ptr<duckdb::MaterializedQueryResult> result = db_conn_->Query(sql);
+                        if (result->HasError()) {
+                            return Status::Invalid(result->GetError());
+                        }
+                        return Status::OK();
+                    }
                 };
 
                 DuckDBFlightSqlServer::DuckDBFlightSqlServer(std::shared_ptr<Impl> impl)
@@ -392,6 +399,10 @@ namespace arrow {
                 }
 
                 DuckDBFlightSqlServer::~DuckDBFlightSqlServer() = default;
+
+                arrow::Status DuckDBFlightSqlServer::ExecuteSql(const std::string& sql) {
+                    return impl_->ExecuteSql(sql);
+                }
 
                 arrow::Result<std::unique_ptr<FlightInfo>> DuckDBFlightSqlServer::GetFlightInfoStatement(
                         const ServerCallContext &context, const StatementQuery &command,

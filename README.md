@@ -96,6 +96,10 @@ docker run --name flight-sql \
 **Note**: for the DuckDB back-end - the following init commands are automatically run for you:   
 `SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;`
 
+**Note**: Initialization SQL commands which SELECT data will NOT show the results (this is not supported).
+
+**Note**: Initialization SQL commands which fail will cause the Flight SQL server to abort and exit with a non-zero exit code. 
+
 ### Connecting to the server via JDBC
 Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)
 

@@ -46,13 +46,31 @@ bool checkIfSkip(std::string_view path, int query_id) {
     return false;
 }
 
+#define RUN_INIT_COMMANDS(serverType, init_sql_commands) \
+    do { \
+        if (init_sql_commands != "") { \
+            std::vector<std::string> tokens; \
+            boost::split(tokens, init_sql_commands, boost::is_any_of(";")); \
+            for (const std::string &init_sql_command: tokens) { \
+                if (init_sql_command.empty()) continue; \
+                std::cout << "Running Init SQL command: " << std::endl << init_sql_command << ";" << std::endl; \
+                ARROW_RETURN_NOT_OK(serverType->ExecuteSql(init_sql_command)); \
+            } \
+        } \
+    } while (false)
+
+
 arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateServer(
         const std::string &db_type,
         const std::string &db_path,
+        const std::string &mtls_ca_cert_path,
+        const std::string &init_sql_commands,
         const bool &print_queries
 ) {
     ARROW_ASSIGN_OR_RAISE(auto location,
                           arrow::flight::Location::ForGrpcTls(arrow::flight::GetFlightServerHostname(), port))
+    std::cout << "Apache Arrow version: " << ARROW_VERSION_STRING << std::endl;
+
     arrow::flight::FlightServerOptions options(location);
 
     auto header_middleware = std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>();
@@ -66,23 +84,33 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     std::string flight_server_password;
     ARROW_CHECK_OK (arrow::flight::GetFlightServerPassword(&flight_server_password));
 
-    // Setup TLS
-    ARROW_CHECK_OK(FlightServerTlsCertificates(&options.tls_certificates));
+    // Setup TLS - we require it because users are sending their passwords
+    ARROW_CHECK_OK(arrow::flight::FlightServerTlsCertificates(&options.tls_certificates));
 
-    std::cout << "Apache Arrow version: " << ARROW_VERSION_STRING << std::endl;
+    if (!mtls_ca_cert_path.empty()) {
+        std::cout << "Using mTLS CA certificate: " << mtls_ca_cert_path << std::endl;
+        ARROW_CHECK_OK(arrow::flight::FlightServerMtlsCACertificate(mtls_ca_cert_path, &options.root_certificates));
+        options.verify_client = true;
+    }
 
     std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server = nullptr;
 
     if (db_type == "sqlite") {
-        ARROW_ASSIGN_OR_RAISE(server,
+        std::shared_ptr<arrow::flight::sql::sqlite::SQLiteFlightSqlServer> sqlite_server = nullptr;
+        ARROW_ASSIGN_OR_RAISE(sqlite_server,
                               arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(db_path)
         )
+        RUN_INIT_COMMANDS(sqlite_server, init_sql_commands);
+        server = sqlite_server;
     } else if (db_type == "duckdb") {
+        std::shared_ptr<arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer> duckdb_server = nullptr;
         duckdb::DBConfig config;
-        ARROW_ASSIGN_OR_RAISE(server,
+        ARROW_ASSIGN_OR_RAISE(duckdb_server,
                               arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(db_path, config,
                                                                                               print_queries)
         )
+        RUN_INIT_COMMANDS(duckdb_server, init_sql_commands);
+        server = duckdb_server;
     } else {
         std::string err_msg = "Unknown server type: --> ";
         err_msg += db_type;
@@ -162,28 +190,6 @@ arrow::Result<FlightSQLClientWithCallOptions> CreateClient() {
     return std::move(client_with_call_options);
 }
 
-arrow::Status runInitCommands(std::string init_sql_commands) {
-    if (init_sql_commands != "") {
-        ARROW_ASSIGN_OR_RAISE(auto client, CreateClient())
-
-        std::vector<std::string> tokens;
-
-        boost::split(tokens, init_sql_commands, boost::is_any_of(";"));
-        for (const std::string &init_sql_command: tokens) {
-            if (init_sql_command.empty()) continue;
-            std::cout << "Running Init SQL command: " << std::endl << init_sql_command << ";" << std::endl;
-            ARROW_ASSIGN_OR_RAISE(auto flight_info, client.client->Execute(*client.call_options, init_sql_command))
-
-            if (flight_info != nullptr) {
-                std::cout << "Init SQL command results: " << std::endl;
-                ARROW_RETURN_NOT_OK(printResults(flight_info, client.client, *client.call_options, true));
-            }
-        }
-    }
-
-    return arrow::Status::OK();
-}
-
 void chdir_string(const std::string &path) {
     // Convert the string to a char array
     // Navigate to the database file directory
@@ -201,6 +207,7 @@ void chdir_string(const std::string &path) {
 arrow::Status Main(const std::string &backend,
                    const std::string &database_file_path,
                    const std::string &database_file_name,
+                   const std::string &mtls_ca_cert_path,
                    const bool &print_queries
 ) {
 
@@ -208,8 +215,6 @@ arrow::Status Main(const std::string &backend,
     chdir_string(database_file_path);
 
     std::string database_file_uri = database_file_path + "/" + database_file_name;
-
-    ARROW_ASSIGN_OR_RAISE(auto server, CreateServer(backend, database_file_uri, print_queries))
 
     std::string init_sql_commands;
 
@@ -223,7 +228,8 @@ arrow::Status Main(const std::string &backend,
         init_sql_commands += init_sql_commands_env;
     }
 
-    ARROW_RETURN_NOT_OK(runInitCommands(init_sql_commands));
+    ARROW_ASSIGN_OR_RAISE(auto server,
+                          CreateServer(backend, database_file_uri, mtls_ca_cert_path, init_sql_commands, print_queries))
 
     ARROW_CHECK_OK(server->Serve());
 
@@ -248,6 +254,8 @@ int main(int argc, char **argv) {
              "Specify the search path for the database file.")
             ("database_file_name,D", po::value<std::string>()->default_value(""),
              "Specify the database filename (the file must be in search path)")
+            ("mtls_ca_cert_path,M", po::value<std::string>()->default_value(""),
+             "Specify an optional mTLS CA certificate path used to verify clients.  The certificate MUST be in PEM format.")
             ("print_queries,Q", po::bool_switch()->default_value(false), "Print queries run by clients to stdout");
 
     po::variables_map vm;
@@ -262,6 +270,7 @@ int main(int argc, char **argv) {
     std::string backend = vm["backend"].as<std::string>();
     std::string database_file_path = vm["database_file_path"].as<std::string>();
     std::string database_file_name = vm["database_file_name"].as<std::string>();
+    std::string mtls_ca_cert_path = vm["mtls_ca_cert_path"].as<std::string>();
     bool print_queries = vm["print_queries"].as<bool>();
 
     if (database_file_name.empty()) {
@@ -269,7 +278,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (auto status = Main(backend, database_file_path, database_file_name, print_queries); !status.ok()) {
+    if (auto status = Main(backend, database_file_path, database_file_name, mtls_ca_cert_path,
+                           print_queries); !status.ok()) {
         std::cerr << status << std::endl;
         return 1;
     }

@@ -75,6 +75,23 @@ namespace arrow {
             return Status::OK();
         }
 
+        Status FlightServerMtlsCACertificate(const std::string &cert_path,
+                                             std::string *out) {
+            try {
+                std::ifstream cert_file(cert_path);
+                if (!cert_file) {
+                    return Status::IOError("Could not open MTLS CA certificate: " + cert_path);
+                }
+                std::stringstream cert;
+                cert << cert_file.rdbuf();
+
+                *out = cert.str();
+            } catch (const std::ifstream::failure &e) {
+                return Status::IOError(e.what());
+            }
+            return Status::OK();
+        }
+
         class HeaderAuthServerMiddleware : public ServerMiddleware {
         public:
             HeaderAuthServerMiddleware(std::string username) {
