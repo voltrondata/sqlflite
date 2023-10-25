@@ -13,7 +13,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-
+namespace fs = std::filesystem;
 
 namespace arrow {
     namespace flight {
@@ -28,8 +28,7 @@ namespace arrow {
             const char *c_flight_hostname = std::getenv("FLIGHT_HOSTNAME");
             if (!c_flight_hostname) {
                 return "0.0.0.0";
-            }
-            else {
+            } else {
                 return std::string(c_flight_hostname);
             }
         }
@@ -44,26 +43,24 @@ namespace arrow {
             return Status::OK();
         }
 
-        Status FlightServerTlsCertificates(std::vector<CertKeyPair> *out) {
-            std::string root = "../tls";
+        Status FlightServerTlsCertificates(const fs::path &cert_path,
+                                           const fs::path &key_path,
+                                           std::vector<CertKeyPair> *out) {
+            std::cout << "Using TLS Cert file: " << cert_path << std::endl;
+            std::cout << "Using TLS Key file: " << key_path << std::endl;
 
             *out = std::vector<CertKeyPair>();
             try {
-                std::stringstream cert_path;
-                cert_path << root << "/cert0.pem";
-                std::stringstream key_path;
-                key_path << root << "/cert0.key";
-
-                std::ifstream cert_file(cert_path.str());
+                std::ifstream cert_file(cert_path);
                 if (!cert_file) {
-                    return Status::IOError("Could not open certificate: " + cert_path.str());
+                    return Status::IOError("Could not open certificate: " + cert_path.string());
                 }
                 std::stringstream cert;
                 cert << cert_file.rdbuf();
 
-                std::ifstream key_file(key_path.str());
+                std::ifstream key_file(key_path);
                 if (!key_file) {
-                    return Status::IOError("Could not open key: " + key_path.str());
+                    return Status::IOError("Could not open key: " + key_path.string());
                 }
                 std::stringstream key;
                 key << key_file.rdbuf();
@@ -94,8 +91,9 @@ namespace arrow {
 
         class HeaderAuthServerMiddleware : public ServerMiddleware {
         public:
-            HeaderAuthServerMiddleware(std::string username) {
-                ARROW_CHECK_OK(FlightServerTlsCertificates(&tls_certs_));
+            HeaderAuthServerMiddleware(const std::vector<CertKeyPair> &tls_certs,
+                                       const std::string &username) {
+                tls_certs_ = tls_certs;
                 username_ = username;
             }
 
@@ -151,13 +149,11 @@ namespace arrow {
         }
 
         Status GetAuthHeaderType(const CallHeaders &incoming_headers, std::string *out) {
-            if ( not FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBasicPrefix).empty() ) {
+            if (not FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBasicPrefix).empty()) {
                 *out = "Basic";
-            }
-            else if ( not FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBearerPrefix).empty() ) {
+            } else if (not FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBearerPrefix).empty()) {
                 *out = "Bearer";
-            }
-            else {
+            } else {
                 return Status::IOError("Invalid Authorization Header type!");
             }
             return Status::OK();
@@ -175,8 +171,8 @@ namespace arrow {
         // Factory for base64 header authentication testing.
         class HeaderAuthServerMiddlewareFactory : public ServerMiddlewareFactory {
         public:
-            HeaderAuthServerMiddlewareFactory() {
-                ARROW_CHECK_OK(FlightServerTlsCertificates(&tls_certs_));
+            HeaderAuthServerMiddlewareFactory(const std::vector<CertKeyPair> &tls_certs) {
+                tls_certs_ = tls_certs;
             }
 
             Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
@@ -184,7 +180,7 @@ namespace arrow {
 
                 std::string auth_header_type;
                 ARROW_RETURN_NOT_OK (GetAuthHeaderType(incoming_headers, &auth_header_type));
-                if (auth_header_type == "Basic" ) {
+                if (auth_header_type == "Basic") {
                     std::string username, password;
 
                     ParseBasicHeader(incoming_headers, username, password);
@@ -192,9 +188,8 @@ namespace arrow {
                     ARROW_RETURN_NOT_OK (GetFlightServerPassword(&flight_server_password));
 
                     if ((username == kValidUsername) && (password == flight_server_password)) {
-                        *middleware = std::make_shared<HeaderAuthServerMiddleware>(username);
-                    }
-                    else {
+                        *middleware = std::make_shared<HeaderAuthServerMiddleware>(tls_certs_, username);
+                    } else {
                         return MakeFlightError(FlightStatusCode::Unauthenticated, "Invalid credentials");
                     }
                 }
@@ -208,10 +203,11 @@ namespace arrow {
         // A server middleware for validating incoming bearer header authentication.
         class BearerAuthServerMiddleware : public ServerMiddleware {
         public:
-            explicit BearerAuthServerMiddleware(const CallHeaders &incoming_headers, bool *isValid)
+            explicit BearerAuthServerMiddleware(const std::vector<CertKeyPair> &tls_certs,
+                                                const CallHeaders &incoming_headers, bool *isValid)
                     : isValid_(isValid) {
                 incoming_headers_ = incoming_headers;
-                ARROW_CHECK_OK(FlightServerTlsCertificates(&tls_certs_));
+                tls_certs_ = tls_certs;
             }
 
             void SendingHeaders(AddCallHeaders *outgoing_headers) override {
@@ -253,7 +249,11 @@ namespace arrow {
         // Factory for base64 header authentication testing.
         class BearerAuthServerMiddlewareFactory : public ServerMiddlewareFactory {
         public:
-            BearerAuthServerMiddlewareFactory() : isValid_(true) {}
+            BearerAuthServerMiddlewareFactory(const std::vector<CertKeyPair> &tls_certs
+            ) {
+                tls_certs_ = tls_certs;
+                isValid_ = true;
+            }
 
             Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
                              std::shared_ptr<ServerMiddleware> *middleware) override {
@@ -262,12 +262,13 @@ namespace arrow {
                 if (iter_pair.first != iter_pair.second) {
                     std::string auth_header_type;
                     ARROW_RETURN_NOT_OK (GetAuthHeaderType(incoming_headers, &auth_header_type));
-                    if (auth_header_type == "Bearer" ) {
+                    if (auth_header_type == "Bearer") {
                         *middleware =
-                                std::make_shared<BearerAuthServerMiddleware>(incoming_headers, &isValid_);
+                                std::make_shared<BearerAuthServerMiddleware>(tls_certs_,
+                                                                             incoming_headers, &isValid_);
                     }
                 }
-                if ( not isValid_ ) {
+                if (not isValid_) {
                     return MakeFlightError(FlightStatusCode::Unauthenticated, "Invalid bearer token provided");
                 }
                 return Status::OK();
@@ -277,30 +278,8 @@ namespace arrow {
 
         private:
             bool isValid_;
+            std::vector<CertKeyPair> tls_certs_;
         };
-
-
-//        Status ExampleTlsCertificateRoot(CertKeyPair* out) {
-//            std::string root;
-//            RETURN_NOT_OK(GetTestResourceRoot(&root));
-//
-//            std::stringstream path;
-//            path << root << "/flight/root-ca.pem";
-//
-//            try {
-//                std::ifstream cert_file(path.str());
-//                if (!cert_file) {
-//                    return Status::IOError("Could not open certificate: " + path.str());
-//                }
-//                std::stringstream cert;
-//                cert << cert_file.rdbuf();
-//                out->pem_cert = cert.str();
-//                out->pem_key = "";
-//                return Status::OK();
-//            } catch (const std::ifstream::failure& e) {
-//                return Status::IOError(e.what());
-//            }
-//        }
 
     }
 }

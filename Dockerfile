@@ -117,15 +117,14 @@ RUN . ~/.bashrc && \
     mkdir build && \
     cd build && \
     cmake .. -GNinja -DCMAKE_PREFIX_PATH=${ARROW_HOME}/lib/cmake && \
-    ninja
+    ninja && \
+    mv flight_sql /usr/local/bin
 
 COPY --chown=app_user:app_user ./tls ./tls
-
-WORKDIR ${APP_DIR}/scripts
 
 EXPOSE 31337
 
 # Run a test to ensure that the server works...
-RUN ./test_flight_sql.sh
+RUN scripts/test_flight_sql.sh
 
-ENTRYPOINT ./start_flight_sql.sh
+ENTRYPOINT scripts/start_flight_sql.sh

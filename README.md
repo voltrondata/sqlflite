@@ -69,7 +69,7 @@ docker run --name flight-sql \
            --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
            --mount type=bind,source=$(pwd),target=/opt/flight_sql/data \
-           --env DATABASE_FILE_NAME="tpch_sf1.duckdb" \
+           --env DATABASE_FILENAME="tpch_sf1.duckdb" \
            voltrondata/flight-sql:latest
 ```
 
@@ -136,14 +136,14 @@ python
 
 In the Python shell - you can then run:
 ```python
-import adbc_driver_flightsql.dbapi as flight_sql
+from adbc_driver_flightsql import dbapi as flight_sql, DatabaseOptions
 
 flight_password = "flight_password" # Use an env var in production code!
 
 with flight_sql.connect(uri="grpc+tls://localhost:31337",
                         db_kwargs={"username": "flight_username",
                                    "password": flight_password,
-                                   "adbc.flight.sql.client_option.tls_skip_verify": "true" # Not needed if you use a trusted CA-signed TLS cert
+                                   DatabaseOptions.TLS_SKIP_VERIFY.value: "true" # Not needed if you use a trusted CA-signed TLS cert
                                    }
                         ) as conn:
    with conn.cursor() as cur:
@@ -229,16 +229,16 @@ popd
 ```
 
 
-8. Start the Flight SQL server (and print client SQL commands as they run using the --print_queries option)
+8. Start the Flight SQL server (and print client SQL commands as they run using the --print-queries option)
 ```bash
-FLIGHT_PASSWORD="flight_password" ./flight_sql --database_file_name "TPC-H-small.duckdb" --print_queries
+FLIGHT_PASSWORD="flight_password" ./flight_sql --database-filename "TPC-H-small.duckdb" --print-queries
 ```
 
 ## Selecting different backends
 This option allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
-$ FLIGHT_PASSWORD="flight_password" ./flight_sql --database_file_name "TPC-H-small.duckdb"
+$ FLIGHT_PASSWORD="flight_password" ./flight_sql --database-filename "TPC-H-small.duckdb"
 > Using database file: ../data/TPC-H-small.duckdb
 > duckdb server listening on grpc+tls://0.0.0.0:31337
 ```
@@ -250,7 +250,7 @@ FLIGHT_PASSWORD="flight_password" ./flight_sql -B sqlite -D "TPC-H-small.db"
 ```
 or 
 ```bash
-FLIGHT_PASSWORD="flight_password" ./flight_sql --backend sqlite --database_file_name "TPC-H-small.db"
+FLIGHT_PASSWORD="flight_password" ./flight_sql --backend sqlite --database-filename "TPC-H-small.db"
 ```
 The above will produce the following:
 
@@ -263,15 +263,21 @@ The above will produce the following:
 To see all the available options run `./flight.sql --help`.
 
 ```bash
-./flight_sql --help
+flight_sql --help
 Allowed options:
   --help                                produce this help message
   -B [ --backend ] arg (=duckdb)        Specify the database backend. Allowed 
                                         options: duckdb, sqlite.
-  -P [ --database_file_path ] arg (=../data)
-                                        Specify the search path for the 
-                                        database file.
-  -D [ --database_file_name ] arg       Specify the database filename (the file
-                                        must be in search path)
-  -Q [ --print_queries ]                Print queries run by clients to stdout
+  -D [ --database-filename ] arg        Specify the database filename (absolute
+                                        or relative to the current working 
+                                        directory)
+  -T [ --tls ] arg (=tls/cert0.pem tls/cert0.key)
+                                        Specify the TLS certificate and key 
+                                        file paths.
+  -I [ --init-sql-commands ] arg        Specify the SQL commands to run on 
+                                        server startup.
+  -M [ --mtls-ca-cert-filename ] arg    Specify an optional mTLS CA certificate
+                                        path used to verify clients.  The 
+                                        certificate MUST be in PEM format.
+  -Q [ --print-queries ]                Print queries run by clients to stdout
 ```

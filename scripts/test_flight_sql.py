@@ -1,12 +1,12 @@
 import os
-import adbc_driver_flightsql.dbapi as flight_sql
+from adbc_driver_flightsql import dbapi as flight_sql, DatabaseOptions
 
 flight_password = os.getenv("FLIGHT_PASSWORD")
 
 with flight_sql.connect(uri="grpc+tls://localhost:31337",
                         db_kwargs={"username": "flight_username",
                                    "password": flight_password,
-                                   "adbc.flight.sql.client_option.tls_skip_verify": "true" # Not needed if you use a trusted CA-signed TLS cert
+                                   DatabaseOptions.TLS_SKIP_VERIFY.value: "true"  # Not needed if you use a trusted CA-signed TLS cert
                                    }
                         ) as conn:
     with conn.cursor() as cur:

@@ -23,28 +23,9 @@
 namespace flight = arrow::flight;
 namespace flightsql = arrow::flight::sql;
 namespace po = boost::program_options;
+namespace fs = std::filesystem;
 
 const int port = 31337;
-
-std::string readFileIntoString(const std::string &path) {
-    auto ss = std::ostringstream{};
-    std::ifstream input_file(path);
-    if (!input_file.is_open()) {
-        std::cerr << "Could not open the file - '"
-                  << path << "'" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    ss << input_file.rdbuf();
-    return ss.str();
-}
-
-bool checkIfSkip(std::string_view path, int query_id) {
-    if (std::string query_id_str = std::to_string(query_id); path.find(query_id_str) != std::string::npos) {
-        std::cout << "Skipping query: " << query_id << '\n';
-        return true;
-    }
-    return false;
-}
 
 #define RUN_INIT_COMMANDS(serverType, init_sql_commands) \
     do { \
@@ -62,8 +43,10 @@ bool checkIfSkip(std::string_view path, int query_id) {
 
 arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateServer(
         const std::string &db_type,
-        const std::string &db_path,
-        const std::string &mtls_ca_cert_path,
+        const fs::path &db_path,
+        const fs::path &tls_cert_path,
+        const fs::path &tls_key_path,
+        const fs::path &mtls_ca_cert_path,
         const std::string &init_sql_commands,
         const bool &print_queries
 ) {
@@ -73,8 +56,14 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
 
     arrow::flight::FlightServerOptions options(location);
 
-    auto header_middleware = std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>();
-    auto bearer_middleware = std::make_shared<arrow::flight::BearerAuthServerMiddlewareFactory>();
+    // Setup TLS - we require it because users are sending their passwords
+    ARROW_CHECK_OK(arrow::flight::FlightServerTlsCertificates(tls_cert_path, tls_key_path, &options.tls_certificates));
+
+    // Setup authentication middleware (using the same TLS certificate keypair)
+    auto header_middleware = std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>(
+            options.tls_certificates);
+    auto bearer_middleware = std::make_shared<arrow::flight::BearerAuthServerMiddlewareFactory>(
+            options.tls_certificates);
 
     options.auth_handler = std::make_unique<arrow::flight::NoOpAuthHandler>();
     options.middleware.push_back({"header-auth-server", header_middleware});
@@ -83,9 +72,6 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     // Ensure a password is set for the server
     std::string flight_server_password;
     ARROW_CHECK_OK (arrow::flight::GetFlightServerPassword(&flight_server_password));
-
-    // Setup TLS - we require it because users are sending their passwords
-    ARROW_CHECK_OK(arrow::flight::FlightServerTlsCertificates(&options.tls_certificates));
 
     if (!mtls_ca_cert_path.empty()) {
         std::cout << "Using mTLS CA certificate: " << mtls_ca_cert_path << std::endl;
@@ -117,8 +103,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
         return arrow::Status::Invalid(err_msg);
     }
 
-    auto db_realpath = realpath(db_path.c_str(), nullptr);
-    std::cout << "Using database file: " << db_realpath << " (resolved from: " << db_path << ")" << std::endl;
+    std::cout << "Using database file: " << db_path << std::endl;
 
     std::cout << "Print Queries option is set to: " << std::boolalpha << print_queries << std::endl;
 
@@ -136,113 +121,38 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     }
 }
 
-arrow::Status printResults(
-        std::unique_ptr<flight::FlightInfo> &results,
-        std::unique_ptr<flightsql::FlightSqlClient> &client,
-        const flight::FlightCallOptions &call_options,
-        const bool &print_results_flag) {
-    // Fetch each partition sequentially (though this can be done in parallel)
-    for (const flight::FlightEndpoint &endpoint: results->endpoints()) {
-        // Here we assume each partition is on the same server we originally queried, but this
-        // isn't true in general: the server may split the query results between multiple
-        // other servers, which we would have to connect to.
-
-        // The "ticket" in the endpoint is opaque to the client. The server uses it to
-        // identify which part of the query results to return.
-        ARROW_ASSIGN_OR_RAISE(auto stream, client->DoGet(call_options, endpoint.ticket))
-        // Read all results into an Arrow Table, though we can iteratively process record
-        // batches as they arrive as well
-        ARROW_ASSIGN_OR_RAISE(auto table, stream->ToTable())
-
-        if (print_results_flag) std::cout << table->ToString() << std::endl;
-    }
-
-    return arrow::Status::OK();
-}
-
-struct FlightSQLClientWithCallOptions {
-    std::unique_ptr<flightsql::FlightSqlClient> client;
-    std::unique_ptr<arrow::flight::FlightCallOptions> call_options;
-};
-
-arrow::Result<FlightSQLClientWithCallOptions> CreateClient() {
-    ARROW_ASSIGN_OR_RAISE(auto location, arrow::flight::Location::ForGrpcTls("localhost", port))
-    arrow::flight::FlightClientOptions options;
-    options.disable_server_verification = true;
-
-    ARROW_ASSIGN_OR_RAISE(auto flight_client, flight::FlightClient::Connect(location, options))
-    std::cout << "Connected to server: localhost:" << port << std::endl;
-
-    arrow::Result<std::pair<std::string, std::string>> bearer_result =
-            flight_client->AuthenticateBasicToken({}, "flight_username", std::string(std::getenv("FLIGHT_PASSWORD")));
-
-    // Use std::make_unique for call_options
-    auto call_options = std::make_unique<arrow::flight::FlightCallOptions>();
-    call_options->headers.push_back(bearer_result.ValueOrDie());
-
-    auto client = std::make_unique<flightsql::FlightSqlClient>(std::move(flight_client));
-    std::cout << "Client created." << std::endl;
-
-    FlightSQLClientWithCallOptions client_with_call_options;
-    client_with_call_options.client = std::move(client);
-    client_with_call_options.call_options = std::move(call_options);
-
-    return std::move(client_with_call_options);
-}
-
-void chdir_string(const std::string &path) {
-    // Convert the string to a char array
-    // Navigate to the database file directory
-    int n = path.length();
-    // declaring character array
-    char char_array[n + 1];
-
-    // copying the contents of the
-    // string to char array
-    strcpy(char_array, path.c_str());
-
-    chdir(char_array);
-}
-
 arrow::Status Main(const std::string &backend,
-                   const std::string &database_file_path,
-                   const std::string &database_file_name,
-                   const std::string &mtls_ca_cert_path,
+                   const fs::path &database_file_name,
+                   const fs::path &tls_cert_path,
+                   const fs::path &tls_key_path,
+                   const fs::path &mtls_ca_cert_path,
+                   const std::string &init_sql_commands,
                    const bool &print_queries
 ) {
-
-    // Navigate to the database file directory
-    chdir_string(database_file_path);
-
-    std::string database_file_uri = database_file_path + "/" + database_file_name;
-
-    std::string init_sql_commands;
+    std::string new_init_sql_commands;
 
     // Set the autoinstall_known_extensions and autoload_known_extensions flags for DuckDB
     if (backend == "duckdb") {
-        init_sql_commands = "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;";
+        new_init_sql_commands = "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;";
     }
 
     // Append the INIT_SQL_COMMANDS environment variable to the init_sql_commands string
-    if (auto init_sql_commands_env = std::getenv("INIT_SQL_COMMANDS"); init_sql_commands_env != nullptr) {
-        init_sql_commands += init_sql_commands_env;
+    if (!init_sql_commands.empty()) {
+        new_init_sql_commands += init_sql_commands;
     }
 
     ARROW_ASSIGN_OR_RAISE(auto server,
-                          CreateServer(backend, database_file_uri, mtls_ca_cert_path, init_sql_commands, print_queries))
+                          CreateServer(backend, database_file_name, tls_cert_path, tls_key_path, mtls_ca_cert_path,
+                                       new_init_sql_commands, print_queries))
 
     ARROW_CHECK_OK(server->Serve());
 
     return arrow::Status::OK();
 }
 
-bool string2bool(const std::string &v) {
-    return !v.empty() &&
-           (strcasecmp(v.c_str(), "true") == 0 ||
-            atoi(v.c_str()) != 0);
-}
-
 int main(int argc, char **argv) {
+
+    std::vector<std::string> tls_token_values;
 
     // Declare the supported options.
     po::options_description desc("Allowed options");
@@ -250,13 +160,16 @@ int main(int argc, char **argv) {
             ("help", "produce this help message")
             ("backend,B", po::value<std::string>()->default_value("duckdb"),
              "Specify the database backend. Allowed options: duckdb, sqlite.")
-            ("database_file_path,P", po::value<std::string>()->default_value("../data"),
-             "Specify the search path for the database file.")
-            ("database_file_name,D", po::value<std::string>()->default_value(""),
-             "Specify the database filename (the file must be in search path)")
-            ("mtls_ca_cert_path,M", po::value<std::string>()->default_value(""),
+            ("database-filename,D", po::value<std::string>()->default_value(""),
+             "Specify the database filename (absolute or relative to the current working directory)")
+            ("tls,T", po::value<std::vector<std::string>>(&tls_token_values)->multitoken()->default_value(
+                     std::vector<std::string>{"tls/cert0.pem", "tls/cert0.key"}, "tls/cert0.pem tls/cert0.key"),
+             "Specify the TLS certificate and key file paths.")
+            ("init-sql-commands,I", po::value<std::string>()->default_value(""),
+             "Specify the SQL commands to run on server startup.")
+            ("mtls-ca-cert-filename,M", po::value<std::string>()->default_value(""),
              "Specify an optional mTLS CA certificate path used to verify clients.  The certificate MUST be in PEM format.")
-            ("print_queries,Q", po::bool_switch()->default_value(false), "Print queries run by clients to stdout");
+            ("print-queries,Q", po::bool_switch()->default_value(false), "Print queries run by clients to stdout");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -268,18 +181,66 @@ int main(int argc, char **argv) {
     }
 
     std::string backend = vm["backend"].as<std::string>();
-    std::string database_file_path = vm["database_file_path"].as<std::string>();
-    std::string database_file_name = vm["database_file_name"].as<std::string>();
-    std::string mtls_ca_cert_path = vm["mtls_ca_cert_path"].as<std::string>();
-    bool print_queries = vm["print_queries"].as<bool>();
-
+    fs::path database_file_name = vm["database-filename"].as<std::string>();
     if (database_file_name.empty()) {
-        std::cout << "--database_file_name (-D) was not provided on the command line!" << std::endl;
+        std::cout << "--database-filename (-D) was not provided on the command line!" << std::endl;
         return 1;
+    } else {
+        // We do not check for existence of the database file, b/c they may want to create a new one
+        database_file_name = fs::absolute(database_file_name).string();
     }
 
-    if (auto status = Main(backend, database_file_path, database_file_name, mtls_ca_cert_path,
-                           print_queries); !status.ok()) {
+    std::vector<std::string> tls_tokens = tls_token_values;
+    if (tls_tokens.size() != 2) {
+        std::cout << "--tls is a required argument, and requires 2 entries - separated by a space!" << std::endl;
+        return 1;
+    }
+    fs::path tls_cert_path = tls_tokens[0];
+    fs::path tls_key_path = tls_tokens[1];
+
+    if (tls_cert_path.empty()) {
+        std::cout << "--tls requires a certificate file path as the first entry!" << std::endl;
+        return 1;
+    } else {
+        if (!fs::exists(tls_cert_path)) {
+            std::cout << "TLS certificate file does not exist: " << tls_cert_path << std::endl;
+            return 1;
+        }
+    }
+
+    if (tls_key_path.empty()) {
+        std::cout << "--tls requires a key file path as the second entry!" << std::endl;
+        return 1;
+    } else {
+        tls_key_path = fs::absolute(tls_key_path).string();
+        if (!fs::exists(tls_key_path)) {
+            std::cout << "TLS key file does not exist: " << tls_key_path << std::endl;
+            return 1;
+        }
+    }
+
+    std::string init_sql_commands = vm["init-sql-commands"].as<std::string>();
+    if (init_sql_commands.empty()) {
+        auto env_init_sql_commands = std::getenv("INIT_SQL_COMMANDS");
+        if (env_init_sql_commands) {
+            init_sql_commands = env_init_sql_commands;
+        }
+    }
+
+    fs::path mtls_ca_cert_path = vm["mtls-ca-cert-filename"].as<std::string>();
+
+    if (!mtls_ca_cert_path.empty()) {
+        mtls_ca_cert_path = fs::absolute(mtls_ca_cert_path).string();
+        if (!fs::exists(mtls_ca_cert_path)) {
+            std::cout << "mTLS CA certificate file does not exist: " << mtls_ca_cert_path << std::endl;
+            return 1;
+        }
+    }
+
+    bool print_queries = vm["print-queries"].as<bool>();
+
+    if (auto status = Main(backend, database_file_name, tls_cert_path, tls_key_path, mtls_ca_cert_path,
+                           init_sql_commands, print_queries); !status.ok()) {
         std::cerr << status << std::endl;
         return 1;
     }
