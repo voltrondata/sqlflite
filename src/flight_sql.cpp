@@ -202,6 +202,7 @@ int main(int argc, char **argv) {
         std::cout << "--tls requires a certificate file path as the first entry!" << std::endl;
         return 1;
     } else {
+        tls_cert_path = fs::absolute(tls_cert_path).string();
         if (!fs::exists(tls_cert_path)) {
             std::cout << "TLS certificate file does not exist: " << tls_cert_path << std::endl;
             return 1;
