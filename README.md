@@ -260,7 +260,7 @@ The above will produce the following:
 ```
 
 ## Print help
-To see all the available options run `flight.sql --help`.
+To see all the available options run `flight_sql --help`.
 
 ```bash
 flight_sql --help
