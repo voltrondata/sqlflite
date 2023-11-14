@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-DUCKDB_VERSION=${1:-"v0.9.1"}
+DUCKDB_VERSION=${1:-"v0.9.2"}
 REMOVE_SOURCE_FILES=${2:-"N"}
 
 echo "Variable: DUCKDB_VERSION=${DUCKDB_VERSION}"
