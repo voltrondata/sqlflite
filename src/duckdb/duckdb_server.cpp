@@ -48,12 +48,13 @@ namespace arrow {
                         std::stringstream table_query;
 
                         table_query
-                                << "SELECT table_catalog as catalog_name, table_schema as schema_name, table_name,"
+                                << "SELECT table_catalog as catalog_name, table_schema as schema_name, table_name, "
                                    "table_type FROM information_schema.tables where 1=1";
 
-                        if (command.catalog.has_value()) {
-                            table_query << " and table_catalog='" << command.catalog.value() << "'";
-                        }
+                        table_query << " and table_catalog = " << (command.catalog.has_value() ? "'" +
+                                                                                                 command.catalog.value() +
+                                                                                                 "'"
+                                                                                               : "CURRENT_DATABASE()");
 
                         if (command.db_schema_filter_pattern.has_value()) {
                             table_query << " and table_schema LIKE '" << command.db_schema_filter_pattern.value()
@@ -275,7 +276,7 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
 
                     arrow::Result<std::unique_ptr<FlightDataStream>> DoGetCatalogs(
                             const ServerCallContext &context) {
-                        std::string query = "SELECT DISTINCT catalog_name FROM information_schema.schemata";
+                        std::string query = "SELECT DISTINCT catalog_name FROM information_schema.schemata ORDER BY catalog_name";
 
                         return DoGetDuckDBQuery(db_conn_, query, SqlSchema::GetTableTypesSchema());
                     }
@@ -288,9 +289,19 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
 
                     arrow::Result<std::unique_ptr<FlightDataStream>> DoGetDbSchemas(
                             const ServerCallContext &context, const GetDbSchemas &command) {
-                        std::string query = "SELECT catalog_name, schema_name AS db_schema_name FROM information_schema.schemata";
+                        std::stringstream query;
+                        query
+                                << "SELECT catalog_name, schema_name AS db_schema_name FROM information_schema.schemata WHERE 1 = 1";
 
-                        return DoGetDuckDBQuery(db_conn_, query, SqlSchema::GetTableTypesSchema());
+                        query << " AND catalog_name = " << (command.catalog.has_value() ? "'" + command.catalog.value() +
+                                                                                         "'"
+                                                                                       : "CURRENT_DATABASE()");
+                        if (command.db_schema_filter_pattern.has_value()) {
+                            query << " AND schema_name LIKE '" << command.db_schema_filter_pattern.value() << "'";
+                        }
+                        query << " ORDER BY catalog_name, db_schema_name";
+
+                        return DoGetDuckDBQuery(db_conn_, query.str(), SqlSchema::GetDbSchemasSchema());
                     }
 
                     arrow::Result<ActionCreatePreparedStatementResult> CreatePreparedStatement(
@@ -338,7 +349,8 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
                         std::scoped_lock guard(mutex_);
                         const std::string &prepared_statement_handle = request.prepared_statement_handle;
 
-                        if (auto search = prepared_statements_.find(prepared_statement_handle); search != prepared_statements_.end()) {
+                        if (auto search = prepared_statements_.find(prepared_statement_handle); search !=
+                                                                                                prepared_statements_.end()) {
                             prepared_statements_.erase(prepared_statement_handle);
                         } else {
                             return Status::Invalid("Prepared statement not found");
@@ -490,9 +502,10 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
                                        "        ) WHERE 1 = 1";
 
                         const TableRef &table_ref = command.table_ref;
-                        if (table_ref.catalog.has_value()) {
-                            table_query << " and catalog_name LIKE '" << table_ref.catalog.value() << "'";
-                        }
+                        table_query << " AND catalog_name = " << (table_ref.catalog.has_value() ? "'" +
+                                                                                                 table_ref.catalog.value() +
+                                                                                                 "'"
+                                                                                               : "CURRENT_DATABASE()");
 
                         if (table_ref.db_schema.has_value()) {
                             table_query << " and schema_name LIKE '" << table_ref.db_schema.value() << "'";
@@ -513,9 +526,11 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
                             const ServerCallContext &context, const GetImportedKeys &command) {
                         const TableRef &table_ref = command.table_ref;
                         std::string filter = "fk_table_name = '" + table_ref.table + "'";
-                        if (table_ref.catalog.has_value()) {
-                            filter += " AND fk_catalog_name = '" + table_ref.catalog.value() + "'";
-                        }
+
+                        filter += " AND fk_catalog_name = " + (table_ref.catalog.has_value() ? "'" +
+                                                                                              table_ref.catalog.value() +
+                                                                                              "'"
+                                                                                            : "CURRENT_DATABASE()");
                         if (table_ref.db_schema.has_value()) {
                             filter += " AND fk_schema_name = '" + table_ref.db_schema.value() + "'";
                         }
@@ -534,9 +549,10 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
                             const ServerCallContext &context, const GetExportedKeys &command) {
                         const TableRef &table_ref = command.table_ref;
                         std::string filter = "pk_table_name = '" + table_ref.table + "'";
-                        if (table_ref.catalog.has_value()) {
-                            filter += " AND pk_catalog_name = '" + table_ref.catalog.value() + "'";
-                        }
+                        filter += " AND pk_catalog_name = " + (table_ref.catalog.has_value() ? "'" +
+                                                                                              table_ref.catalog.value() +
+                                                                                              "'"
+                                                                                            : "CURRENT_DATABASE()");
                         if (table_ref.db_schema.has_value()) {
                             filter += " AND pk_schema_name = '" + table_ref.db_schema.value() + "'";
                         }
@@ -555,18 +571,20 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
                             const ServerCallContext &context, const GetCrossReference &command) {
                         const TableRef &pk_table_ref = command.pk_table_ref;
                         std::string filter = "pk_table_name = '" + pk_table_ref.table + "'";
-                        if (pk_table_ref.catalog.has_value()) {
-                            filter += " AND pk_catalog_name = '" + pk_table_ref.catalog.value() + "'";
-                        }
+                        filter += " AND pk_catalog_name = " + (pk_table_ref.catalog.has_value() ? "'" +
+                                                                                                 pk_table_ref.catalog.value() +
+                                                                                                 "'"
+                                                                                               : "CURRENT_DATABASE()");
                         if (pk_table_ref.db_schema.has_value()) {
                             filter += " AND pk_schema_name = '" + pk_table_ref.db_schema.value() + "'";
                         }
 
                         const TableRef &fk_table_ref = command.fk_table_ref;
                         filter += " AND fk_table_name = '" + fk_table_ref.table + "'";
-                        if (fk_table_ref.catalog.has_value()) {
-                            filter += " AND fk_catalog_name = '" + fk_table_ref.catalog.value() + "'";
-                        }
+                        filter += " AND fk_catalog_name = " + (fk_table_ref.catalog.has_value() ? "'" +
+                                                                                                 fk_table_ref.catalog.value() +
+                                                                                                 "'"
+                                                                                               : "CURRENT_DATABASE()");
                         if (fk_table_ref.db_schema.has_value()) {
                             filter += " AND fk_schema_name = '" + fk_table_ref.db_schema.value() + "'";
                         }
