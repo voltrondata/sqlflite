@@ -204,7 +204,7 @@ namespace arrow {
         class BearerAuthServerMiddleware : public ServerMiddleware {
         public:
             explicit BearerAuthServerMiddleware(const std::vector<CertKeyPair> &tls_certs,
-                                                const CallHeaders &incoming_headers, bool *isValid)
+                                                const CallHeaders &incoming_headers, std::optional<bool> *isValid)
                     : isValid_(isValid) {
                 incoming_headers_ = incoming_headers;
                 tls_certs_ = tls_certs;
@@ -222,7 +222,7 @@ namespace arrow {
 
         private:
             CallHeaders incoming_headers_;
-            bool *isValid_;
+            std::optional<bool> *isValid_;
             std::vector<CertKeyPair> tls_certs_;
 
             bool VerifyToken(const std::string &token) {
@@ -252,7 +252,6 @@ namespace arrow {
             BearerAuthServerMiddlewareFactory(const std::vector<CertKeyPair> &tls_certs
             ) {
                 tls_certs_ = tls_certs;
-                isValid_ = true;
             }
 
             Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
@@ -268,16 +267,18 @@ namespace arrow {
                                                                              incoming_headers, &isValid_);
                     }
                 }
-                if (not isValid_) {
+                if (isValid_.has_value() && !*isValid_) {
+                    isValid_.reset();
                     return MakeFlightError(FlightStatusCode::Unauthenticated, "Invalid bearer token provided");
                 }
+
                 return Status::OK();
             }
 
-            bool GetIsValid() { return isValid_; }
+            std::optional<bool> GetIsValid() { return isValid_; }
 
         private:
-            bool isValid_;
+            std::optional<bool> isValid_;
             std::vector<CertKeyPair> tls_certs_;
         };
 
