@@ -62,7 +62,7 @@ namespace arrow {
             std::string username_;
             std::string secret_key_;
 
-            std::string CreateJWTToken();
+            std::string CreateJWTToken() const;
         };
 
         class HeaderAuthServerMiddlewareFactory : public ServerMiddlewareFactory {
@@ -93,16 +93,16 @@ namespace arrow {
             std::string name() const override;
 
         private:
+            std::string secret_key_;
             CallHeaders incoming_headers_;
             std::optional<bool> *isValid_;
-            std::string secret_key_;
 
-            bool VerifyToken(const std::string &token);
+            bool VerifyToken(const std::string &token) const;
         };
 
         class BearerAuthServerMiddlewareFactory : public ServerMiddlewareFactory {
         public:
-            BearerAuthServerMiddlewareFactory(const std::string &secret_key);
+            explicit BearerAuthServerMiddlewareFactory(const std::string &secret_key);
 
             Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
                              std::shared_ptr<ServerMiddleware> *middleware) override;
