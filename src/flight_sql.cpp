@@ -69,10 +69,17 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
     std::string flight_server_password;
     ARROW_CHECK_OK (arrow::flight::SecurityUtilities::VerifyFlightServerPassword(&flight_server_password));
 
-    // Setup authentication
-    options.auth_handler = std::make_unique<arrow::flight::FlightSQLServerAuthHandler>("flight_username",
-                                                                                       flight_server_password,
-                                                                                       arrow::flight::SecurityUtilities::GetFlightServerSecretKey());
+    // Setup authentication middleware (using the same TLS certificate keypair)
+    auto secret_key = arrow::flight::SecurityUtilities::GetFlightServerSecretKey();
+
+    auto header_middleware = std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>(
+            "flight_username", flight_server_password, secret_key);
+    auto bearer_middleware = std::make_shared<arrow::flight::BearerAuthServerMiddlewareFactory>(
+            secret_key);
+
+    options.auth_handler = std::make_unique<arrow::flight::NoOpAuthHandler>();
+    options.middleware.push_back({"header-auth-server", header_middleware});
+    options.middleware.push_back({"bearer-auth-server", bearer_middleware});
 
     if (!mtls_ca_cert_path.empty()) {
         std::cout << "Using mTLS CA certificate: " << mtls_ca_cert_path << std::endl;

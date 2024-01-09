@@ -36,29 +36,82 @@ namespace arrow {
 
             static Status FlightServerMtlsCACertificate(const std::string &cert_path,
                                                         std::string *out);
+
+            static std::string FindKeyValPrefixInCallHeaders(const CallHeaders &incoming_headers,
+                                                             const std::string &key,
+                                                             const std::string &prefix);
+
+            static Status GetAuthHeaderType(const CallHeaders &incoming_headers, std::string *out);
+
+            static void ParseBasicHeader(const CallHeaders &incoming_headers, std::string &username,
+                                         std::string &password);
         };
 
-        class FlightSQLServerAuthHandler : public ServerAuthHandler {
+        class HeaderAuthServerMiddleware : public ServerMiddleware {
         public:
-            explicit FlightSQLServerAuthHandler(const std::string &username,
-                                                const std::string &password,
-                                                const std::string &secret_key);
+            HeaderAuthServerMiddleware(const std::string &username,
+                                       const std::string &secret_key);
 
-            ~FlightSQLServerAuthHandler() override;
+            void SendingHeaders(AddCallHeaders *outgoing_headers) override;
 
-            Status Authenticate(const ServerCallContext &context, ServerAuthSender *outgoing,
-                                ServerAuthReader *incoming) override;
+            void CallCompleted(const Status &status) override;
 
-            Status IsValid(const ServerCallContext &context, const std::string &token,
-                           std::string *peer_identity) override;
+            std::string name() const override;
 
         private:
-            BasicAuth basic_auth_;
+            std::string username_;
             std::string secret_key_;
 
             std::string CreateJWTToken();
+        };
+
+        class HeaderAuthServerMiddlewareFactory : public ServerMiddlewareFactory {
+        public:
+            HeaderAuthServerMiddlewareFactory(const std::string &username,
+                                              const std::string &password,
+                                              const std::string &secret_key);
+
+            Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
+                             std::shared_ptr<ServerMiddleware> *middleware) override;
+
+        private:
+            std::string username_;
+            std::string password_;
+            std::string secret_key_;
+        };
+
+        class BearerAuthServerMiddleware : public ServerMiddleware {
+        public:
+            explicit BearerAuthServerMiddleware(const std::string &secret_key,
+                                                const CallHeaders &incoming_headers,
+                                                std::optional<bool> *isValid);
+
+            void SendingHeaders(AddCallHeaders *outgoing_headers) override;
+
+            void CallCompleted(const Status &status) override;
+
+            std::string name() const override;
+
+        private:
+            CallHeaders incoming_headers_;
+            std::optional<bool> *isValid_;
+            std::string secret_key_;
 
             bool VerifyToken(const std::string &token);
+        };
+
+        class BearerAuthServerMiddlewareFactory : public ServerMiddlewareFactory {
+        public:
+            BearerAuthServerMiddlewareFactory(const std::string &secret_key);
+
+            Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
+                             std::shared_ptr<ServerMiddleware> *middleware) override;
+
+            std::optional<bool> GetIsValid();
+
+        private:
+            std::optional<bool> isValid_;
+            std::string secret_key_;
         };
 
     }
