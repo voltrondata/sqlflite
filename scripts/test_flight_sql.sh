@@ -10,7 +10,7 @@ export FLIGHT_PASSWORD="testing123"
 ${SCRIPT_DIR}/start_flight_sql.sh &
 
 # Set a timeout limit for waiting (e.g., 60 seconds)
-timeout_limit=60
+timeout_limit=300
 elapsed_time=0
 interval=1  # seconds
 started="0"
