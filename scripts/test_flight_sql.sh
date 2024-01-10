@@ -9,7 +9,7 @@ export FLIGHT_PASSWORD="testing123"
 # Start the Flight SQL Server - in the background...
 ${SCRIPT_DIR}/start_flight_sql.sh &
 
-# Set a timeout limit for waiting (e.g., 60 seconds)
+# Set a timeout limit for waiting
 timeout_limit=300
 elapsed_time=0
 interval=1  # seconds
@@ -21,6 +21,8 @@ while [ $elapsed_time -lt $timeout_limit ]; do
     if pgrep --exact "flight_sql" > /dev/null; then
         echo "Flight SQL Server process started successfully!"
         started="1"
+        # Sleep for a few more seconds...
+        sleep 10
         break
     fi
 
