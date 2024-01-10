@@ -29,12 +29,13 @@ set(ARROW_FLIGHT_SQL_DUCKDB_SQLITE_SERVER_SRCS
     src/duckdb/duckdb_statement.cpp
     src/duckdb/duckdb_statement_batch_reader.cpp
     src/duckdb/duckdb_server.cpp
-        src/FlightAuthHandler.h src/duckdb/duckdb_tables_schema_batch_reader.cpp)
+    src/duckdb/duckdb_tables_schema_batch_reader.cpp)
 
 add_subdirectory(jwt-cpp)
 
 add_executable(flight_sql
     src/flight_sql.cpp
+    src/flight_sql_security.cpp
     ${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
     ${ARROW_FLIGHT_SQL_DUCKDB_SQLITE_SERVER_SRCS}
 )

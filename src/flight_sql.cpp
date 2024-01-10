@@ -17,7 +17,7 @@
 
 #include "sqlite/sqlite_server.h"
 #include "duckdb/duckdb_server.h"
-#include "FlightAuthHandler.h"
+#include "flight_sql_security.h"
 
 
 namespace flight = arrow::flight;
@@ -51,31 +51,39 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateSe
         const bool &print_queries
 ) {
     ARROW_ASSIGN_OR_RAISE(auto location,
-                          arrow::flight::Location::ForGrpcTls(arrow::flight::GetFlightServerHostname(), port))
+                          (!tls_cert_path.empty())
+                          ? arrow::flight::Location::ForGrpcTls(arrow::flight::SecurityUtilities::GetFlightServerHostname(), port)
+                          : arrow::flight::Location::ForGrpcTcp(arrow::flight::SecurityUtilities::GetFlightServerHostname(), port));
+
     std::cout << "Apache Arrow version: " << ARROW_VERSION_STRING << std::endl;
 
     arrow::flight::FlightServerOptions options(location);
 
-    // Setup TLS - we require it because users are sending their passwords
-    ARROW_CHECK_OK(arrow::flight::FlightServerTlsCertificates(tls_cert_path, tls_key_path, &options.tls_certificates));
+    if (!tls_cert_path.empty() && !tls_key_path.empty()) {
+        ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerTlsCertificates(tls_cert_path, tls_key_path, &options.tls_certificates));
+    } else {
+        std::cout << "WARNING - TLS is disabled for the Flight SQL server - this is insecure." << std::endl;
+    }
+
+    // Ensure a password is set for the server
+    std::string flight_server_password;
+    ARROW_CHECK_OK (arrow::flight::SecurityUtilities::VerifyFlightServerPassword(&flight_server_password));
 
     // Setup authentication middleware (using the same TLS certificate keypair)
+    auto secret_key = arrow::flight::SecurityUtilities::GetFlightServerSecretKey();
+
     auto header_middleware = std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>(
-            options.tls_certificates);
+            "flight_username", flight_server_password, secret_key);
     auto bearer_middleware = std::make_shared<arrow::flight::BearerAuthServerMiddlewareFactory>(
-            options.tls_certificates);
+            secret_key);
 
     options.auth_handler = std::make_unique<arrow::flight::NoOpAuthHandler>();
     options.middleware.push_back({"header-auth-server", header_middleware});
     options.middleware.push_back({"bearer-auth-server", bearer_middleware});
 
-    // Ensure a password is set for the server
-    std::string flight_server_password;
-    ARROW_CHECK_OK (arrow::flight::GetFlightServerPassword(&flight_server_password));
-
     if (!mtls_ca_cert_path.empty()) {
         std::cout << "Using mTLS CA certificate: " << mtls_ca_cert_path << std::endl;
-        ARROW_CHECK_OK(arrow::flight::FlightServerMtlsCACertificate(mtls_ca_cert_path, &options.root_certificates));
+        ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerMtlsCACertificate(mtls_ca_cert_path, &options.root_certificates));
         options.verify_client = true;
     }
 
@@ -163,10 +171,12 @@ int main(int argc, char **argv) {
             ("database-filename,D", po::value<std::string>()->default_value(""),
              "Specify the database filename (absolute or relative to the current working directory)")
             ("tls,T", po::value<std::vector<std::string>>(&tls_token_values)->multitoken()->default_value(
-                     std::vector<std::string>{"tls/cert0.pem", "tls/cert0.key"}, "tls/cert0.pem tls/cert0.key"),
+                     std::vector<std::string>{"", ""}, ""),
              "Specify the TLS certificate and key file paths.")
             ("init-sql-commands,I", po::value<std::string>()->default_value(""),
              "Specify the SQL commands to run on server startup.")
+            ("init-sql-commands-file,F", po::value<std::string>()->default_value(""),
+             "Specify a file containing SQL commands to run on server startup.")
             ("mtls-ca-cert-filename,M", po::value<std::string>()->default_value(""),
              "Specify an optional mTLS CA certificate path used to verify clients.  The certificate MUST be in PEM format.")
             ("print-queries,Q", po::bool_switch()->default_value(false), "Print queries run by clients to stdout");
@@ -198,25 +208,22 @@ int main(int argc, char **argv) {
     fs::path tls_cert_path = tls_tokens[0];
     fs::path tls_key_path = tls_tokens[1];
 
-    if (tls_cert_path.empty()) {
-        std::cout << "--tls requires a certificate file path as the first entry!" << std::endl;
-        return 1;
-    } else {
+    if (!tls_cert_path.empty()) {
         tls_cert_path = fs::absolute(tls_cert_path).string();
         if (!fs::exists(tls_cert_path)) {
             std::cout << "TLS certificate file does not exist: " << tls_cert_path << std::endl;
             return 1;
         }
-    }
 
-    if (tls_key_path.empty()) {
-        std::cout << "--tls requires a key file path as the second entry!" << std::endl;
-        return 1;
-    } else {
-        tls_key_path = fs::absolute(tls_key_path).string();
-        if (!fs::exists(tls_key_path)) {
-            std::cout << "TLS key file does not exist: " << tls_key_path << std::endl;
+        if (tls_key_path.empty()) {
+            std::cout << "--tls requires a key file path as the second entry!" << std::endl;
             return 1;
+        } else {
+            tls_key_path = fs::absolute(tls_key_path).string();
+            if (!fs::exists(tls_key_path)) {
+                std::cout << "TLS key file does not exist: " << tls_key_path << std::endl;
+                return 1;
+            }
         }
     }
 
@@ -225,6 +232,20 @@ int main(int argc, char **argv) {
         auto env_init_sql_commands = std::getenv("INIT_SQL_COMMANDS");
         if (env_init_sql_commands) {
             init_sql_commands = env_init_sql_commands;
+        }
+    }
+
+    std::string init_sql_commands_file = vm["init-sql-commands-file"].as<std::string>();
+    if (init_sql_commands_file.empty()) {
+        auto env_init_sql_commands_file = std::getenv("INIT_SQL_COMMANDS_FILE");
+        if (env_init_sql_commands_file) {
+            init_sql_commands_file = env_init_sql_commands_file;
+        }
+        if (fs::exists(init_sql_commands_file)) {
+            std::ifstream ifs(init_sql_commands_file);
+            std::string init_sql_commands_file_contents((std::istreambuf_iterator<char>(ifs)),
+                                                        (std::istreambuf_iterator<char>()));
+            init_sql_commands += init_sql_commands_file_contents;
         }
     }
 
