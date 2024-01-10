@@ -27,7 +27,13 @@ namespace arrow {
 
         std::string SecurityUtilities::GetFlightServerPassword() {
             const char *c_flight_password = std::getenv("FLIGHT_PASSWORD");
-            return std::string(c_flight_password);
+
+            if (!c_flight_password) {
+                return "";
+            }
+            else {
+                return std::string(c_flight_password);
+            }
         }
 
         Status SecurityUtilities::VerifyFlightServerPassword(std::string *out) {

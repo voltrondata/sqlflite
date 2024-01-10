@@ -10,7 +10,7 @@
 
 This repo demonstrates how to build an Apache Arrow Flight SQL server implementation using DuckDB or SQLite as a backend database.
 
-It enables authentication via middleware and encrypts connections to the database via TLS.
+It enables authentication via middleware and allows for encrypted connections to the database via TLS.
 
 For more information about Apache Arrow Flight SQL - please see this [article](https://voltrondata.com/resources/apache-arrow-flight-sql-arrow-for-every-database-developer). 
 
@@ -25,6 +25,7 @@ docker run --name flight-sql \
            --tty \
            --init \
            --publish 31337:31337 \
+           --env TLS_ENABLED="1" \
            --env FLIGHT_PASSWORD="flight_password" \
            --env PRINT_QUERIES="1" \
            --pull missing \
@@ -32,6 +33,8 @@ docker run --name flight-sql \
 ```
 
 The above command will automatically mount a very small TPC-H DuckDB database file.
+
+**Note**: You can disable TLS in the container by setting environment variable: `TLS_ENABLED` to "0" (default is "1" - enabled).  This is not recommended unless you are using an mTLS sidecar in Kubernetes or something similar, as it will be insecure.    
 
 ### Optional - open a different database file
 When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.9.2).   
@@ -66,6 +69,7 @@ docker run --name flight-sql \
            --tty \
            --init \
            --publish 31337:31337 \
+           --env TLS_ENABLED="1" \
            --env FLIGHT_PASSWORD="flight_password" \
            --pull missing \
            --mount type=bind,source=$(pwd),target=/opt/flight_sql/data \
@@ -86,12 +90,15 @@ docker run --name flight-sql \
            --tty \
            --init \
            --publish 31337:31337 \
+           --env TLS_ENABLED="1" \
            --env FLIGHT_PASSWORD="flight_password" \
            --env PRINT_QUERIES="1" \
            --env INIT_SQL_COMMANDS="SET threads = 1; SET memory_limit = '1GB';" \
            --pull missing \
            voltrondata/flight-sql:latest
 ```
+
+You can also specify a file containing initialization SQL commands by setting environment variable: `INIT_SQL_COMMANDS_FILE` to the path of the file containing the SQL commands - example value: `/tmp/init.sql`.  The file must be mounted inside the container.   
 
 **Note**: for the DuckDB back-end - the following init commands are automatically run for you:   
 `SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;`
@@ -265,19 +272,20 @@ To see all the available options run `flight_sql --help`.
 ```bash
 flight_sql --help
 Allowed options:
-  --help                                produce this help message
-  -B [ --backend ] arg (=duckdb)        Specify the database backend. Allowed 
-                                        options: duckdb, sqlite.
-  -D [ --database-filename ] arg        Specify the database filename (absolute
-                                        or relative to the current working 
-                                        directory)
-  -T [ --tls ] arg (=tls/cert0.pem tls/cert0.key)
-                                        Specify the TLS certificate and key 
-                                        file paths.
-  -I [ --init-sql-commands ] arg        Specify the SQL commands to run on 
-                                        server startup.
-  -M [ --mtls-ca-cert-filename ] arg    Specify an optional mTLS CA certificate
-                                        path used to verify clients.  The 
-                                        certificate MUST be in PEM format.
-  -Q [ --print-queries ]                Print queries run by clients to stdout
+  --help                              produce this help message
+  -B [ --backend ] arg (=duckdb)      Specify the database backend. Allowed 
+                                      options: duckdb, sqlite.
+  -D [ --database-filename ] arg      Specify the database filename (absolute 
+                                      or relative to the current working 
+                                      directory)
+  -T [ --tls ] arg                    Specify the TLS certificate and key file 
+                                      paths.
+  -I [ --init-sql-commands ] arg      Specify the SQL commands to run on server
+                                      startup.
+  -F [ --init-sql-commands-file ] arg Specify a file containing SQL commands to
+                                      run on server startup.
+  -M [ --mtls-ca-cert-filename ] arg  Specify an optional mTLS CA certificate 
+                                      path used to verify clients.  The 
+                                      certificate MUST be in PEM format.
+  -Q [ --print-queries ]              Print queries run by clients to stdout
 ```
