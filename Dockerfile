@@ -49,14 +49,14 @@ RUN apt update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+WORKDIR /tmp
+
 # Copy the scripts directory into the image (we copy directory-by-directory in order to maximize Docker caching)
 COPY --chown=app_user:app_user ./scripts ./scripts
 
 # Build/Install DuckDB
 ARG DUCKDB_VERSION="v0.9.2"
 RUN scripts/build_duckdb.sh ${DUCKDB_VERSION} "Y"
-
-WORKDIR /tmp
 
 # Setup the AWS Client (so we can copy S3 files to the container if needed)
 RUN case ${TARGETPLATFORM} in \
