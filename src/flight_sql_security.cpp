@@ -16,45 +16,6 @@ namespace arrow {
         const std::string kAuthHeader = "authorization";
 
         // ----------------------------------------
-        std::string SecurityUtilities::GetFlightServerHostname() {
-            const char *c_flight_hostname = std::getenv("FLIGHT_HOSTNAME");
-            if (!c_flight_hostname) {
-                return "0.0.0.0";
-            } else {
-                return std::string(c_flight_hostname);
-            }
-        }
-
-        std::string SecurityUtilities::GetFlightServerPassword() {
-            const char *c_flight_password = std::getenv("FLIGHT_PASSWORD");
-
-            if (!c_flight_password) {
-                return "";
-            }
-            else {
-                return std::string(c_flight_password);
-            }
-        }
-
-        Status SecurityUtilities::VerifyFlightServerPassword(std::string *out) {
-            auto c_flight_password = GetFlightServerPassword();
-            if (c_flight_password.empty()) {
-                return Status::IOError(
-                        "Flight SQL Server env var: FLIGHT_PASSWORD is not set, set this variable to secure the server.");
-            }
-            *out = c_flight_password;
-            return Status::OK();
-        }
-
-        std::string SecurityUtilities::GetFlightServerSecretKey() {
-            const char *c_flight_secret_key = std::getenv("SECRET_KEY");
-            if (c_flight_secret_key) {
-                return std::string(c_flight_secret_key);
-            } else {
-                return "SECRET-" + boost::uuids::to_string(boost::uuids::random_generator()());
-            }
-        }
-
         Status SecurityUtilities::FlightServerTlsCertificates(const fs::path &cert_path,
                                                               const fs::path &key_path,
                                                               std::vector<CertKeyPair> *out) {

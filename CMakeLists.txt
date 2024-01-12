@@ -35,6 +35,7 @@ add_subdirectory(jwt-cpp)
 
 add_executable(flight_sql
     src/flight_sql.cpp
+	src/flight_sql_library.cpp
     src/flight_sql_security.cpp
     ${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
     ${ARROW_FLIGHT_SQL_DUCKDB_SQLITE_SERVER_SRCS}
