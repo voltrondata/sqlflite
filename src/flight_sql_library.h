@@ -2,7 +2,7 @@
 #pragma once
 
 #include <fstream>
-#include <arrow/flight/sql/server.h>
+
 
 namespace fs = std::filesystem;
 
@@ -34,17 +34,17 @@ enum class BackendType {
  * @return Returns an integer status code. 0 indicates success, and non-zero values indicate errors.
  */
 extern "C" {
-    int RunFlightSQLServer(const BackendType backend,
-                           fs::path &database_filename,
-                           std::string hostname = "",
-                           std::string username = "flight_username",
-                           std::string password = "",
-                           std::string secret_key = "",
-                           fs::path tls_cert_path = fs::path(),
-                           fs::path tls_key_path = fs::path(),
-                           fs::path mtls_ca_cert_path = fs::path(),
-                           std::string init_sql_commands = "",
-                           fs::path init_sql_commands_file = fs::path(),
-                           const bool &print_queries = false
-    );
+int RunFlightSQLServer(const BackendType backend,
+                       fs::path &database_filename,
+                       std::string hostname = "",
+                       std::string username = "flight_username",
+                       std::string password = "",
+                       std::string secret_key = "",
+                       fs::path tls_cert_path = fs::path(),
+                       fs::path tls_key_path = fs::path(),
+                       fs::path mtls_ca_cert_path = fs::path(),
+                       std::string init_sql_commands = "",
+                       fs::path init_sql_commands_file = fs::path(),
+                       const bool &print_queries = false
+);
 }

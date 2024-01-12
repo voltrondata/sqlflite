@@ -3,16 +3,13 @@
 #include <cstdlib>
 #include <csignal>
 #include <iostream>
-#include <pthread.h>
 #include <filesystem>
 #include <vector>
 #include <arrow/flight/client.h>
-#include <arrow/flight/sql/client.h>
-#include <arrow/table.h>
+#include <arrow/flight/sql/server.h>
 #include <arrow/util/logging.h>
 #include <arrow/record_batch.h>
 #include <boost/algorithm/string.hpp>
-#include <unistd.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 
@@ -169,13 +166,15 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
     }
 
     if (username.empty()) {
-        return arrow::Status::Invalid("The Flight SQL Server username is empty.  You must pass a value to this argument to secure the server.");
+        return arrow::Status::Invalid(
+                "The Flight SQL Server username is empty.  You must pass a value to this argument to secure the server.");
     }
 
     if (password.empty()) {
         password = SafeGetEnvVarValue("FLIGHT_PASSWORD");
         if (password.empty()) {
-            return arrow::Status::Invalid("The Flight SQL Server password is empty and env var: 'FLIGHT_PASSWORD' is not set.  Pass a value to this argument to secure the server.");
+            return arrow::Status::Invalid(
+                    "The Flight SQL Server password is empty and env var: 'FLIGHT_PASSWORD' is not set.  Pass a value to this argument to secure the server.");
         }
     }
 
@@ -213,7 +212,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
         if (!init_sql_commands_file.empty()) {
             init_sql_commands_file = fs::absolute(init_sql_commands_file);
             if (!fs::exists(init_sql_commands_file)) {
-                return arrow::Status::Invalid("INIT_SQL_COMMANDS_FILE does not exist: " + init_sql_commands_file.string());
+                return arrow::Status::Invalid(
+                        "INIT_SQL_COMMANDS_FILE does not exist: " + init_sql_commands_file.string());
             } else {
                 std::ifstream ifs(init_sql_commands_file);
                 std::string init_sql_commands_file_contents((std::istreambuf_iterator<char>(ifs)),
@@ -246,21 +246,22 @@ arrow::Status StartFlightSQLServer(std::shared_ptr<arrow::flight::sql::FlightSql
 }
 
 int RunFlightSQLServer(const BackendType backend,
-                                 fs::path &database_filename,
-                                 std::string hostname,
-                                 std::string username,
-                                 std::string password,
-                                 std::string secret_key,
-                                 fs::path tls_cert_path,
-                                 fs::path tls_key_path,
-                                 fs::path mtls_ca_cert_path,
-                                 std::string init_sql_commands,
-                                 fs::path init_sql_commands_file,
-                                 const bool &print_queries
+                       fs::path &database_filename,
+                       std::string hostname,
+                       std::string username,
+                       std::string password,
+                       std::string secret_key,
+                       fs::path tls_cert_path,
+                       fs::path tls_key_path,
+                       fs::path mtls_ca_cert_path,
+                       std::string init_sql_commands,
+                       fs::path init_sql_commands_file,
+                       const bool &print_queries
 ) {
-    auto create_server_result = CreateFlightSQLServer(backend, database_filename, hostname, username, password, secret_key,
-                                                tls_cert_path, tls_key_path, mtls_ca_cert_path, init_sql_commands,
-                                                init_sql_commands_file, print_queries);
+    auto create_server_result = CreateFlightSQLServer(backend, database_filename, hostname, username, password,
+                                                      secret_key,
+                                                      tls_cert_path, tls_key_path, mtls_ca_cert_path, init_sql_commands,
+                                                      init_sql_commands_file, print_queries);
 
     if (create_server_result.ok()) {
         auto server_ptr = create_server_result.ValueOrDie();
