@@ -1,4 +1,4 @@
-#include "flight_sql_library.h"
+#include "include/flight_sql_library.h"
 
 #include <cstdlib>
 #include <csignal>
@@ -13,9 +13,9 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 
-#include "sqlite/sqlite_server.h"
-#include "duckdb/duckdb_server.h"
-#include "flight_sql_security.h"
+#include "sqlite_server.h"
+#include "duckdb_server.h"
+#include "include/flight_sql_security.h"
 
 
 namespace flight = arrow::flight;

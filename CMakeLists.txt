@@ -34,19 +34,16 @@ set(ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS
 add_subdirectory(jwt-cpp)
 
 # Add a library target
-add_library(flight_sql_library STATIC
-		src/flight_sql_library.cpp
-		src/flight_sql_security.cpp
+add_library(flightsqlserver SHARED
+		src/library/flight_sql_library.cpp
+		src/library/flight_sql_security.cpp
 		${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
 		${ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS}
 )
 
-# Set the output name for the library (libflight_sql_custom_name.a)
-set_target_properties(flight_sql_library PROPERTIES OUTPUT_NAME flight_sql)
+target_include_directories(flightsqlserver PRIVATE src/sqlite src/duckdb /usr/local/include)
 
-target_include_directories(flight_sql_library PRIVATE src/sqlite src/duckdb /usr/local/include)
-
-target_link_libraries(flight_sql_library PRIVATE
+target_link_libraries(flightsqlserver
 		jwt-cpp
 		arrow_shared
 		arrow_flight_shared
@@ -57,12 +54,18 @@ target_link_libraries(flight_sql_library PRIVATE
 		${Boost_LIBRARIES}
 )
 
+# Specify the installation directory for the library
+install(TARGETS flightsqlserver
+		LIBRARY DESTINATION lib
+		PUBLIC_HEADER DESTINATION include
+)
+
 add_executable(flight_sql
     src/flight_sql.cpp
 )
 
 target_link_libraries(flight_sql PRIVATE
-		flight_sql_library
+		flightsqlserver
 		${Boost_LIBRARIES}
 )
 
