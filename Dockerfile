@@ -116,7 +116,7 @@ WORKDIR ${APP_DIR}
 RUN . ~/.bashrc && \
     mkdir build && \
     cd build && \
-    cmake .. -GNinja -DCMAKE_PREFIX_PATH=${ARROW_HOME}/lib/cmake && \
+    cmake .. -GNinja -DCMAKE_PREFIX_PATH=${ARROW_HOME}/lib/cmake -DCMAKE_INSTALL_PREFIX=/usr/local && \
     ninja && \
     mv flight_sql /usr/local/bin
 

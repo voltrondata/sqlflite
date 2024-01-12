@@ -36,8 +36,7 @@ const int port = 31337;
         } \
     } while (false)
 
-
-arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> ServerFactory(
+arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQLServerBuilder(
         const BackendType backend,
         const fs::path &database_filename,
         const std::string &hostname,
@@ -138,19 +137,20 @@ std::string SafeGetEnvVarValue(const std::string &env_var_name) {
     }
 }
 
-arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFlightSQLServer(const BackendType backend,
-                                                                                              fs::path &database_filename,
-                                                                                              std::string hostname,
-                                                                                              const int &port,
-                                                                                              std::string username,
-                                                                                              std::string password,
-                                                                                              std::string secret_key,
-                                                                                              fs::path tls_cert_path,
-                                                                                              fs::path tls_key_path,
-                                                                                              fs::path mtls_ca_cert_path,
-                                                                                              std::string init_sql_commands,
-                                                                                              fs::path init_sql_commands_file,
-                                                                                              const bool &print_queries
+arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFlightSQLServer(
+        const BackendType backend,
+        fs::path &database_filename,
+        std::string hostname,
+        const int &port,
+        std::string username,
+        std::string password,
+        std::string secret_key,
+        fs::path tls_cert_path,
+        fs::path tls_key_path,
+        fs::path mtls_ca_cert_path,
+        std::string init_sql_commands,
+        fs::path init_sql_commands_file,
+        const bool &print_queries
 ) {
     // Validate and default the arguments to env var values where applicable
     if (database_filename.empty()) {
@@ -237,9 +237,9 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
         }
     }
 
-    return ServerFactory(backend, database_filename, hostname, port, username, password, secret_key,
-                         tls_cert_path, tls_key_path, mtls_ca_cert_path, init_sql_commands,
-                         print_queries);
+    return FlightSQLServerBuilder(backend, database_filename, hostname, port, username, password, secret_key,
+                                  tls_cert_path, tls_key_path, mtls_ca_cert_path, init_sql_commands,
+                                  print_queries);
 }
 
 arrow::Status StartFlightSQLServer(std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server) {
@@ -247,24 +247,24 @@ arrow::Status StartFlightSQLServer(std::shared_ptr<arrow::flight::sql::FlightSql
     return arrow::Status::OK();
 }
 
-int RunFlightSQLServer(const BackendType backend,
-                       fs::path &database_filename,
-                       std::string hostname,
-                       const int &port,
-                       std::string username,
-                       std::string password,
-                       std::string secret_key,
-                       fs::path tls_cert_path,
-                       fs::path tls_key_path,
-                       fs::path mtls_ca_cert_path,
-                       std::string init_sql_commands,
-                       fs::path init_sql_commands_file,
-                       const bool &print_queries
+int RunFlightSQLServer(
+        const BackendType backend,
+        fs::path &database_filename,
+        std::string hostname,
+        const int &port,
+        std::string username,
+        std::string password,
+        std::string secret_key,
+        fs::path tls_cert_path,
+        fs::path tls_key_path,
+        fs::path mtls_ca_cert_path,
+        std::string init_sql_commands,
+        fs::path init_sql_commands_file,
+        const bool &print_queries
 ) {
     auto create_server_result = CreateFlightSQLServer(backend, database_filename, hostname, port, username, password,
-                                                      secret_key,
-                                                      tls_cert_path, tls_key_path, mtls_ca_cert_path, init_sql_commands,
-                                                      init_sql_commands_file, print_queries);
+                                                      secret_key, tls_cert_path, tls_key_path, mtls_ca_cert_path,
+                                                      init_sql_commands, init_sql_commands_file, print_queries);
 
     if (create_server_result.ok()) {
         auto server_ptr = create_server_result.ValueOrDie();
