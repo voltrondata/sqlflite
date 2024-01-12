@@ -34,7 +34,7 @@ set(ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS
 add_subdirectory(jwt-cpp)
 
 # Add a library target
-add_library(flight_sql_library
+add_library(flight_sql_library STATIC
 		src/flight_sql_library.cpp
 		src/flight_sql_security.cpp
 		${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
@@ -66,9 +66,4 @@ target_link_libraries(flight_sql PRIVATE
 		${Boost_LIBRARIES}
 )
 
-# Specify the installation targets
-install(TARGETS flight_sql_library
-		LIBRARY DESTINATION lib
-		ARCHIVE DESTINATION lib
-		RUNTIME DESTINATION bin
-)
+target_compile_options(flight_sql PRIVATE "-static")
