@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
              "If that isn't set, the server will exit with failure.")
             ("secret-key,S", po::value<std::string>()->default_value(""),
              "Specify the secret key used to sign JWTs issued by the Flight SQL Server. "
-             "If it isn't set, we use env var: 'SECRET_KEY'.  If that isn't set, the serve will create a random secret key.")
+             "If it isn't set, we use env var: 'SECRET_KEY'.  If that isn't set, the server will create a random secret key.")
             ("tls,T", po::value<std::vector<std::string>>(&tls_token_values)->multitoken()->default_value(
                      std::vector<std::string>{"", ""}, ""),
              "Specify the TLS certificate and key file paths.")
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    fs::path database_filename = fs::path(vm["database-filename"].as<std::string>());
+    auto database_filename = fs::path(vm["database-filename"].as<std::string>());
 
     std::string hostname = "";
     if (vm.count("hostname")) {
@@ -86,8 +86,8 @@ int main(int argc, char **argv) {
         secret_key = vm["secret-key"].as<std::string>();
     }
 
-    fs::path tls_cert_path = fs::path();
-    fs::path tls_key_path = fs::path();
+    auto tls_cert_path = fs::path();
+    auto tls_key_path = fs::path();
     if (vm.count("tls")) {
         std::vector<std::string> tls_tokens = tls_token_values;
         if (tls_tokens.size() != 2) {

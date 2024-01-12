@@ -238,32 +238,46 @@ popd
 
 8. Start the Flight SQL server (and print client SQL commands as they run using the --print-queries option)
 ```bash
-FLIGHT_PASSWORD="flight_password" ./flight_sql --database-filename "TPC-H-small.duckdb" --print-queries
+FLIGHT_PASSWORD="flight_password" flight_sql --database-filename "TPC-H-small.duckdb" --print-queries
 ```
 
 ## Selecting different backends
 This option allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
-$ FLIGHT_PASSWORD="flight_password" ./flight_sql --database-filename "TPC-H-small.duckdb"
-> Using database file: ../data/TPC-H-small.duckdb
-> duckdb server listening on grpc+tls://0.0.0.0:31337
+$ FLIGHT_PASSWORD="flight_password" flight_sql --database-filename "TPC-H-small.duckdb"
+Apache Arrow version: 14.0.2
+WARNING - TLS is disabled for the Flight SQL server - this is insecure.
+DuckDB version: v0.9.2
+Running Init SQL command: 
+SET autoinstall_known_extensions = true;
+Running Init SQL command: 
+ SET autoload_known_extensions = true;
+Using database file: "/opt/flight_sql/TPC-H-small.duckdb"
+Print Queries option is set to: false
+Apache Arrow Flight SQL server - with engine: DuckDB - will listen on grpc+tcp://0.0.0.0:31337
+Flight SQL server - started
 ```
 
-The above call is equivalent to running `./flight_sql -B duckdb` or `./flight_sql --backend duckdb`. To select SQLite run
+The above call is equivalent to running `flight_sql -B duckdb` or `flight_sql --backend duckdb`. To select SQLite run
 
 ```bash
-FLIGHT_PASSWORD="flight_password" ./flight_sql -B sqlite -D "TPC-H-small.db" 
+FLIGHT_PASSWORD="flight_password" flight_sql -B sqlite -D "TPC-H-small.db" 
 ```
 or 
 ```bash
-FLIGHT_PASSWORD="flight_password" ./flight_sql --backend sqlite --database-filename "TPC-H-small.db"
+FLIGHT_PASSWORD="flight_password" flight_sql --backend sqlite --database-filename "TPC-H-small.db"
 ```
 The above will produce the following:
 
 ```bash
-> Using database file: ../data/TPC-H-small.db
-> sqlite server listening on grpc+tls://0.0.0.0:31337
+Apache Arrow version: 14.0.2
+WARNING - TLS is disabled for the Flight SQL server - this is insecure.
+SQLite version: 3.40.1
+Using database file: "/opt/flight_sql/TPC-H-small.db"
+Print Queries option is set to: false
+Apache Arrow Flight SQL server - with engine: SQLite - will listen on grpc+tcp://0.0.0.0:31337
+Flight SQL server - started
 ```
 
 ## Print help
@@ -272,20 +286,45 @@ To see all the available options run `flight_sql --help`.
 ```bash
 flight_sql --help
 Allowed options:
-  --help                              produce this help message
-  -B [ --backend ] arg (=duckdb)      Specify the database backend. Allowed 
-                                      options: duckdb, sqlite.
-  -D [ --database-filename ] arg      Specify the database filename (absolute 
-                                      or relative to the current working 
-                                      directory)
-  -T [ --tls ] arg                    Specify the TLS certificate and key file 
-                                      paths.
-  -I [ --init-sql-commands ] arg      Specify the SQL commands to run on server
-                                      startup.
-  -F [ --init-sql-commands-file ] arg Specify a file containing SQL commands to
-                                      run on server startup.
-  -M [ --mtls-ca-cert-filename ] arg  Specify an optional mTLS CA certificate 
-                                      path used to verify clients.  The 
-                                      certificate MUST be in PEM format.
-  -Q [ --print-queries ]              Print queries run by clients to stdout
+  --help                                produce this help message
+  -B [ --backend ] arg (=duckdb)        Specify the database backend. Allowed 
+                                        options: duckdb, sqlite.
+  -H [ --hostname ] arg                 Specify the hostname to listen on for 
+                                        the Flight SQL Server.  If not set, we 
+                                        will use env var: 'FLIGHT_HOSTNAME'.If 
+                                        that isn't set, we will use the default
+                                        of: '0.0.0.0'.
+  -R [ --port ] arg (=31337)            Specify the port to listen on for the 
+                                        Flight SQL Server.
+  -D [ --database-filename ] arg        Specify the database filename (absolute
+                                        or relative to the current working 
+                                        directory)
+  -U [ --username ] arg (=flight_username)
+                                        Specify the username to allow to 
+                                        connect to the Flight SQL Server for 
+                                        clients.
+  -P [ --password ] arg                 Specify the password to set on the 
+                                        Flight SQL Server for clients to 
+                                        connect with.  If not set, we will use 
+                                        env var: 'FLIGHT_PASSWORD'.If that 
+                                        isn't set, the server will exit with 
+                                        failure.
+  -S [ --secret-key ] arg               Specify the secret key used to sign 
+                                        JWTs issued by the Flight SQL Server. 
+                                        If it isn't set, we use env var: 
+                                        'SECRET_KEY'.  If that isn't set, the 
+                                        server will create a random secret key.
+  -T [ --tls ] arg                      Specify the TLS certificate and key 
+                                        file paths.
+  -I [ --init-sql-commands ] arg        Specify the SQL commands to run on 
+                                        server startup.If not set, we will use 
+                                        env var: 'INIT_SQL_COMMANDS'.
+  -F [ --init-sql-commands-file ] arg   Specify a file containing SQL commands 
+                                        to run on server startup.If not set, we
+                                        will use env var: 'INIT_SQL_COMMANDS_FI
+                                        LE'.
+  -M [ --mtls-ca-cert-filename ] arg    Specify an optional mTLS CA certificate
+                                        path used to verify clients.  The 
+                                        certificate MUST be in PEM format.
+  -Q [ --print-queries ]                Print queries run by clients to stdout
 ```
