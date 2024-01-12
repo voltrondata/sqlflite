@@ -3,13 +3,16 @@
 
 #include <fstream>
 
-
-namespace fs = std::filesystem;
+// Constants
+const std::string DEFAULT_FLIGHT_HOSTNAME = "0.0.0.0";
+const int DEFAULT_FLIGHT_PORT = 31337;
 
 enum class BackendType {
     duckdb,
     sqlite
 };
+
+namespace fs = std::filesystem;
 
 /**
  * @brief Run a Flight SQL Server with the specified configuration.
@@ -19,7 +22,10 @@ enum class BackendType {
  * @param backend The backend to use (duckdb or sqlite).
  * @param database_filename The path to the database file.
  * @param hostname The hostname for the Flight SQL Server. Default is "" - if so, we use environment variable: "FLIGHT_HOSTNAME",
- *   and fallback to: "0.0.0.0" if that is not set.
+ *   and fallback to: DEFAULT_FLIGHT_HOSTNAME if that is not set.
+ * @param port The port to listen on for the Flight SQL Server. Default is DEFAULT_FLIGHT_PORT
+ * @param username The username to use for authentication. Default is Default is "flight_username" - if not set, we use environment variable: "FLIGHT_PASSWORD",
+ *   if both are not set, we exit with an error.
  * @param password The password for authentication. Default is Default is "" - if so, we use environment variable: "FLIGHT_PASSWORD",
  *   if both are not set, we exit with an error.
  * @param secret_key The secret key for authentication. Default is "", if so, we use environment variable: "SECRET_KEY",
@@ -33,10 +39,12 @@ enum class BackendType {
  *
  * @return Returns an integer status code. 0 indicates success, and non-zero values indicate errors.
  */
+
 extern "C" {
 int RunFlightSQLServer(const BackendType backend,
                        fs::path &database_filename,
                        std::string hostname = "",
+                       const int &port = DEFAULT_FLIGHT_PORT,
                        std::string username = "flight_username",
                        std::string password = "",
                        std::string secret_key = "",

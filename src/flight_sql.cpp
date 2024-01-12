@@ -14,6 +14,11 @@ int main(int argc, char **argv) {
             ("help", "produce this help message")
             ("backend,B", po::value<std::string>()->default_value("duckdb"),
              "Specify the database backend. Allowed options: duckdb, sqlite.")
+            ("hostname,H", po::value<std::string>()->default_value(""),
+             "Specify the hostname to listen on for the Flight SQL Server.  If not set, we will use env var: 'FLIGHT_HOSTNAME'."
+             "If that isn't set, we will use the default of: '0.0.0.0'.")
+            ("port,R", po::value<int>()->default_value(DEFAULT_FLIGHT_PORT),
+             "Specify the port to listen on for the Flight SQL Server.")
             ("database-filename,D", po::value<std::string>()->default_value(""),
              "Specify the database filename (absolute or relative to the current working directory)")
             ("username,U", po::value<std::string>()->default_value("flight_username"),
@@ -64,6 +69,8 @@ int main(int argc, char **argv) {
         hostname = vm["hostname"].as<std::string>();
     }
 
+    int port = vm["port"].as<int>();
+
     std::string username = "";
     if (vm.count("username")) {
         username = vm["username"].as<std::string>();
@@ -108,7 +115,7 @@ int main(int argc, char **argv) {
 
     bool print_queries = vm["print-queries"].as<bool>();
 
-    return RunFlightSQLServer(backend, database_filename, hostname, username, password, secret_key,
+    return RunFlightSQLServer(backend, database_filename, hostname, port, username, password, secret_key,
                                      tls_cert_path, tls_key_path, mtls_ca_cert_path,
                                      init_sql_commands, init_sql_commands_file, print_queries);
 }
