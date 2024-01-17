@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.25)
 project(flight_sql)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -12,23 +12,9 @@ execute_process(COMMAND "${CMAKE_COMMAND}" --build .
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/arrow"
 )
 
-set(ARROW_INCLUDE_DIR ${CMAKE_BINARY_DIR}/3rd_party/arrow/include)
-set(ARROW_LIB_DIR ${CMAKE_BINARY_DIR}/3rd_party/arrow/lib)
-
-add_library(arrow_bundled_dependencies STATIC IMPORTED)
-set_target_properties(arrow_bundled_dependencies PROPERTIES IMPORTED_LOCATION ${ARROW_LIB_DIR}/libarrow_bundled_dependencies.a)
-
-add_library (arrow STATIC IMPORTED)
-set_target_properties(arrow PROPERTIES IMPORTED_LOCATION ${ARROW_LIB_DIR}/libarrow.a)
-
-add_library(arrow_dataset STATIC IMPORTED)
-set_target_properties(arrow_dataset PROPERTIES IMPORTED_LOCATION ${ARROW_LIB_DIR}/libarrow_dataset.a)
-
-add_library (arrow_flight STATIC IMPORTED)
-set_target_properties(arrow_flight PROPERTIES IMPORTED_LOCATION ${ARROW_LIB_DIR}/libarrow_flight.a)
-
-add_library (arrow_flight_sql STATIC IMPORTED)
-set_target_properties(arrow_flight_sql PROPERTIES IMPORTED_LOCATION ${ARROW_LIB_DIR}/libarrow_flight_sql.a)
+find_package(Arrow REQUIRED PATHS ${CMAKE_BINARY_DIR}/3rd_party/arrow NO_DEFAULT_PATH)
+find_package(ArrowFlight REQUIRED PATHS ${CMAKE_BINARY_DIR}/3rd_party/arrow NO_DEFAULT_PATH)
+find_package(ArrowFlightSql REQUIRED PATHS ${CMAKE_BINARY_DIR}/3rd_party/arrow NO_DEFAULT_PATH)
 
 # ---------------------
 
@@ -77,20 +63,24 @@ target_include_directories(flightsqlserver PRIVATE
 		/usr/local/include
 )
 
-target_link_libraries(flightsqlserver
+target_link_libraries(flightsqlserver PRIVATE
 		jwt-cpp
 		Threads::Threads
-		arrow_bundled_dependencies
-		arrow
-		arrow_dataset
-		arrow_flight
-		arrow_flight_sql
+		Arrow::arrow_static
+		ArrowFlight::arrow_flight_static
+		ArrowFlightSql::arrow_flight_sql_static
 		${SQLite3_LIBRARIES}
 		${DUCKDB}
 		${Boost_LIBRARIES}
-		"-framework CoreFoundation"
 		"-lresolv"
 )
+
+if(APPLE)
+	# macOS-specific libraries and options
+	target_link_libraries(flightsqlserver PRIVATE "-framework CoreFoundation")
+elseif (UNIX)
+	target_link_libraries(flightsqlserver PRIVATE "-lssl -lcrypto")
+endif()
 
 # Specify the installation directory for the library
 install(TARGETS flightsqlserver
