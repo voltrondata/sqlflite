@@ -26,29 +26,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Apache Arrow (per https://arrow.apache.org/install/)
-RUN apt update && \
-    apt install -y -V ca-certificates lsb-release wget && \
-    wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
-    apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb && \
-    apt update && \
-    apt install -y -V \
-       libarrow-dev \
-       libarrow-glib-dev \
-       libarrow-dataset-dev \
-       libarrow-dataset-glib-dev \
-       libarrow-acero-dev \
-       libarrow-flight-dev \
-       libarrow-flight-glib-dev \
-       libarrow-flight-sql-dev \
-       libarrow-flight-sql-glib-dev \
-       libgandiva-dev \
-       libgandiva-glib-dev \
-       libparquet-dev \
-       libparquet-glib-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
 WORKDIR /tmp
 
 # Copy the scripts directory into the image (we copy directory-by-directory in order to maximize Docker caching)
@@ -109,14 +86,15 @@ RUN python "scripts/create_duckdb_database_file.py" \
            --scale-factor=0.01
 
 # Build the Flight SQL application
-COPY --chown=app_user:app_user ./CMakeLists.txt ./
+COPY --chown=app_user:app_user ./CMakeLists.txt ./Arrow_CMakeLists.txt.in ./
 COPY --chown=app_user:app_user ./src ./src
 COPY --chown=app_user:app_user ./jwt-cpp ./jwt-cpp
 WORKDIR ${APP_DIR}
+
 RUN . ~/.bashrc && \
     mkdir build && \
     cd build && \
-    cmake .. -GNinja -DCMAKE_PREFIX_PATH=${ARROW_HOME}/lib/cmake -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake .. -GNinja -DCMAKE_INSTALL_PREFIX=/usr/local && \
     ninja && \
     mv flight_sql /usr/local/bin
 
