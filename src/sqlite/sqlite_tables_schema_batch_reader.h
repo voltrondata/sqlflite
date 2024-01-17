@@ -43,8 +43,8 @@ class SqliteTablesWithSchemaBatchReader : public RecordBatchReader {
   /// \param main_query  SQL query that originated reader's data.
   /// \param db     a pointer to the sqlite3 db.
   SqliteTablesWithSchemaBatchReader(
-          std::shared_ptr<sqlite::SqliteStatementBatchReader> reader, std::string main_query,
-          sqlite3* db)
+      std::shared_ptr<sqlite::SqliteStatementBatchReader> reader, std::string main_query,
+      sqlite3* db)
       : reader_(std::move(reader)), main_query_(std::move(main_query)), db_(db) {}
 
   std::shared_ptr<Schema> schema() const override;
