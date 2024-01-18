@@ -3,99 +3,170 @@ project(flight_sql)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Download and unpack arrow at configure time
-configure_file(Arrow_CMakeLists.txt.in arrow/CMakeLists.txt)
+# --------------------- Arrow ---------------------
+configure_file(third_party/Arrow_CMakeLists.txt.in arrow/CMakeLists.txt)
 execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
-		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/arrow"
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/arrow"
 )
 execute_process(COMMAND "${CMAKE_COMMAND}" --build .
-		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/arrow"
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/arrow"
 )
 
-find_package(Arrow REQUIRED PATHS ${CMAKE_BINARY_DIR}/3rd_party/arrow NO_DEFAULT_PATH)
-find_package(ArrowFlight REQUIRED PATHS ${CMAKE_BINARY_DIR}/3rd_party/arrow NO_DEFAULT_PATH)
-find_package(ArrowFlightSql REQUIRED PATHS ${CMAKE_BINARY_DIR}/3rd_party/arrow NO_DEFAULT_PATH)
+set(ARROW_INSTALL_DIR "${CMAKE_BINARY_DIR}/third_party/arrow")
 
-# ---------------------
+find_package(Arrow REQUIRED PATHS ${ARROW_INSTALL_DIR} NO_DEFAULT_PATH)
+find_package(ArrowFlight REQUIRED PATHS ${ARROW_INSTALL_DIR} NO_DEFAULT_PATH)
+find_package(ArrowFlightSql REQUIRED PATHS ${ARROW_INSTALL_DIR} NO_DEFAULT_PATH)
+
+# --------------------- SQLite ---------------------
+
+configure_file(third_party/SQLite_CMakeLists.txt.in sqlite/CMakeLists.txt)
+execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/sqlite"
+)
+execute_process(COMMAND "${CMAKE_COMMAND}" --build .
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/sqlite"
+)
+
+set(SQLITE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/third_party/sqlite/src/sqlite_project")
+set(SQLITE_LIBRARY_PATH "${CMAKE_BINARY_DIR}/third_party/sqlite/src/sqlite_project-build/sqlite3-sqlite3.o")
+
+add_library(sqlite STATIC IMPORTED)
+set_property(TARGET sqlite PROPERTY IMPORTED_LOCATION ${SQLITE_LIBRARY_PATH})
+
+# --------------------- DuckDB ---------------------
+
+configure_file(third_party/DuckDB_CMakeLists.txt.in duckdb/CMakeLists.txt)
+execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/duckdb"
+)
+execute_process(COMMAND "${CMAKE_COMMAND}" --build .
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/duckdb"
+)
+
+set(DUCKDB_INSTALL_DIR "${CMAKE_BINARY_DIR}/third_party/duckdb")
+
+set(DUCKDB_LIBRARY_PATH "${DUCKDB_INSTALL_DIR}/lib/libduckdb_static.a")
+set(DUCKDB_INCLUDE_DIR "${DUCKDB_INSTALL_DIR}/include")
+
+add_library(duckdb STATIC IMPORTED)
+set_property(TARGET duckdb PROPERTY IMPORTED_LOCATION ${DUCKDB_LIBRARY_PATH})
+set_property(TARGET duckdb APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${DUCKDB_INCLUDE_DIR})
+
+target_link_libraries(duckdb
+        INTERFACE
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_fastpforlib.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_fmt.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_fsst.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_hyperloglog.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_mbedtls.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_miniz.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_pg_query.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_re2.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_utf8proc.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libparquet_extension.a"
+)
+
+if (UNIX AND NOT APPLE)
+    target_link_libraries(duckdb
+            INTERFACE
+            "${DUCKDB_INSTALL_DIR}/lib/libjemalloc_extension.a"
+    )
+endif ()
+
+# --------------------- JWT-CPP ---------------------
+
+configure_file(third_party/JWTCPP_CMakeLists.txt.in jwt-cpp/CMakeLists.txt)
+execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/jwt-cpp"
+)
+execute_process(COMMAND "${CMAKE_COMMAND}" --build .
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/jwt-cpp"
+)
+
+set(JWT_CPP_INCLUDE_DIR "${CMAKE_BINARY_DIR}/third_party/src/jwt_cpp_project/include")
+
+# --------------------------------------------------
 
 find_package(Threads REQUIRED)
-find_package(SQLite3 REQUIRED)
+
+set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS program_options REQUIRED)
 
-# find duckDB
-find_library(DUCKDB_LIB NAMES duckdb PATHS /usr/local/lib/)
-set(DUCKDB ${DUCKDB_LIB})
-
 set(ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS
-    src/sqlite/sqlite_sql_info.cc
-    src/sqlite/sqlite_type_info.cc
-    src/sqlite/sqlite_statement.cc
-    src/sqlite/sqlite_statement_batch_reader.cc
-    src/sqlite/sqlite_server.cc
-    src/sqlite/sqlite_tables_schema_batch_reader.cc)
+        src/sqlite/sqlite_sql_info.cc
+        src/sqlite/sqlite_type_info.cc
+        src/sqlite/sqlite_statement.cc
+        src/sqlite/sqlite_statement_batch_reader.cc
+        src/sqlite/sqlite_server.cc
+        src/sqlite/sqlite_tables_schema_batch_reader.cc)
+
 
 set(ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS
-    src/duckdb/duckdb_sql_info.cpp
-    src/duckdb/duckdb_statement.cpp
-    src/duckdb/duckdb_statement_batch_reader.cpp
-    src/duckdb/duckdb_server.cpp
-    src/duckdb/duckdb_tables_schema_batch_reader.cpp)
-
-add_subdirectory(jwt-cpp)
+        src/duckdb/duckdb_sql_info.cpp
+        src/duckdb/duckdb_statement.cpp
+        src/duckdb/duckdb_statement_batch_reader.cpp
+        src/duckdb/duckdb_server.cpp
+        src/duckdb/duckdb_tables_schema_batch_reader.cpp)
 
 # Add header file
 set(HEADER_FILES src/library/include/flight_sql_library.h)
 
 # Add a library target
 add_library(flightsqlserver STATIC
-		src/library/flight_sql_library.cpp
-		src/library/flight_sql_security.cpp
-		${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
-		${ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS}
+        src/library/flight_sql_library.cpp
+        src/library/flight_sql_security.cpp
+        ${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
+        ${ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS}
 )
 
 set_target_properties(flightsqlserver PROPERTIES PUBLIC_HEADER ${HEADER_FILES})
 
 target_include_directories(flightsqlserver PRIVATE
-		src/sqlite
-		src/duckdb
-		${ARROW_INCLUDE_DIR}
-		/usr/local/include
+        src/sqlite
+        src/duckdb
+        ${SQLITE_INCLUDE_DIR}
+        ${DUCKDB_INCLUDE_DIR}
+        ${JWT_CPP_INCLUDE_DIR}
 )
 
-target_link_libraries(flightsqlserver PRIVATE
-		jwt-cpp
-		Threads::Threads
-		Arrow::arrow_static
-		ArrowFlight::arrow_flight_static
-		ArrowFlightSql::arrow_flight_sql_static
-		${SQLite3_LIBRARIES}
-		${DUCKDB}
-		${Boost_LIBRARIES}
-		"-lresolv"
+target_link_libraries(flightsqlserver
+        PRIVATE
+        Threads::Threads
+        Arrow::arrow_static
+        ArrowFlight::arrow_flight_static
+        ArrowFlightSql::arrow_flight_sql_static
+        sqlite
+        duckdb
+        ${Boost_LIBRARIES}
+        "-lresolv"
 )
 
-if(APPLE)
-	# macOS-specific libraries and options
-	target_link_libraries(flightsqlserver PRIVATE "-framework CoreFoundation")
-elseif (UNIX)
-	target_link_libraries(flightsqlserver PRIVATE "-lssl -lcrypto")
-endif()
+if (APPLE)
+    # macOS-specific libraries and options
+    target_link_libraries(flightsqlserver PRIVATE "-framework CoreFoundation")
+elseif (UNIX AND NOT APPLE)
+    target_link_libraries(flightsqlserver PRIVATE "-lssl -lcrypto")
+endif ()
 
 # Specify the installation directory for the library
 install(TARGETS flightsqlserver
-		LIBRARY DESTINATION lib
-		PUBLIC_HEADER DESTINATION include
+        LIBRARY DESTINATION lib
+        PUBLIC_HEADER DESTINATION include
 )
 
 # ------------ Executable section ------------
 add_executable(flight_sql
-    src/flight_sql.cpp
+        src/flight_sql.cpp
 )
 
 target_link_libraries(flight_sql PRIVATE
-		flightsqlserver
-		${Boost_LIBRARIES}
+        flightsqlserver
+        ${Boost_LIBRARIES}
 )
 
 target_compile_options(flight_sql PRIVATE "-static")
+
+install(TARGETS flight_sql
+        DESTINATION bin
+)
