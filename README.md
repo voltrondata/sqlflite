@@ -182,34 +182,32 @@ docker stop flight-sql
 In order to run build the solution manually, and run SQLite and DuckDB Flight SQL server, you need to set up a new Python 3.8+ virtual environment on your machine. 
 Follow these steps to do so (thanks to David Li!).
 
-1. Clone the repo, ensure you have Python 3.8+ installed, then create a virtual environment from the root of this repo and install requirements...
+1. Clone the repo and build the static library and executable
 ```bash
 git clone https://github.com/voltrondata/flight-sql-server-example --recurse-submodules
 cd flight-sql-server-example
+
+# Build and install the static library and executable
+mkdir build
+cd build
+cmake -S .. -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local
+cmake --build . --target install
+```
+
+2. Install Python requirements for ADBC client interaction - (ensure you have Python 3.9+ installed first)
+```bash
 python3 -m venv ./venv
 . ./venv/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install --requirement ./requirements.txt
-```
+````
 
-2. Build and install Arrow
+3. Get some SQLite3 sample data.
 ```bash
-scripts/build_arrow.sh
+wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O ./data/TPC-H-small.sqlite
 ```
 
-3. Build and install `duckdb`. This is sometimes necessary as conda `compilers` 
-seem to be including incompatible GlibC library with the compiled binaries
-of `duckdb`.
-```bash
-scripts/build_duckdb.sh
-```
-
-4. Get some SQLite3 sample data.
-```bash
-wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O ./data/TPC-H-small.db
-```
-
-5. Create a DuckDB database.
+4. Create a DuckDB database.
 ```bash
 python "scripts/create_duckdb_database_file.py" \
        --file-name="TPC-H-small.duckdb" \
@@ -218,42 +216,31 @@ python "scripts/create_duckdb_database_file.py" \
        --scale-factor=0.01
 ```
 
-6. Build the Flight SQL Server executable.
-```bash
-. ~/.bashrc
-mkdir -p build
-pushd build
-cmake .. -GNinja -DCMAKE_PREFIX_PATH=$ARROW_HOME/lib/cmake
-ninja
-popd
-```
-
-7. Generate TLS certificates for encrypting traffic to/from the Flight SQL server
+5. Optionally generate TLS certificates for encrypting traffic to/from the Flight SQL server
 ```bash
 pushd tls
 ./gen-certs.sh
 popd
 ```
 
-
-8. Start the Flight SQL server (and print client SQL commands as they run using the --print-queries option)
+6. Start the Flight SQL server (and print client SQL commands as they run using the --print-queries option)
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql --database-filename "TPC-H-small.duckdb" --print-queries
+FLIGHT_PASSWORD="flight_password" flight_sql --database-filename data/TPC-H-small.duckdb --print-queries
 ```
 
 ## Selecting different backends
 This option allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
-$ FLIGHT_PASSWORD="flight_password" flight_sql --database-filename "TPC-H-small.duckdb"
-Apache Arrow version: 14.0.2
+$ FLIGHT_PASSWORD="flight_password" flight_sql --database-filename data/TPC-H-small.duckdb
+Apache Arrow version: 15.0.0
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
 DuckDB version: v0.9.2
 Running Init SQL command: 
 SET autoinstall_known_extensions = true;
 Running Init SQL command: 
  SET autoload_known_extensions = true;
-Using database file: "/opt/flight_sql/TPC-H-small.duckdb"
+Using database file: "/opt/flight_sql/data/TPC-H-small.duckdb"
 Print Queries option is set to: false
 Apache Arrow Flight SQL server - with engine: DuckDB - will listen on grpc+tcp://0.0.0.0:31337
 Flight SQL server - started
@@ -262,19 +249,19 @@ Flight SQL server - started
 The above call is equivalent to running `flight_sql -B duckdb` or `flight_sql --backend duckdb`. To select SQLite run
 
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql -B sqlite -D "TPC-H-small.db" 
+FLIGHT_PASSWORD="flight_password" flight_sql -B sqlite -D data/TPC-H-small.sqlite 
 ```
 or 
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql --backend sqlite --database-filename "TPC-H-small.db"
+FLIGHT_PASSWORD="flight_password" flight_sql --backend sqlite --database-filename data/TPC-H-small.sqlite
 ```
 The above will produce the following:
 
 ```bash
-Apache Arrow version: 14.0.2
+Apache Arrow version: 15.0.0
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
-SQLite version: 3.40.1
-Using database file: "/opt/flight_sql/TPC-H-small.db"
+SQLite version: 3.45.0
+Using database file: "/opt/flight_sql/data/TPC-H-small.sqlite"
 Print Queries option is set to: false
 Apache Arrow Flight SQL server - with engine: SQLite - will listen on grpc+tcp://0.0.0.0:31337
 Flight SQL server - started
@@ -328,3 +315,4 @@ Allowed options:
                                         certificate MUST be in PEM format.
   -Q [ --print-queries ]                Print queries run by clients to stdout
 ```
+

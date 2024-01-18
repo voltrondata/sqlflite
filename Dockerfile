@@ -86,7 +86,9 @@ RUN . ~/.bashrc && \
     mkdir build && \
     cd build && \
     cmake -S .. -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local && \
-    cmake --build . --target install
+    cmake --build . --target install && \
+    cd .. && \
+    rm -rf build
 
 COPY --chown=app_user:app_user ./tls ./tls
 

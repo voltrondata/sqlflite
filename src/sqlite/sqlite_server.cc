@@ -804,28 +804,6 @@ arrow::Result<std::shared_ptr<SQLiteFlightSqlServer>> SQLiteFlightSqlServer::Cre
     result->RegisterSqlInfo(id_to_result.first, id_to_result.second);
   }
 
-  ARROW_RETURN_NOT_OK(result->ExecuteSql(R"(
-    CREATE TABLE foreignTable (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    foreignName varchar(100),
-    value int);
-
-    CREATE TABLE intTable (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    keyName varchar(100),
-    value int,
-    foreignId int references foreignTable(id));
-
-    INSERT INTO foreignTable (foreignName, value) VALUES ('keyOne', 1);
-    INSERT INTO foreignTable (foreignName, value) VALUES ('keyTwo', 0);
-    INSERT INTO foreignTable (foreignName, value) VALUES ('keyThree', -1);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES ('one', 1, 1);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES ('zero', 0, 1);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES ('negative one', -1, 1);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES (NULL, NULL, NULL);
-    INSERT INTO intTable (keyName, value, foreignId) VALUES ('null', NULL, NULL);
-  )"));
-
   return result;
 }
 
