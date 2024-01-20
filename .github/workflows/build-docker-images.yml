@@ -76,6 +76,8 @@ jobs:
             ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.platform }}
           no-cache: true
           provenance: false
+          build-args: |
+            GITHUB_WORKSPACE=${{ github.workspace }}
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms
