@@ -54,7 +54,7 @@ jobs:
         with:
           name: flight_sql_cli_${{ matrix.os }}_${{ matrix.platform }}.zip
           path: |
-            build/flight_sql.zip
+            flight_sql.zip
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -73,7 +73,7 @@ jobs:
           push: true
           tags: |
             ${{ env.DOCKER_IMAGE_NAME }}:latest-${{ matrix.platform }}
-            ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.platform }}
+            ${{ env.DOCKER_IMAGE_NAME }}:${GITHUB_REF_NAME##*/}-${{ matrix.platform }}
           no-cache: true
           provenance: false
 
@@ -90,6 +90,6 @@ jobs:
       - name: Create and push manifest images
         uses: Noelware/docker-manifest-action@master # or use a pinned version in the Releases tab
         with:
-          inputs: ${{ env.DOCKER_IMAGE_NAME }}:latest,${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}
+          inputs: ${{ env.DOCKER_IMAGE_NAME }}:latest,${{ env.DOCKER_IMAGE_NAME }}:${GITHUB_REF_NAME##*/}
           images: ${{ env.DOCKER_IMAGE_NAME }}:latest-amd64,${{ env.DOCKER_IMAGE_NAME }}:latest-arm64
           push: true
