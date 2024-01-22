@@ -65,7 +65,7 @@ jobs:
 
       - name: List files
         run: |
-          echo $(pwd) && ls -ltrhR . && mkdir build && echo "hi" > build/flight_sql
+          echo $(pwd) && ls -ltrhR . && mkdir build && echo "hi" > ./joe_burger
 
       - name: Build and push
         uses: docker/build-push-action@v5
