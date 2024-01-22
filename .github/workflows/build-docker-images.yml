@@ -20,7 +20,7 @@ jobs:
             runner: macos-13
           - platform: arm64
             os: macos
-            runner: macos-13-arm
+            runner: macos-13-arm64
     runs-on: ${{ matrix.runner }}
 
     steps:
