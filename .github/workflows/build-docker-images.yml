@@ -77,6 +77,8 @@ jobs:
           provenance: false
           build-args: |
             --build-arg ARTIFACT_URL=${{ steps.artifact-upload-step.outputs.artifact-url }}
+          secrets: |
+            "github_token=${{ secrets.GITHUB_TOKEN }}"           
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms
