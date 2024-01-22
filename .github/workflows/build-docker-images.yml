@@ -67,6 +67,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          builder: docker
           platforms: linux/${{ matrix.platform }}
           file: Dockerfile.ci
           push: true
@@ -75,10 +76,6 @@ jobs:
             ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.platform }}
           no-cache: true
           provenance: false
-          build-args: |
-            --build-arg ARTIFACT_URL=${{ steps.artifact-upload-step.outputs.artifact-url }}
-          secrets: |
-            "github_token=${{ secrets.GITHUB_TOKEN }}"           
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms
