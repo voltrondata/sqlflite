@@ -13,12 +13,9 @@ RUN apt-get update && \
     apt-get dist-upgrade --yes && \
     apt-get install -y \
     build-essential \
-    cmake \
     wget \
     gcc \
     git \
-    ninja-build \
-    libboost-all-dev \
     vim && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -77,7 +74,7 @@ RUN python "scripts/create_duckdb_database_file.py" \
 ARG GITHUB_WORKSPACE
 
 # The flight_sql executable was built earlier in the Github actions pipeline - so just copy it into the image
-COPY --chown=app_user:app_user ${GITHUB_WORKSPACE}/build/flight_sql /usr/local/bin/flight_sql
+COPY --chown=app_user:app_user build/flight_sql /usr/local/bin/flight_sql
 
 COPY --chown=app_user:app_user ./tls ./tls
 
