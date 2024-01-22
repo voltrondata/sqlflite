@@ -66,6 +66,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          secret-files: build/flight_sql
           platforms: linux/${{ matrix.platform }}
           file: Dockerfile.ci
           push: true
@@ -74,8 +75,6 @@ jobs:
             ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.platform }}
           no-cache: true
           provenance: false
-          build-args: |
-            GITHUB_WORKSPACE=${{ github.workspace }}
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms

@@ -27,7 +27,7 @@ RUN case ${TARGETPLATFORM} in \
     esac && \
     curl "${AWSCLI_FILE}" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
-    ./aws/install && \
+    aws/install && \
     rm -f awscliv2.zip
 
 # Create an application user
@@ -53,15 +53,15 @@ RUN python3 -m venv ${APP_DIR}/venv && \
 ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 
 # Copy the scripts directory into the image (we copy directory-by-directory in order to maximize Docker caching)
-COPY --chown=app_user:app_user ./scripts ./scripts
+COPY --chown=app_user:app_user scripts scripts
 
 # Get the SQLite3 database file
 RUN mkdir data && \
     wget https://github.com/lovasoa/TPCH-sqlite/releases/download/v1.0/TPC-H-small.db -O data/TPC-H-small.db
 
 # Install Python requirements
-COPY --chown=app_user:app_user ./requirements.txt ./
-RUN pip install --requirement ./requirements.txt
+COPY --chown=app_user:app_user requirements.txt .
+RUN pip install --requirement requirements.txt
 
 # Create DuckDB database file
 RUN python "scripts/create_duckdb_database_file.py" \
@@ -74,9 +74,9 @@ RUN python "scripts/create_duckdb_database_file.py" \
 ARG GITHUB_WORKSPACE
 
 # The flight_sql executable was built earlier in the Github actions pipeline - so just copy it into the image
-COPY --chown=app_user:app_user ./build/flight_sql /usr/local/bin/flight_sql
+COPY --chown=app_user:app_user /run/secrets/flight_sql /usr/local/bin/flight_sql
 
-COPY --chown=app_user:app_user ./tls ./tls
+COPY --chown=app_user:app_user tls tls
 
 EXPOSE 31337
 
