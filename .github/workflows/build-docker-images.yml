@@ -20,12 +20,16 @@ jobs:
             runner: macos-13
           - platform: arm64
             os: macos
-            runner: macos-13-arm64
+            runner: macos-13-xlarge
     runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
+
+      - name: Install build requirements
+        run: |
+          brew install boost
 
       - name: Configure Project
         uses: threeal/cmake-action@v1.3.0
