@@ -22,14 +22,6 @@ namespace arrow {
 
         class SecurityUtilities {
         public:
-            static std::string GetFlightServerHostname();
-
-            static std::string GetFlightServerPassword();
-
-            static Status VerifyFlightServerPassword(std::string *out);
-
-            static std::string GetFlightServerSecretKey();
-
             static Status FlightServerTlsCertificates(const fs::path &cert_path,
                                                       const fs::path &key_path,
                                                       std::vector<CertKeyPair> *out);

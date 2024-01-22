@@ -22,4 +22,6 @@ CMakeFiles
 venv
 dist
 cmake-build-debug
+cmake-build-debug-event-trace
+
 data
