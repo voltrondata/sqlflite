@@ -67,7 +67,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          builder: docker
           platforms: linux/${{ matrix.platform }}
           file: Dockerfile.ci
           push: true
