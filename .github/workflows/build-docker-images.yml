@@ -50,6 +50,7 @@ jobs:
           zip -j flight_sql.zip build/flight_sql
 
       - name: Upload artifacts
+        id: artifact-upload-step
         uses: actions/upload-artifact@v4
         with:
           name: flight_sql_cli_${{ matrix.os }}_${{ matrix.platform }}.zip
@@ -66,7 +67,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          secret-files: build/flight_sql
           platforms: linux/${{ matrix.platform }}
           file: Dockerfile.ci
           push: true
@@ -75,6 +75,8 @@ jobs:
             ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.platform }}
           no-cache: true
           provenance: false
+          build-args: |
+            --build-arg ARTIFACT_URL=${{ steps.artifact-upload-step.outputs.artifact-url }}
 
   update-image-manifest:
     name: Update DockerHub image manifest to include all built platforms

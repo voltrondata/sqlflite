@@ -16,7 +16,8 @@ RUN apt-get update && \
     wget \
     gcc \
     git \
-    vim && \
+    vim \
+    zip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -71,10 +72,12 @@ RUN python "scripts/create_duckdb_database_file.py" \
            --scale-factor=0.01
 
 # This build-arg gets passed by the pipeline..
-ARG GITHUB_WORKSPACE
+ARG ARTIFACT_URL
 
-# The flight_sql executable was built earlier in the Github actions pipeline - so just copy it into the image
-COPY --chown=app_user:app_user /run/secrets/flight_sql /usr/local/bin/flight_sql
+RUN curl --location --output /tmp/flight_sql.zip \
+      -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+      ${ARTIFACT_URL} && \
+      unzip /tmp/flight_sql.zip -d /usr/local/bin && \
 
 COPY --chown=app_user:app_user tls tls
 
