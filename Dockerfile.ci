@@ -71,8 +71,6 @@ RUN python "scripts/create_duckdb_database_file.py" \
            --overwrite-file=true \
            --scale-factor=0.01
 
-RUN echo $(pwd) && ls -R ./
-
 COPY --chown=app_user:app_user build/flight_sql /usr/local/bin/flight_sql
 
 COPY --chown=app_user:app_user tls tls

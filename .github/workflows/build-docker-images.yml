@@ -63,6 +63,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+      - name: List files
+        run: |
+          echo $(pwd) && ls -ltrhR .
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
