@@ -10,8 +10,48 @@ env:
   DOCKER_IMAGE_NAME: voltrondata/flight-sql
 
 jobs:
-  build-project:
-    name: Build Project
+  build-project-macos:
+    name: Build Project - MacOS
+    strategy:
+      matrix:
+        include:
+          - platform: amd64
+            os: macos
+            runner: macos-13
+          - platform: arm64
+            os: macos
+            runner: macos-13-xlarge
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.1
+
+      - name: Install build requirements
+        run: |
+          brew install boost
+
+      - name: Configure Project
+        uses: threeal/cmake-action@v1.3.0
+        with:
+          generator: Ninja
+          run-build: true
+
+      - name: Zip artifacts
+        run: |
+          mv build/flight_sql . &&
+          zip -j flight_sql.zip flight_sql
+
+      - name: Upload artifacts
+        id: artifact-upload-step
+        uses: actions/upload-artifact@v4
+        with:
+          name: flight_sql_cli_${{ matrix.os }}_${{ matrix.platform }}.zip
+          path: |
+            flight_sql.zip
+
+  build-project-linux:
+    name: Build Project - Linux
     strategy:
       matrix:
         include:
