@@ -74,7 +74,7 @@ RUN python "scripts/create_duckdb_database_file.py" \
 ARG GITHUB_WORKSPACE
 
 # The flight_sql executable was built earlier in the Github actions pipeline - so just copy it into the image
-COPY --chown=app_user:app_user build/flight_sql /usr/local/bin/flight_sql
+COPY --chown=app_user:app_user ./build/flight_sql /usr/local/bin/flight_sql
 
 COPY --chown=app_user:app_user ./tls ./tls
 
