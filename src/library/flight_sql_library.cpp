@@ -105,8 +105,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQ
                                                                                               print_queries)
         )
         // Run additional commands (first) for the DuckDB back-end...
-        RUN_INIT_COMMANDS(duckdb_server, "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;");
-        RUN_INIT_COMMANDS(duckdb_server, init_sql_commands);
+        auto duckdb_init_sql_commands = "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;" + init_sql_commands;
+        RUN_INIT_COMMANDS(duckdb_server, duckdb_init_sql_commands);
         server = duckdb_server;
     }
 

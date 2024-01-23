@@ -73,16 +73,17 @@ RUN python "scripts/create_duckdb_database_file.py" \
            --overwrite-file=true \
            --scale-factor=0.01
 
-
 COPY --chown=app_user:app_user ./CMakeLists.txt ./
 COPY --chown=app_user:app_user ./third_party ./third_party
 COPY --chown=app_user:app_user ./src ./src
 
-# Run the CMake build
+# Run the CMake build (then cleanup)
 RUN mkdir build && \
     cd build && \
     cmake .. -GNinja -DCMAKE_INSTALL_PREFIX=/usr/local && \
-    cmake --build . --target install
+    cmake --build . --target install && \
+    cd .. && \
+    rm -rf build src third_party CMakeLists.txt
 
 COPY --chown=app_user:app_user ./tls ./tls
 
