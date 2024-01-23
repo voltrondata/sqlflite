@@ -81,8 +81,8 @@ COPY --chown=app_user:app_user ./src ./src
 # Run the CMake build
 RUN mkdir build && \
     cd build && \
-    cmake .. -GNinja -DCMAKE_PREFIX_PATH=${ARROW_HOME}/lib/cmake -DCMAKE_INSTALL_PREFIX=/usr/local && \
-    cmake install
+    cmake .. -GNinja -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake --build . --target install
 
 COPY --chown=app_user:app_user ./tls ./tls
 

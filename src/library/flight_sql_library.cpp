@@ -104,6 +104,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQ
                               arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(database_filename, config,
                                                                                               print_queries)
         )
+        // Run additional commands (first) for the DuckDB back-end...
+        RUN_INIT_COMMANDS(duckdb_server, "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;");
         RUN_INIT_COMMANDS(duckdb_server, init_sql_commands);
         server = duckdb_server;
     }
@@ -224,11 +226,6 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
                 init_sql_commands += init_sql_commands_file_contents;
             }
         }
-    }
-
-    // Run additional commands for the DuckDB back-end...
-    if (backend == BackendType::duckdb) {
-        init_sql_commands += "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;";
     }
 
     if (!mtls_ca_cert_path.empty()) {
