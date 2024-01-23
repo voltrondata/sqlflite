@@ -5,6 +5,7 @@
 
 // Constants
 const std::string DEFAULT_FLIGHT_HOSTNAME = "0.0.0.0";
+const std::string DEFAULT_FLIGHT_USERNAME = "flight_username";
 const int DEFAULT_FLIGHT_PORT = 31337;
 
 enum class BackendType {

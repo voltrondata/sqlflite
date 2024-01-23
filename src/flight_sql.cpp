@@ -21,8 +21,9 @@ int main(int argc, char **argv) {
              "Specify the port to listen on for the Flight SQL Server.")
             ("database-filename,D", po::value<std::string>()->default_value(""),
              "Specify the database filename (absolute or relative to the current working directory)")
-            ("username,U", po::value<std::string>()->default_value("flight_username"),
-             "Specify the username to allow to connect to the Flight SQL Server for clients.")
+            ("username,U", po::value<std::string>()->default_value(""),
+             "Specify the username to allow to connect to the Flight SQL Server for clients.  If not set, we will use env var: 'FLIGHT_USERNAME'.  "
+             "If that isn't set, we will use the default of: 'flight_username'.")
             ("password,P", po::value<std::string>()->default_value(""),
              "Specify the password to set on the Flight SQL Server for clients to connect with.  If not set, we will use env var: 'FLIGHT_PASSWORD'.  "
              "If that isn't set, the server will exit with failure.")

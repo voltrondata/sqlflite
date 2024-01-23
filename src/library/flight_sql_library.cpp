@@ -172,7 +172,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
     if (username.empty()) {
         username = SafeGetEnvVarValue("FLIGHT_USERNAME");
         if (username.empty()) {
-            username = "flight_username";
+            username = DEFAULT_FLIGHT_USERNAME;
+        }
     }
 
     if (password.empty()) {
