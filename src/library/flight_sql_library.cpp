@@ -168,8 +168,9 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
     }
 
     if (username.empty()) {
-        return arrow::Status::Invalid(
-                "The Flight SQL Server username is empty.  You must pass a value to this argument to secure the server.");
+        username = SafeGetEnvVarValue("FLIGHT_USERNAME");
+        if (username.empty()) {
+            username = "flight_username";
     }
 
     if (password.empty()) {

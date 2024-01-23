@@ -24,8 +24,8 @@ namespace fs = std::filesystem;
  * @param hostname The hostname for the Flight SQL Server. Default is "" - if so, we use environment variable: "FLIGHT_HOSTNAME",
  *   and fallback to: DEFAULT_FLIGHT_HOSTNAME if that is not set.
  * @param port The port to listen on for the Flight SQL Server. Default is DEFAULT_FLIGHT_PORT
- * @param username The username to use for authentication. Default is "flight_username" - if not set, we use environment variable: "FLIGHT_USERNAME",
- *   if both are not set, we exit with an error.
+ * @param username The username to use for authentication. Default is now "" - if not set, we use environment variable: "FLIGHT_USERNAME",
+ *   if this is not defined we set this to "flight_username" again in flight_sql_library.
  * @param password The password for authentication. Default is "" - if so, we use environment variable: "FLIGHT_PASSWORD",
  *   if both are not set, we exit with an error.
  * @param secret_key The secret key for authentication. Default is "", if so, we use environment variable: "SECRET_KEY",
@@ -46,7 +46,7 @@ int RunFlightSQLServer(
         fs::path &database_filename,
         std::string hostname = "",
         const int &port = DEFAULT_FLIGHT_PORT,
-        std::string username = "flight_username",
+        std::string username = "",
         std::string password = "",
         std::string secret_key = "",
         fs::path tls_cert_path = fs::path(),
