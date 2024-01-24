@@ -182,8 +182,8 @@ docker stop flight-sql
 Download (and unzip) the latest release of the **flight_sql** CLI executable from these currently supported platforms:   
 [Linux x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_amd64.zip)   
 [Linux arm64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_arm64.zip)   
-[MacOS x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_amd64.zip)   
-[MacOS arm64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_arm64.zip)   
+[MacOS x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_macos_amd64.zip)   
+[MacOS arm64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_macos_arm64.zip)   
 
 Then from a terminal - you can run:
 ```bash
