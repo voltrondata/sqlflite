@@ -38,7 +38,7 @@ jobs:
           run-build: true
 
       - name: Sign and notarize the release build
-        uses: toitlang/action-macos-sign-notarize@v1
+        uses: toitlang/action-macos-sign-notarize@v1.0.0
         with:
           certificate: ${{ secrets.APPLE_CERTIFICATE }}
           certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
