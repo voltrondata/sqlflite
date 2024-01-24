@@ -6,7 +6,6 @@ on:
 
 env:
   DOCKER_IMAGE_NAME: voltrondata/flight-sql
-  ZIP_FILE_PREFIX: flight_sql_cli_
 
 jobs:
   build-project-macos:
@@ -22,7 +21,7 @@ jobs:
             runner: macos-13-xlarge
     runs-on: ${{ matrix.runner }}
     env:
-      zip_file_name: ${{ ZIP_FILE_PREFIX }}_${{ matrix.os }}_${{ matrix.platform }}.zip
+      zip_file_name: flight_sql_cli_${{ matrix.os }}_${{ matrix.platform }}.zip
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
@@ -73,7 +72,7 @@ jobs:
             runner: buildjet-8vcpu-ubuntu-2204-arm
     runs-on: ${{ matrix.runner }}
     env:
-      zip_file_name: ${{ ZIP_FILE_PREFIX }}_${{ matrix.os }}_${{ matrix.platform }}.zip
+      zip_file_name: flight_sql_cli_${{ matrix.os }}_${{ matrix.platform }}.zip
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
@@ -142,14 +141,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: ${{ env.ZIP_FILE_PREFIX }}_*.zip
+          pattern: flight_sql_cli_*.zip
           merge-multiple: true
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/${{ env.ZIP_FILE_PREFIX }}_*.zip
+            artifacts/flight_sql_cli_*.zip
             LICENSE
 
   update-image-manifest:
