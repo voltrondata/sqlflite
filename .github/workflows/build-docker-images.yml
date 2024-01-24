@@ -48,7 +48,7 @@ jobs:
 
       - name: Zip artifacts
         run: |
-          mv build/flight_sql . &&
+          mv build/flight_sql .
           zip -j ${{ env.zip_file_name }} flight_sql
 
       - name: Upload artifacts
@@ -79,15 +79,15 @@ jobs:
 
       - name: Install build requirements
         run: |
-          sudo apt-get update && \
+          sudo apt-get update
           sudo apt-get install -y \
             build-essential \
             ninja-build \
             cmake \
             gcc \
             git \
-            libboost-all-dev && \
-          sudo apt-get clean && \
+            libboost-all-dev
+          sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
 
       - name: Configure Project
@@ -98,7 +98,7 @@ jobs:
 
       - name: Zip artifacts
         run: |
-          mv build/flight_sql . &&
+          mv build/flight_sql .
           zip -j ${{ env.zip_file_name }} flight_sql
 
       - name: Upload artifacts
