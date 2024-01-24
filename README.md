@@ -177,9 +177,27 @@ Stop the docker image with:
 docker stop flight-sql
 ```
 
-## Option 2 - Steps to build the solution manually
+## Option 2 - Download and run the flight_sql CLI executable
 
-In order to run build the solution manually, and run SQLite and DuckDB Flight SQL server, you need to set up a new Python 3.8+ virtual environment on your machine. 
+Download (and unzip) the latest release of the **flight_sql** CLI executable from these currently supported platforms:   
+[Linux x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_amd64.zip)   
+[Linux arm64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_arm64.zip)   
+[MacOS x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_amd64.zip)   
+[MacOS arm64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_arm64.zip)   
+
+Then from a terminal - you can run:
+```bash
+FLIGHT_PASSWORD="flight_password" flight_sql --database-filename data/some_db.duckdb --print-queries
+```
+
+To see all program options - run:
+```bash
+flight_sql --help
+```
+
+## Option 3 - Steps to build the solution manually
+
+In order to run build the solution manually, and run SQLite and DuckDB Flight SQL server, you need to set up a new Python 3.9+ virtual environment on your machine. 
 Follow these steps to do so (thanks to David Li!).
 
 1. Clone the repo and build the static library and executable
