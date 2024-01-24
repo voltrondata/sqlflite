@@ -6,6 +6,7 @@ on:
 
 env:
   DOCKER_IMAGE_NAME: voltrondata/flight-sql
+  ZIP_FILE_PREFIX: flight_sql_cli_
 
 jobs:
   build-project-macos:
@@ -20,7 +21,8 @@ jobs:
             os: macos
             runner: macos-13-xlarge
     runs-on: ${{ matrix.runner }}
-
+    env:
+      zip_file_name: ${{ ZIP_FILE_PREFIX }}_${{ matrix.os }}_${{ matrix.platform }}.zip
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
@@ -48,15 +50,15 @@ jobs:
       - name: Zip artifacts
         run: |
           mv build/flight_sql . &&
-          zip -j flight_sql.zip flight_sql
+          zip -j ${{ env.zip_file_name }} flight_sql
 
       - name: Upload artifacts
         id: artifact-upload-step
         uses: actions/upload-artifact@v4
         with:
-          name: flight_sql_cli_${{ matrix.os }}_${{ matrix.platform }}.zip
+          name: ${{ env.zip_file_name }}
           path: |
-            flight_sql.zip
+            ${{ env.zip_file_name }}
 
   build-project-linux:
     name: Build Project - Linux
@@ -70,6 +72,8 @@ jobs:
             os: linux
             runner: buildjet-8vcpu-ubuntu-2204-arm
     runs-on: ${{ matrix.runner }}
+    env:
+      zip_file_name: ${{ ZIP_FILE_PREFIX }}_${{ matrix.os }}_${{ matrix.platform }}.zip
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.1
@@ -96,15 +100,15 @@ jobs:
       - name: Zip artifacts
         run: |
           mv build/flight_sql . &&
-          zip -j flight_sql.zip flight_sql
+          zip -j ${{ env.zip_file_name }} flight_sql
 
       - name: Upload artifacts
         id: artifact-upload-step
         uses: actions/upload-artifact@v4
         with:
-          name: flight_sql_cli_${{ matrix.os }}_${{ matrix.platform }}.zip
+          name: ${{ env.zip_file_name }}
           path: |
-            flight_sql.zip
+            ${{ env.zip_file_name }}
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -138,14 +142,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          pattern: flight_sql_cli_*.zip
+          pattern: ${{ env.ZIP_FILE_PREFIX }}_*.zip
           merge-multiple: true
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/flight_sql_cli_*.zip
+            artifacts/${{ env.ZIP_FILE_PREFIX }}_*.zip
             LICENSE
 
   update-image-manifest:
