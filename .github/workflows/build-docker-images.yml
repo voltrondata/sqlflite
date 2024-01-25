@@ -57,7 +57,7 @@ jobs:
           password: ${{ secrets.APPLE_ID_PASSWORD }}
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-path: build/flight_sql
-          entitlements-path: macos/entitlements.plist
+#          entitlements-path: macos/entitlements.plist
 
       - name: Zip artifacts
         run: |
