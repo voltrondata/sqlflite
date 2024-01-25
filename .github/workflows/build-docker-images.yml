@@ -49,7 +49,7 @@ jobs:
           ls macos
 
       - name: Sign and notarize the release build
-        uses: prmoore77/action-macos-sign-notarize@v1.1.5
+        uses: prmoore77/action-macos-sign-notarize@v1.1.6
         with:
           certificate: ${{ secrets.APPLE_CERTIFICATE }}
           certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
