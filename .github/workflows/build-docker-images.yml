@@ -26,6 +26,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.1
 
+      - name: debug 1
+        run: |
+          pwd
+          ls -ltrh
+          ls macos
+
       - name: Install build requirements
         run: |
           brew install boost
@@ -36,7 +42,7 @@ jobs:
           generator: Ninja
           run-build: true
 
-      - name: debug
+      - name: debug 2
         run: |
           pwd
           ls -ltrh
