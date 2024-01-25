@@ -37,7 +37,7 @@ jobs:
           run-build: true
 
       - name: Sign and notarize the release build
-        uses: toitlang/action-macos-sign-notarize@v1.0.0
+        uses: toitlang/action-macos-sign-notarize@v1.1.0
         with:
           certificate: ${{ secrets.APPLE_CERTIFICATE }}
           certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -45,6 +45,7 @@ jobs:
           password: ${{ secrets.APPLE_ID_PASSWORD }}
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-path: build/flight_sql
+          entitlements-path: macos/entitlements.plist
 
       - name: Zip artifacts
         run: |
@@ -52,7 +53,6 @@ jobs:
           zip -j ${{ env.zip_file_name }} flight_sql
 
       - name: Upload artifacts
-        id: artifact-upload-step
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.zip_file_name }}
@@ -102,7 +102,6 @@ jobs:
           zip -j ${{ env.zip_file_name }} flight_sql
 
       - name: Upload artifacts
-        id: artifact-upload-step
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.zip_file_name }}
@@ -129,8 +128,8 @@ jobs:
           provenance: false
 
   create-release:
-    if: startsWith(github.ref, 'refs/tags/')
     name: Create a release
+    if: startsWith(github.ref, 'refs/tags/')
     needs: [build-project-macos, build-project-linux]
     runs-on: ubuntu-latest
     steps:
