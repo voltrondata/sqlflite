@@ -19,6 +19,7 @@ RUN apt-get update && \
     git \
     ninja-build \
     libboost-all-dev \
+    sqlite3 \
     vim && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -86,6 +87,17 @@ RUN mkdir build && \
     rm -rf build src third_party CMakeLists.txt
 
 COPY --chown=app_user:app_user ./tls ./tls
+
+# Install DuckDB CLI for troubleshooting, etc.
+ARG DUCKDB_VERSION="0.9.2"
+
+RUN case ${TARGETPLATFORM} in \
+         "linux/amd64")  DUCKDB_FILE=https://github.com/duckdb/duckdb/releases/download/v${DUCKDB_VERSION}/duckdb_cli-linux-amd64.zip  ;; \
+         "linux/arm64")  DUCKDB_FILE=https://github.com/duckdb/duckdb/releases/download/v${DUCKDB_VERSION}/duckdb_cli-linux-aarch64.zip  ;; \
+    esac && \
+    curl --output /tmp/duckdb.zip --location ${DUCKDB_FILE} && \
+    unzip /tmp/duckdb.zip -d /usr/local/bin && \
+    rm /tmp/duckdb.zip
 
 EXPOSE 31337
 
