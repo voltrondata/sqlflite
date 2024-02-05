@@ -278,7 +278,7 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
                             const ServerCallContext &context) {
                         std::string query = "SELECT DISTINCT catalog_name FROM information_schema.schemata ORDER BY catalog_name";
 
-                        return DoGetDuckDBQuery(db_conn_, query, SqlSchema::GetTableTypesSchema());
+                        return DoGetDuckDBQuery(db_conn_, query, SqlSchema::GetCatalogsSchema());
                     }
 
                     arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoSchemas(
