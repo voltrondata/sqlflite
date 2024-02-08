@@ -12,6 +12,7 @@ int main(int argc, char **argv) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help", "produce this help message")
+            ("version", "Print the version and exit")
             ("backend,B", po::value<std::string>()->default_value("duckdb"),
              "Specify the database backend. Allowed options: duckdb, sqlite.")
             ("hostname,H", po::value<std::string>()->default_value(""),
@@ -49,7 +50,12 @@ int main(int argc, char **argv) {
 
     if (vm.count("help")) {
         std::cout << desc << "\n";
-        return 1;
+        return 0;
+    }
+
+    if (vm.count("version")) {
+        std::cout << "Flight SQL Server CLI: " << FLIGHT_SQL_SERVER_VERSION << std::endl;
+        return 0;
     }
 
     std::string backend_str = vm["backend"].as<std::string>();

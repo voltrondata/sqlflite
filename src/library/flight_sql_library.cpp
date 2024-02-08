@@ -120,7 +120,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQ
         // Exit with a clean error code (0) on SIGTERM
         ARROW_CHECK_OK(server->SetShutdownOnSignals({SIGTERM}));
 
-        std::cout << "Apache Arrow Flight SQL server - with engine: " << db_type << " - will listen on "
+        std::cout << "Apache Arrow Flight SQL server version: " << FLIGHT_SQL_SERVER_VERSION << " - with engine: " << db_type << " - will listen on "
                   << server->location().ToString() << std::endl;
 
         return server;

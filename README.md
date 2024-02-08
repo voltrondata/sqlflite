@@ -292,6 +292,7 @@ To see all the available options run `flight_sql --help`.
 flight_sql --help
 Allowed options:
   --help                              produce this help message
+  --version                           Print the version and exit
   -B [ --backend ] arg (=duckdb)      Specify the database backend. Allowed 
                                       options: duckdb, sqlite.
   -H [ --hostname ] arg               Specify the hostname to listen on for the
