@@ -143,7 +143,7 @@ namespace arrow {
                                                           res_options);
 
                     duckdb::unique_ptr<duckdb::DataChunk> data_chunk;
-                    duckdb::PreservedError fetch_error;
+                    duckdb::ErrorData fetch_error;
                     auto fetch_success = query_result_->TryFetch(data_chunk, fetch_error);
                     if (!fetch_success) {
                         ARROW_RETURN_NOT_OK(arrow::Status::ExecutionError(fetch_error.Message()));

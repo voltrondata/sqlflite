@@ -63,6 +63,7 @@ target_link_libraries(duckdb
         "${DUCKDB_INSTALL_DIR}/lib/libduckdb_miniz.a"
         "${DUCKDB_INSTALL_DIR}/lib/libduckdb_pg_query.a"
         "${DUCKDB_INSTALL_DIR}/lib/libduckdb_re2.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_skiplistlib.a"
         "${DUCKDB_INSTALL_DIR}/lib/libduckdb_utf8proc.a"
         "${DUCKDB_INSTALL_DIR}/lib/libparquet_extension.a"
 )
