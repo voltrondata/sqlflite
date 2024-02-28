@@ -19,6 +19,7 @@ RUN apt-get update && \
     git \
     ninja-build \
     libboost-all-dev \
+    libgflags-dev \
     sqlite3 \
     vim && \
     apt-get clean && \
