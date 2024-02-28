@@ -72,9 +72,11 @@ RUN python "scripts/create_duckdb_database_file.py" \
            --overwrite-file=true \
            --scale-factor=0.01
 
-COPY --chown=app_user:app_user flight_sql /usr/local/bin/flight_sql
+COPY --chown=app_user:app_user flight_sql_server /usr/local/bin/flight_sql_server
+RUN chmod +x /usr/local/bin/flight_sql_server
 
-RUN chmod +x /usr/local/bin/flight_sql
+COPY --chown=app_user:app_user flight_sql_client /usr/local/bin/flight_sql_client
+RUN chmod +x /usr/local/bin/flight_sql_client
 
 COPY --chown=app_user:app_user tls tls
 

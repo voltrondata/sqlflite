@@ -134,8 +134,6 @@ target_include_directories(flightsqlserver PRIVATE
 target_link_libraries(flightsqlserver
         PRIVATE
         Threads::Threads
-        Arrow::arrow_static
-        ArrowFlight::arrow_flight_static
         ArrowFlightSql::arrow_flight_sql_static
         sqlite
         duckdb
@@ -156,18 +154,43 @@ install(TARGETS flightsqlserver
         PUBLIC_HEADER DESTINATION include
 )
 
-# ------------ Executable section ------------
-add_executable(flight_sql
-        src/flight_sql.cpp
+# ------------ Server Executable section ------------
+add_executable(flight_sql_server
+        src/flight_sql_server.cpp
 )
 
-target_link_libraries(flight_sql PRIVATE
+target_link_libraries(flight_sql_server PRIVATE
         flightsqlserver
         ${Boost_LIBRARIES}
 )
 
-target_compile_options(flight_sql PRIVATE "-static")
+target_compile_options(flight_sql_server PRIVATE "-static")
 
-install(TARGETS flight_sql
+install(TARGETS flight_sql_server
+        DESTINATION bin
+)
+
+# ------------ Client Executable section ------------
+add_executable(flight_sql_client
+        src/flight_sql_client.cpp
+)
+
+target_link_libraries(flight_sql_client PRIVATE
+        Threads::Threads
+        ArrowFlightSql::arrow_flight_sql_static
+        ${Boost_LIBRARIES}
+        "-lresolv"
+)
+
+if (APPLE)
+    # macOS-specific libraries and options
+    target_link_libraries(flight_sql_client PRIVATE "-framework CoreFoundation")
+elseif (UNIX AND NOT APPLE)
+    target_link_libraries(flight_sql_client PRIVATE "-lssl -lcrypto")
+endif ()
+
+target_compile_options(flight_sql_client PRIVATE "-static")
+
+install(TARGETS flight_sql_client
         DESTINATION bin
 )

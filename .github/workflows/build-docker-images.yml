@@ -49,8 +49,8 @@ jobs:
 
       - name: Zip artifacts
         run: |
-          mv build/flight_sql .
-          zip -j ${{ env.zip_file_name }} flight_sql
+          mv build/flight_sql_server build/flight_sql_client .
+          zip -j ${{ env.zip_file_name }} flight_sql_server flight_sql_client
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -98,8 +98,8 @@ jobs:
 
       - name: Zip artifacts
         run: |
-          mv build/flight_sql .
-          zip -j ${{ env.zip_file_name }} flight_sql
+          mv build/flight_sql_server build/flight_sql_client .
+          zip -j ${{ env.zip_file_name }} flight_sql_server flight_sql_client
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -179,7 +179,7 @@ docker stop flight-sql
 
 ## Option 2 - Download and run the flight_sql CLI executable
 
-Download (and unzip) the latest release of the **flight_sql** CLI executable from these currently supported platforms:   
+Download (and unzip) the latest release of the **flight_sql_server** CLI executable from these currently supported platforms:   
 [Linux x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_amd64.zip)   
 [Linux arm64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_arm64.zip)   
 [MacOS x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_macos_amd64.zip)   
@@ -187,12 +187,12 @@ Download (and unzip) the latest release of the **flight_sql** CLI executable fro
 
 Then from a terminal - you can run:
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql --database-filename data/some_db.duckdb --print-queries
+FLIGHT_PASSWORD="flight_password" flight_sql_server --database-filename data/some_db.duckdb --print-queries
 ```
 
 To see all program options - run:
 ```bash
-flight_sql --help
+flight_sql_server --help
 ```
 
 ## Option 3 - Steps to build the solution manually
@@ -243,14 +243,14 @@ popd
 
 6. Start the Flight SQL server (and print client SQL commands as they run using the --print-queries option)
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql --database-filename data/TPC-H-small.duckdb --print-queries
+FLIGHT_PASSWORD="flight_password" flight_sql_server --database-filename data/TPC-H-small.duckdb --print-queries
 ```
 
 ## Selecting different backends
 This option allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
-$ FLIGHT_PASSWORD="flight_password" flight_sql --database-filename data/TPC-H-small.duckdb
+$ FLIGHT_PASSWORD="flight_password" flight_sql_server --database-filename data/TPC-H-small.duckdb
 Apache Arrow version: 15.0.0
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
 DuckDB version: v0.10.0
@@ -264,14 +264,14 @@ Apache Arrow Flight SQL server - with engine: DuckDB - will listen on grpc+tcp:/
 Flight SQL server - started
 ```
 
-The above call is equivalent to running `flight_sql -B duckdb` or `flight_sql --backend duckdb`. To select SQLite run
+The above call is equivalent to running `flight_sql_server -B duckdb` or `flight_sql --backend duckdb`. To select SQLite run
 
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql -B sqlite -D data/TPC-H-small.sqlite 
+FLIGHT_PASSWORD="flight_password" flight_sql_server -B sqlite -D data/TPC-H-small.sqlite 
 ```
 or 
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql --backend sqlite --database-filename data/TPC-H-small.sqlite
+FLIGHT_PASSWORD="flight_password" flight_sql_server --backend sqlite --database-filename data/TPC-H-small.sqlite
 ```
 The above will produce the following:
 
@@ -286,10 +286,10 @@ Flight SQL server - started
 ```
 
 ## Print help
-To see all the available options run `flight_sql --help`.
+To see all the available options run `flight_sql_server --help`.
 
 ```bash
-flight_sql --help
+flight_sql_server --help
 Allowed options:
   --help                              produce this help message
   --version                           Print the version and exit
