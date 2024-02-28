@@ -47,16 +47,6 @@ jobs:
           app-path: build/flight_sql_server
           entitlements-path: macos/entitlements.plist
 
-      - name: Sign and notarize the client release build
-        uses: toitlang/action-macos-sign-notarize@v1.1.1
-        with:
-          certificate: ${{ secrets.APPLE_CERTIFICATE }}
-          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          username: ${{ secrets.APPLE_ID_USERNAME }}
-          password: ${{ secrets.APPLE_ID_PASSWORD }}
-          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
-          app-path: build/flight_sql_client
-
       - name: Zip artifacts
         run: |
           mv build/flight_sql_server build/flight_sql_client .
