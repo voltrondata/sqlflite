@@ -37,7 +37,7 @@ jobs:
           run-build: true
 
       - name: Sign and notarize the server release build
-        uses: toitlang/action-macos-sign-notarize@v1.1.1
+        uses: prmoore77/action-macos-sign-notarize@b0f525e0d98a47b0884558b786f21453889a04d7
         with:
           certificate: ${{ secrets.APPLE_CERTIFICATE }}
           certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -46,6 +46,16 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
           app-path: build/flight_sql_server
           entitlements-path: macos/entitlements.plist
+
+      - name: Sign and notarize the server release build
+        uses: prmoore77/action-macos-sign-notarize@b0f525e0d98a47b0884558b786f21453889a04d7
+        with:
+          certificate: ${{ secrets.APPLE_CERTIFICATE }}
+          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          username: ${{ secrets.APPLE_ID_USERNAME }}
+          password: ${{ secrets.APPLE_ID_PASSWORD }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          app-path: build/flight_sql_client
 
       - name: Zip artifacts
         run: |
