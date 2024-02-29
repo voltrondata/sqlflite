@@ -21,6 +21,8 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <sstream>
+#include <fstream>
 
 #include "arrow/array/builder_binary.h"
 #include "arrow/array/builder_primitive.h"
@@ -52,7 +54,10 @@ DEFINE_int32(port, 31337, "Port to connect to");
 DEFINE_string(username, "", "Username");
 DEFINE_string(password, "", "Password");
 DEFINE_bool(use_tls, false, "Use TLS for connection");
-DEFINE_bool(tls_skip_verify, false, "Skip TLS certificate verification");
+DEFINE_string(tls_roots, "", "Path to Root certificates for TLS (in PEM format)");
+DEFINE_bool(tls_skip_verify, false, "Skip TLS server certificate verification");
+DEFINE_string(mtls_cert_chain, "", "Path to Certificate chain (in PEM format) used for mTLS authentication - if server requires it, must be accompanied by mtls_private_key");
+DEFINE_string(mtls_private_key, "", "Path to Private key (in PEM format) used for mTLS authentication - if server requires it");
 
 DEFINE_string(command, "", "Method to run");
 DEFINE_string(query, "", "Query");
@@ -102,6 +107,19 @@ Status PrintResults(FlightSqlClient& client, const FlightCallOptions& call_optio
     return Status::OK();
 }
 
+Status getPEMCertFileContents(const std::string& cert_file_path, std::string& cert_contents) {
+    std::ifstream cert_file(cert_file_path);
+    if (!cert_file.is_open()) {
+        return Status::IOError("Could not open file: " + cert_file_path);
+    }
+
+    std::stringstream cert_stream;
+    cert_stream << cert_file.rdbuf();
+    cert_contents = cert_stream.str();
+
+    return Status::OK();
+}
+
 Status RunMain() {
     ARROW_ASSIGN_OR_RAISE(auto location,
                           (FLAGS_use_tls)
@@ -112,7 +130,23 @@ Status RunMain() {
 
     // Setup our options
     arrow::flight::FlightClientOptions options;
+
+    if (!FLAGS_tls_roots.empty()) {
+        ARROW_RETURN_NOT_OK(getPEMCertFileContents(FLAGS_tls_roots, options.tls_root_certs));
+    }
+
     options.disable_server_verification = FLAGS_tls_skip_verify;
+
+    if (!FLAGS_mtls_cert_chain.empty()) {
+        ARROW_RETURN_NOT_OK(getPEMCertFileContents(FLAGS_mtls_cert_chain, options.cert_chain));
+
+        if (!FLAGS_mtls_private_key.empty()) {
+            ARROW_RETURN_NOT_OK(getPEMCertFileContents(FLAGS_mtls_private_key, options.private_key));
+        }
+        else {
+            return Status::Invalid("mTLS private key file must be provided if mTLS certificate chain is provided");
+        }
+    }
 
     ARROW_ASSIGN_OR_RAISE(auto client, FlightClient::Connect(location, options));
 

@@ -171,6 +171,36 @@ n_nationkey: [[24]]
 n_name: [["UNITED STATES"]]
 ```
 
+### Connecting via the new `flight_sql_client` CLI tool
+You can also use the new `flight_sql_client` CLI tool to connect to the Flight SQL server, and then run a single command.  This tool is built into the Docker image, and is also available as a standalone executable for Linux and MacOS.   
+
+Example (run from the host computer's terminal):
+```bash
+flight_sql_client \
+  --command Execute \
+  --host "localhost" \
+  --port 31337 \
+  --username "flight_username" \
+  --password "flight_password" \
+  --query "SELECT version()" \
+  --use-tls \
+  --tls-skip-verify
+```
+
+That should return:
+```text
+Results from endpoint 1 of 1
+Schema:
+version(): string
+
+Results:
+version():   [
+    "v0.10.0"
+  ]
+
+Total: 1
+```
+
 ### Tear-down
 Stop the docker image with:
 ```bash
