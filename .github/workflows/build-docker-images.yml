@@ -28,7 +28,7 @@ jobs:
 
       - name: Install build requirements
         run: |
-          brew install boost
+          brew install boost gflags
 
       - name: Configure Project
         uses: threeal/cmake-action@v1.3.0
@@ -36,21 +36,31 @@ jobs:
           generator: Ninja
           run-build: true
 
-      - name: Sign and notarize the release build
-        uses: toitlang/action-macos-sign-notarize@v1.1.1
+      - name: Sign and notarize the server release build
+        uses: prmoore77/action-macos-sign-notarize@b0f525e0d98a47b0884558b786f21453889a04d7
         with:
           certificate: ${{ secrets.APPLE_CERTIFICATE }}
           certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           username: ${{ secrets.APPLE_ID_USERNAME }}
           password: ${{ secrets.APPLE_ID_PASSWORD }}
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
-          app-path: build/flight_sql
+          app-path: build/flight_sql_server
           entitlements-path: macos/entitlements.plist
+
+      - name: Sign and notarize the server release build
+        uses: prmoore77/action-macos-sign-notarize@b0f525e0d98a47b0884558b786f21453889a04d7
+        with:
+          certificate: ${{ secrets.APPLE_CERTIFICATE }}
+          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          username: ${{ secrets.APPLE_ID_USERNAME }}
+          password: ${{ secrets.APPLE_ID_PASSWORD }}
+          apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          app-path: build/flight_sql_client
 
       - name: Zip artifacts
         run: |
-          mv build/flight_sql .
-          zip -j ${{ env.zip_file_name }} flight_sql
+          mv build/flight_sql_server build/flight_sql_client .
+          zip -j ${{ env.zip_file_name }} flight_sql_server flight_sql_client
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -86,7 +96,8 @@ jobs:
             cmake \
             gcc \
             git \
-            libboost-all-dev
+            libboost-all-dev \
+            libgflags-dev
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
 
@@ -98,8 +109,8 @@ jobs:
 
       - name: Zip artifacts
         run: |
-          mv build/flight_sql .
-          zip -j ${{ env.zip_file_name }} flight_sql
+          mv build/flight_sql_server build/flight_sql_client .
+          zip -j ${{ env.zip_file_name }} flight_sql_server flight_sql_client
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

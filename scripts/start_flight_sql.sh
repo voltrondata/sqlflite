@@ -30,4 +30,4 @@ then
   PRINT_QUERIES_FLAG="--print-queries"
 fi
 
-flight_sql --backend="${L_DATABASE_BACKEND}" --database-filename="${L_DATABASE_FILENAME}" ${TLS_ARG} ${PRINT_QUERIES_FLAG}
+flight_sql_server --backend="${L_DATABASE_BACKEND}" --database-filename="${L_DATABASE_FILENAME}" ${TLS_ARG} ${PRINT_QUERIES_FLAG}
