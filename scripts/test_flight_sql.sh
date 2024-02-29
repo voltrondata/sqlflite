@@ -17,7 +17,7 @@ started="0"
 
 # Check if the process is running
 while [ $elapsed_time -lt $timeout_limit ]; do
-    # Check if the process is running using --exact to match the whole process name
+    # Check if the process is running
     if pgrep "flight_sql" > /dev/null; then
         echo "Flight SQL Server process started successfully!"
         started="1"
