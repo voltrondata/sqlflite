@@ -13,6 +13,7 @@ RUN apt-get update && \
     apt-get dist-upgrade --yes && \
     apt-get install -y \
     build-essential \
+    automake \
     cmake \
     wget \
     gcc \
