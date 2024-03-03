@@ -10,5 +10,8 @@ ExternalProject_Add(
 		PREFIX ${CMAKE_BINARY_DIR}/third_party
 		GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
 		GIT_TAG v0.7.0
-		BUILD_COMMAND "" # This is a header only library
+		CMAKE_ARGS
+			-DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/third_party/jwt-cpp
+			-DJWT_BUILD_EXAMPLES=OFF
+		BUILD_COMMAND ""  # This is a header only library
 )

@@ -85,7 +85,7 @@ execute_process(COMMAND "${CMAKE_COMMAND}" --build .
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/jwt-cpp"
 )
 
-set(JWT_CPP_INCLUDE_DIR "${CMAKE_BINARY_DIR}/third_party/src/jwt_cpp_project/include")
+set(JWT_CPP_INCLUDE_DIR "${CMAKE_BINARY_DIR}/third_party/jwt-cpp/include")
 
 # --------------------------------------------------
 
