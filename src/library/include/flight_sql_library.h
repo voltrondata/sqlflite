@@ -4,7 +4,7 @@
 #include <filesystem>
 
 // Constants
-const std::string FLIGHT_SQL_SERVER_VERSION = "v1.2.1";  // For now - be sure to update this version with the git tag!  TODO: automate this
+const std::string FLIGHT_SQL_SERVER_VERSION = "v1.2.3";  // For now - be sure to update this version with the git tag!  TODO: automate this
 const std::string DEFAULT_FLIGHT_HOSTNAME = "0.0.0.0";
 const std::string DEFAULT_FLIGHT_USERNAME = "flight_username";
 const int DEFAULT_FLIGHT_PORT = 31337;
