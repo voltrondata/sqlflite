@@ -1,0 +1,8 @@
+// version.h.in
+// This file is used by CMake to generate version.h
+#ifndef PROJECT_VERSION_H
+#define PROJECT_VERSION_H
+
+#define PROJECT_VERSION "@PROJECT_VERSION@"
+
+#endif // PROJECT_VERSION_H

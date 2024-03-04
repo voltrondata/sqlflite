@@ -3,6 +3,30 @@ project(flight_sql)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# Function to retrieve the latest Git tag
+function(get_latest_git_tag OUTPUT_VARIABLE)
+    execute_process(
+            COMMAND git describe --tags --abbrev=0
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            OUTPUT_VARIABLE RETURN_VALUE
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(${OUTPUT_VARIABLE} ${RETURN_VALUE} PARENT_SCOPE)
+endfunction()
+
+# Set the version
+get_latest_git_tag(LATEST_TAG)
+set(PROJECT_VERSION ${LATEST_TAG})
+
+# Display variable values using message
+message(STATUS "PROJECT_VERSION: ${PROJECT_VERSION}")
+
+# Configure a header file with the version
+configure_file(
+        ${CMAKE_SOURCE_DIR}/src/library/include/version.h.in
+        ${CMAKE_SOURCE_DIR}/src/library/include/version.h
+)
+
 # --------------------- Arrow ---------------------
 configure_file(third_party/Arrow_CMakeLists.txt.in arrow/CMakeLists.txt)
 execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
