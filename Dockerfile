@@ -81,7 +81,7 @@ COPY --chown=app_user:app_user ./third_party ./third_party
 COPY --chown=app_user:app_user ./src ./src
 
 # Run the CMake build (then cleanup)
-RUN cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local && \
+RUN cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local && \
     cmake --build build --target install && \
     rm -rf build src third_party CMakeLists.txt
 

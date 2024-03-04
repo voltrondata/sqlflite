@@ -236,10 +236,8 @@ git clone https://github.com/voltrondata/flight-sql-server-example --recurse-sub
 cd flight-sql-server-example
 
 # Build and install the static library and executable
-mkdir build
-cd build
-cmake -S .. -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local
-cmake --build . --target install
+cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local
+cmake --build build --target install
 ```
 
 2. Install Python requirements for ADBC client interaction - (ensure you have Python 3.9+ installed first)
