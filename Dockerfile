@@ -1,4 +1,4 @@
-FROM python:3.11.8
+FROM python:3.12.2
 
 ARG TARGETPLATFORM
 ARG TARGETARCH
@@ -13,6 +13,7 @@ RUN apt-get update && \
     apt-get dist-upgrade --yes && \
     apt-get install -y \
     build-essential \
+    automake \
     cmake \
     wget \
     gcc \
@@ -80,11 +81,8 @@ COPY --chown=app_user:app_user ./third_party ./third_party
 COPY --chown=app_user:app_user ./src ./src
 
 # Run the CMake build (then cleanup)
-RUN mkdir build && \
-    cd build && \
-    cmake .. -GNinja -DCMAKE_INSTALL_PREFIX=/usr/local && \
-    cmake --build . --target install && \
-    cd .. && \
+RUN cmake -S . -B build -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    cmake --build build --target install && \
     rm -rf build src third_party CMakeLists.txt
 
 COPY --chown=app_user:app_user ./tls ./tls

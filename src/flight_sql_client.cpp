@@ -179,7 +179,8 @@ Status RunMain() {
     } else if (FLAGS_command == "PreparedStatementExecute") {
         ARROW_ASSIGN_OR_RAISE(auto prepared_statement,
                               sql_client.Prepare(call_options, FLAGS_query));
-        ARROW_ASSIGN_OR_RAISE(info, prepared_statement->Execute());
+        ARROW_ASSIGN_OR_RAISE(info, prepared_statement->Execute(call_options));
+        ARROW_RETURN_NOT_OK(prepared_statement->Close(call_options));
     } else if (FLAGS_command == "PreparedStatementExecuteParameterBinding") {
         ARROW_ASSIGN_OR_RAISE(auto prepared_statement, sql_client.Prepare({}, FLAGS_query));
         auto parameter_schema = prepared_statement->parameter_schema();
@@ -194,7 +195,8 @@ Status RunMain() {
         result = arrow::RecordBatch::Make(parameter_schema, 1, {int_array});
 
         ARROW_RETURN_NOT_OK(prepared_statement->SetParameters(result));
-        ARROW_ASSIGN_OR_RAISE(info, prepared_statement->Execute());
+        ARROW_ASSIGN_OR_RAISE(info, prepared_statement->Execute(call_options));
+        ARROW_RETURN_NOT_OK(prepared_statement->Close(call_options));
     } else if (FLAGS_command == "GetDbSchemas") {
         ARROW_ASSIGN_OR_RAISE(
                 info, sql_client.GetDbSchemas(call_options, &FLAGS_catalog, &FLAGS_schema));

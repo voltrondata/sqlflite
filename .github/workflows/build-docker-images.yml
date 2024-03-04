@@ -28,7 +28,7 @@ jobs:
 
       - name: Install build requirements
         run: |
-          brew install boost gflags
+          brew install automake boost gflags
 
       - name: Configure Project
         uses: threeal/cmake-action@v1.3.0
@@ -93,6 +93,7 @@ jobs:
           sudo apt-get install -y \
             build-essential \
             ninja-build \
+            automake \
             cmake \
             gcc \
             git \
