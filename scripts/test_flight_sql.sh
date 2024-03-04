@@ -44,8 +44,6 @@ RC=$?
 # Stop the server...
 kill %1
 
-popd
-
 # Remove temporary TLS cert files
 pushd ${TLS_DIR}
 rm -f ./*.csr \
