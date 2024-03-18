@@ -28,7 +28,7 @@ jobs:
 
       - name: Install build requirements
         run: |
-          brew install automake boost gflags
+          brew install automake boost gflags --force --overwrite
 
       - name: Configure Project
         uses: threeal/cmake-action@v1.3.0
