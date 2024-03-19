@@ -26,9 +26,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.1
 
+      # RE: https://discord.com/channels/314987288398659595/401594186983407616/1196451948413595778
+      - name: Unlink 2to3
+        run: brew unlink /usr/local/bin/2to3
+
       - name: Install build requirements
         run: |
-          brew install automake boost gflags --force --overwrite
+          brew install automake boost gflags
 
       - name: Configure Project
         uses: threeal/cmake-action@v1.3.0
