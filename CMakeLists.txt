@@ -92,12 +92,13 @@ target_link_libraries(duckdb
         "${DUCKDB_INSTALL_DIR}/lib/libparquet_extension.a"
 )
 
-if (UNIX AND NOT APPLE)
+# Only link jemalloc_extension on Linux x86_64 and i386 (not arm64)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     target_link_libraries(duckdb
             INTERFACE
             "${DUCKDB_INSTALL_DIR}/lib/libjemalloc_extension.a"
     )
-endif ()
+endif()
 
 # --------------------- JWT-CPP ---------------------
 
