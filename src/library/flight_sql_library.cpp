@@ -4,6 +4,7 @@
 #include <csignal>
 #include <iostream>
 #include <filesystem>
+#include <regex>
 #include <vector>
 #include <arrow/flight/client.h>
 #include <arrow/flight/sql/server.h>
@@ -26,12 +27,15 @@ const int port = 31337;
 #define RUN_INIT_COMMANDS(serverType, init_sql_commands) \
     do { \
         if (init_sql_commands != "") { \
-            std::vector<std::string> tokens; \
-            boost::split(tokens, init_sql_commands, boost::is_any_of(";")); \
-            for (const std::string &init_sql_command: tokens) { \
+            std::regex regex_pattern(";(?=(?:[^']*'[^']*')*[^']*$)"); \
+            std::sregex_token_iterator iter(init_sql_commands.begin(), init_sql_commands.end(), regex_pattern, -1); \
+            std::sregex_token_iterator end; \
+            while (iter != end) { \
+                std::string init_sql_command = *iter; \
                 if (init_sql_command.empty()) continue; \
                 std::cout << "Running Init SQL command: " << std::endl << init_sql_command << ";" << std::endl; \
                 ARROW_RETURN_NOT_OK(serverType->ExecuteSql(init_sql_command)); \
+                ++iter; \
             } \
         } \
     } while (false)
