@@ -37,7 +37,7 @@ The above command will automatically mount a very small TPC-H DuckDB database fi
 **Note**: You can disable TLS in the container by setting environment variable: `TLS_ENABLED` to "0" (default is "1" - enabled).  This is not recommended unless you are using an mTLS sidecar in Kubernetes or something similar, as it will be insecure.    
 
 ### Optional - open a different database file
-When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.10.1).   
+When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.10.2).   
 
 Prerequisite: DuckDB CLI   
 Install DuckDB CLI version [0.10.2](https://github.com/duckdb/duckdb/releases/tag/v0.10.2) - and make sure the executable is on your PATH.
