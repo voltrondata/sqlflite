@@ -40,12 +40,12 @@ The above command will automatically mount a very small TPC-H DuckDB database fi
 When running the Docker image - you can have it run your own DuckDB database file (the database must be built with DuckDB version: 0.10.1).   
 
 Prerequisite: DuckDB CLI   
-Install DuckDB CLI version [0.10.1](https://github.com/duckdb/duckdb/releases/tag/v0.10.1) - and make sure the executable is on your PATH.
+Install DuckDB CLI version [0.10.2](https://github.com/duckdb/duckdb/releases/tag/v0.10.2) - and make sure the executable is on your PATH.
 
 Platform Downloads:   
-[Linux x86-64](https://github.com/duckdb/duckdb/releases/download/v0.10.1/duckdb_cli-linux-amd64.zip)   
-[Linux arm64 (aarch64)](https://github.com/duckdb/duckdb/releases/download/v0.10.1/duckdb_cli-linux-aarch64.zip)   
-[MacOS Universal](https://github.com/duckdb/duckdb/releases/download/v0.10.1/duckdb_cli-osx-universal.zip)
+[Linux x86-64](https://github.com/duckdb/duckdb/releases/download/v0.10.2/duckdb_cli-linux-amd64.zip)   
+[Linux arm64 (aarch64)](https://github.com/duckdb/duckdb/releases/download/v0.10.2/duckdb_cli-linux-aarch64.zip)   
+[MacOS Universal](https://github.com/duckdb/duckdb/releases/download/v0.10.2/duckdb_cli-osx-universal.zip)
 
 In this example, we'll generate a new TPC-H Scale Factor 1 (1GB) database file, and then run the docker image to mount it:
 
@@ -195,7 +195,7 @@ version(): string
 
 Results:
 version():   [
-    "v0.10.1"
+    "v0.10.2"
   ]
 
 Total: 1
@@ -279,9 +279,9 @@ This option allows choosing from two backends: SQLite and DuckDB. It defaults to
 
 ```bash
 $ FLIGHT_PASSWORD="flight_password" flight_sql_server --database-filename data/TPC-H-small.duckdb
-Apache Arrow version: 15.0.0
+Apache Arrow version: 15.0.2
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
-DuckDB version: v0.10.1
+DuckDB version: v0.10.2
 Running Init SQL command: 
 SET autoinstall_known_extensions = true;
 Running Init SQL command: 
@@ -304,7 +304,7 @@ FLIGHT_PASSWORD="flight_password" flight_sql_server --backend sqlite --database-
 The above will produce the following:
 
 ```bash
-Apache Arrow version: 15.0.0
+Apache Arrow version: 15.0.2
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
 SQLite version: 3.45.0
 Using database file: "/opt/flight_sql/data/TPC-H-small.sqlite"
