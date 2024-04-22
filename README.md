@@ -279,7 +279,7 @@ This option allows choosing from two backends: SQLite and DuckDB. It defaults to
 
 ```bash
 $ FLIGHT_PASSWORD="flight_password" flight_sql_server --database-filename data/TPC-H-small.duckdb
-Apache Arrow version: 15.0.2
+Apache Arrow version: 16.0.0
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
 DuckDB version: v0.10.2
 Running Init SQL command: 
@@ -304,7 +304,7 @@ FLIGHT_PASSWORD="flight_password" flight_sql_server --backend sqlite --database-
 The above will produce the following:
 
 ```bash
-Apache Arrow version: 15.0.2
+Apache Arrow version: 16.0.0
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
 SQLite version: 3.45.0
 Using database file: "/opt/flight_sql/data/TPC-H-small.sqlite"
