@@ -363,3 +363,33 @@ Allowed options:
                                       certificate MUST be in PEM format.
   -Q [ --print-queries ]              Print queries run by clients to stdout
 ```
+
+## Slim Docker image
+There is now a slim docker image available, without Python, tls certificate generation, sample database files, etc.   
+
+You must supply the following environment variables to the slim image:
+- `DATABASE_FILENAME` - the path to the database file to use
+- `FLIGHT_PASSWORD` - the password to use for the Flight SQL server
+
+You can optionally supply the following environment variables:
+- `TLS_ENABLED` - set to "1" to enable TLS (default is "0" - disabled)
+- `TLS_CERT` - If `TLS_ENABLED` is 1 - provide the path to the TLS certificate file (it must be mounted in the container)
+- `TLS_KEY` - If `TLS_ENABLED` is 1 - provide the path to the TLS key file (it must be mounted in the container)
+
+To run that image - use the following command:
+```bash
+docker run --name flight-sql-slim \
+           --detach \
+           --rm \
+           --tty \
+           --init \
+           --publish 31337:31337 \
+           --env DATABASE_FILENAME="data/some_database.duckdb" \
+           --env TLS_ENABLED="0" \
+           --env FLIGHT_PASSWORD="flight_password" \
+           --env PRINT_QUERIES="1" \
+           --pull missing \
+           voltrondata/flight-sql:latest-slim
+```
+
+See [start_flight_sql_slim.sh](scripts/start_flight_sql_slim.sh) - the container's entrypoint script for more details.
