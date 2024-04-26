@@ -128,7 +128,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build and push
+      - name: Build and push full Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -138,6 +138,19 @@ jobs:
           tags: |
             ${{ env.DOCKER_IMAGE_NAME }}:latest-${{ matrix.platform }}
             ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.platform }}
+          no-cache: true
+          provenance: false
+
+      - name: Build and push slim Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/${{ matrix.platform }}
+          file: Dockerfile-slim.ci
+          push: ${{ startsWith(github.ref, 'refs/tags/') }}
+          tags: |
+            ${{ env.DOCKER_IMAGE_NAME }}:latest-${{ matrix.platform }}-slim
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-${{ matrix.platform }}-slim
           no-cache: true
           provenance: false
 
@@ -176,9 +189,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Create and push manifest images
+      - name: Create and push full manifest images
         uses: Noelware/docker-manifest-action@master # or use a pinned version in the Releases tab
         with:
           inputs: ${{ env.DOCKER_IMAGE_NAME }}:latest,${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}
           images: ${{ env.DOCKER_IMAGE_NAME }}:latest-amd64,${{ env.DOCKER_IMAGE_NAME }}:latest-arm64
+          push: true
+
+      - name: Create and push slim manifest images
+        uses: Noelware/docker-manifest-action@master # or use a pinned version in the Releases tab
+        with:
+          inputs: ${{ env.DOCKER_IMAGE_NAME }}:latest-slim,${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-slim
+          images: ${{ env.DOCKER_IMAGE_NAME }}:latest-amd64-slim,${{ env.DOCKER_IMAGE_NAME }}:latest-arm64-slim
           push: true
