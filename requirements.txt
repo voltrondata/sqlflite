@@ -1,6 +1,6 @@
 pandas==2.2.*
-duckdb==0.10.2
+duckdb==0.10.3
 click==8.1.*
 pyarrow==16.1.0
-adbc-driver-flightsql==0.11.*
-adbc-driver-manager==0.11.*
+adbc-driver-flightsql==1.0.*
+adbc-driver-manager==1.0.*
