@@ -320,7 +320,7 @@ WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
                         FieldVector parameter_fields;
                         parameter_fields.reserve(parameter_count);
 
-                        std::shared_ptr<duckdb::PreparedStatementData> parameter_data = stmt->data;
+                        duckdb::shared_ptr<duckdb::PreparedStatementData> parameter_data = stmt->data;
                         auto bind_parameter_map = parameter_data->value_map;
 
                         for (id_t i = 0; i < parameter_count; i++) {

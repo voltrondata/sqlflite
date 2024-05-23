@@ -89,6 +89,7 @@ target_link_libraries(duckdb
         "${DUCKDB_INSTALL_DIR}/lib/libduckdb_re2.a"
         "${DUCKDB_INSTALL_DIR}/lib/libduckdb_skiplistlib.a"
         "${DUCKDB_INSTALL_DIR}/lib/libduckdb_utf8proc.a"
+        "${DUCKDB_INSTALL_DIR}/lib/libduckdb_yyjson.a"
         "${DUCKDB_INSTALL_DIR}/lib/libparquet_extension.a"
 )
 
