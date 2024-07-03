@@ -1,0 +1,59 @@
+---
+BasedOnStyle: Microsoft
+# Basics
+BreakBeforeBraces: Attach
+ColumnLimit: 100
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# Comments
+AlignTrailingComments: false
+ReflowComments: false
+SpacesBeforeTrailingComments: 2
+
+# Short {} blocks
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+
+# Handling of includes
+IncludeBlocks: Preserve
+SortIncludes: false
+
+# Misc indentation settings
+AccessModifierOffset: -4
+ContinuationIndentWidth: 8
+IndentCaseLabels: true
+NamespaceIndentation: All
+
+# Breaking of expressions
+AlignAfterOpenBracket: Align
+AlignOperands: true  # horizontally align operands of binary and ternary expressions
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: false
+BreakStringLiterals: false
+
+# Parameter/Arguments formatting
+AllowAllArgumentsOnNextLine: false
+AllowAllConstructorInitializersOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None
+BinPackArguments: true
+BinPackParameters: false
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+
+# All the Penalty- settings
+PenaltyBreakAssignment: 70
+PenaltyBreakBeforeFirstCallParameter: 10
+# PenaltyBreakComment
+PenaltyBreakFirstLessLess: 100
+PenaltyBreakOpenParenthesis: 20
+# PenaltyBreakScopeResolution
+# PenaltyBreakString
+# PenaltyBreakTemplateDeclaration
+# PenaltyExcessCharacter
+# PenaltyIndentedWhitespace
+PenaltyReturnTypeOnItsOwnLine: 40

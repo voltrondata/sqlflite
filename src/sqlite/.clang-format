@@ -1,0 +1,6 @@
+---
+BasedOnStyle: Google
+ColumnLimit: 90
+IncludeBlocks: Preserve
+ReflowComments: false
+SortIncludes: false
