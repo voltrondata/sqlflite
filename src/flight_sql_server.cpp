@@ -10,6 +10,7 @@ int main(int argc, char **argv) {
 
     // Declare the supported options.
     po::options_description desc("Allowed options");
+    // clang-format off
     desc.add_options()
             ("help", "produce this help message")
             ("version", "Print the version and exit")
@@ -43,6 +44,7 @@ int main(int argc, char **argv) {
             ("mtls-ca-cert-filename,M", po::value<std::string>()->default_value(""),
              "Specify an optional mTLS CA certificate path used to verify clients.  The certificate MUST be in PEM format.")
             ("print-queries,Q", po::bool_switch()->default_value(false), "Print queries run by clients to stdout");
+    // clang-format on
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);

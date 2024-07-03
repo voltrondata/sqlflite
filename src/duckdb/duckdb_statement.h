@@ -25,6 +25,7 @@
 #include <arrow/flight/sql/column_metadata.h>
 #include <arrow/type_fwd.h>
 
+// clang-format off
 namespace arrow {
 namespace flight {
 namespace sql {
