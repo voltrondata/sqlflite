@@ -15,7 +15,8 @@ def main():
             with flight_sql.connect(uri="grpc+tls://localhost:31337",
                                     db_kwargs={"username": "flight_username",
                                                "password": flight_password,
-                                               DatabaseOptions.TLS_SKIP_VERIFY.value: "true"  # Not needed if you use a trusted CA-signed TLS cert
+                                               # Not needed if you use a trusted CA-signed TLS cert
+                                               DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
                                                }
                                     ) as conn:
                 with conn.cursor() as cur:
