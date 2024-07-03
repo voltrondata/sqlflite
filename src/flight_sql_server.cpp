@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 
     bool print_queries = vm["print-queries"].as<bool>();
 
-    return RunFlightSQLServer(backend, database_filename, hostname, port, username, password, secret_key,
-                                     tls_cert_path, tls_key_path, mtls_ca_cert_path,
-                                     init_sql_commands, init_sql_commands_file, print_queries);
+    return RunFlightSQLServer(backend, database_filename, hostname, port, username, password,
+                              secret_key, tls_cert_path, tls_key_path, mtls_ca_cert_path,
+                              init_sql_commands, init_sql_commands_file, print_queries);
 }

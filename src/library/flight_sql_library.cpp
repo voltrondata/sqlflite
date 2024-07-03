@@ -18,26 +18,28 @@
 #include "duckdb_server.h"
 #include "include/flight_sql_security.h"
 
-
 namespace flight = arrow::flight;
 namespace flightsql = arrow::flight::sql;
 
 const int port = 31337;
 
-#define RUN_INIT_COMMANDS(serverType, init_sql_commands) \
-    do { \
-        if (init_sql_commands != "") { \
-            std::regex regex_pattern(";(?=(?:[^']*'[^']*')*[^']*$)"); \
-            std::sregex_token_iterator iter(init_sql_commands.begin(), init_sql_commands.end(), regex_pattern, -1); \
-            std::sregex_token_iterator end; \
-            while (iter != end) { \
-                std::string init_sql_command = *iter; \
-                if (init_sql_command.empty()) continue; \
-                std::cout << "Running Init SQL command: " << std::endl << init_sql_command << ";" << std::endl; \
-                ARROW_RETURN_NOT_OK(serverType->ExecuteSql(init_sql_command)); \
-                ++iter; \
-            } \
-        } \
+#define RUN_INIT_COMMANDS(serverType, init_sql_commands)                                           \
+    do {                                                                                           \
+        if (init_sql_commands != "") {                                                             \
+            std::regex regex_pattern(";(?=(?:[^']*'[^']*')*[^']*$)");                              \
+            std::sregex_token_iterator iter(init_sql_commands.begin(), init_sql_commands.end(),    \
+                                            regex_pattern, -1);                                    \
+            std::sregex_token_iterator end;                                                        \
+            while (iter != end) {                                                                  \
+                std::string init_sql_command = *iter;                                              \
+                if (init_sql_command.empty())                                                      \
+                    continue;                                                                      \
+                std::cout << "Running Init SQL command: " << std::endl                             \
+                          << init_sql_command << ";" << std::endl;                                 \
+                ARROW_RETURN_NOT_OK(serverType->ExecuteSql(init_sql_command));                     \
+                ++iter;                                                                            \
+            }                                                                                      \
+        }                                                                                          \
     } while (false)
 
 arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQLServerBuilder(
@@ -52,24 +54,22 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQ
         const fs::path &tls_key_path,
         const fs::path &mtls_ca_cert_path,
         const std::string &init_sql_commands,
-        const bool &print_queries
-) {
+        const bool &print_queries) {
     ARROW_ASSIGN_OR_RAISE(auto location,
-                          (!tls_cert_path.empty())
-                          ? arrow::flight::Location::ForGrpcTls(
-                                  hostname, port)
-                          : arrow::flight::Location::ForGrpcTcp(
-                                  hostname, port));
+                          (!tls_cert_path.empty()) ?
+                                  arrow::flight::Location::ForGrpcTls(hostname, port) :
+                                  arrow::flight::Location::ForGrpcTcp(hostname, port));
 
     std::cout << "Apache Arrow version: " << ARROW_VERSION_STRING << std::endl;
 
     arrow::flight::FlightServerOptions options(location);
 
     if (!tls_cert_path.empty() && !tls_key_path.empty()) {
-        ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerTlsCertificates(tls_cert_path, tls_key_path,
-                                                                                     &options.tls_certificates));
+        ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerTlsCertificates(
+                tls_cert_path, tls_key_path, &options.tls_certificates));
     } else {
-        std::cout << "WARNING - TLS is disabled for the Flight SQL server - this is insecure." << std::endl;
+        std::cout << "WARNING - TLS is disabled for the Flight SQL server - this is insecure."
+                  << std::endl;
     }
 
     // Setup authentication middleware (using the same TLS certificate keypair)
@@ -84,8 +84,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQ
 
     if (!mtls_ca_cert_path.empty()) {
         std::cout << "Using mTLS CA certificate: " << mtls_ca_cert_path << std::endl;
-        ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerMtlsCACertificate(mtls_ca_cert_path,
-                                                                                       &options.root_certificates));
+        ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerMtlsCACertificate(
+                mtls_ca_cert_path, &options.root_certificates));
         options.verify_client = true;
     }
 
@@ -95,21 +95,23 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQ
     if (backend == BackendType::sqlite) {
         db_type = "SQLite";
         std::shared_ptr<arrow::flight::sql::sqlite::SQLiteFlightSqlServer> sqlite_server = nullptr;
-        ARROW_ASSIGN_OR_RAISE(sqlite_server,
-                              arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(database_filename)
-        )
+        ARROW_ASSIGN_OR_RAISE(
+                sqlite_server,
+                arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(database_filename))
         RUN_INIT_COMMANDS(sqlite_server, init_sql_commands);
         server = sqlite_server;
     } else if (backend == BackendType::duckdb) {
         db_type = "DuckDB";
-        std::shared_ptr<arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer> duckdb_server = nullptr;
+        std::shared_ptr<arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer> duckdb_server =
+                nullptr;
         duckdb::DBConfig config;
         ARROW_ASSIGN_OR_RAISE(duckdb_server,
-                              arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(database_filename, config,
-                                                                                              print_queries)
-        )
+                              arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(
+                                      database_filename, config, print_queries))
         // Run additional commands (first) for the DuckDB back-end...
-        auto duckdb_init_sql_commands = "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;" + init_sql_commands;
+        auto duckdb_init_sql_commands =
+                "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;" +
+                init_sql_commands;
         RUN_INIT_COMMANDS(duckdb_server, duckdb_init_sql_commands);
         server = duckdb_server;
     }
@@ -124,7 +126,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> FlightSQ
         // Exit with a clean error code (0) on SIGTERM
         ARROW_CHECK_OK(server->SetShutdownOnSignals({SIGTERM}));
 
-        std::cout << "Apache Arrow Flight SQL server version: " << FLIGHT_SQL_SERVER_VERSION << " - with engine: " << db_type << " - will listen on "
+        std::cout << "Apache Arrow Flight SQL server version: " << FLIGHT_SQL_SERVER_VERSION
+                  << " - with engine: " << db_type << " - will listen on "
                   << server->location().ToString() << std::endl;
 
         return server;
@@ -156,8 +159,7 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
         fs::path mtls_ca_cert_path,
         std::string init_sql_commands,
         fs::path init_sql_commands_file,
-        const bool &print_queries
-) {
+        const bool &print_queries) {
     // Validate and default the arguments to env var values where applicable
     if (database_filename.empty()) {
         return arrow::Status::Invalid("The database filename was not provided!");
@@ -200,15 +202,18 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
     if (!tls_cert_path.empty()) {
         tls_cert_path = fs::absolute(tls_cert_path);
         if (!fs::exists(tls_cert_path)) {
-            return arrow::Status::Invalid("TLS certificate file does not exist: " + tls_cert_path.string());
+            return arrow::Status::Invalid("TLS certificate file does not exist: " +
+                                          tls_cert_path.string());
         }
 
         if (tls_key_path.empty()) {
-            return arrow::Status::Invalid("tls_key_path was not specified (when tls_cert_path WAS specified)");
+            return arrow::Status::Invalid(
+                    "tls_key_path was not specified (when tls_cert_path WAS specified)");
         } else {
             tls_key_path = fs::absolute(tls_key_path);
             if (!fs::exists(tls_key_path)) {
-                return arrow::Status::Invalid("TLS key file does not exist: " + tls_key_path.string());
+                return arrow::Status::Invalid("TLS key file does not exist: " +
+                                              tls_key_path.string());
             }
         }
     }
@@ -222,8 +227,8 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
         if (!init_sql_commands_file.empty()) {
             init_sql_commands_file = fs::absolute(init_sql_commands_file);
             if (!fs::exists(init_sql_commands_file)) {
-                return arrow::Status::Invalid(
-                        "INIT_SQL_COMMANDS_FILE does not exist: " + init_sql_commands_file.string());
+                return arrow::Status::Invalid("INIT_SQL_COMMANDS_FILE does not exist: " +
+                                              init_sql_commands_file.string());
             } else {
                 std::ifstream ifs(init_sql_commands_file);
                 std::string init_sql_commands_file_contents((std::istreambuf_iterator<char>(ifs)),
@@ -236,38 +241,39 @@ arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>> CreateFl
     if (!mtls_ca_cert_path.empty()) {
         mtls_ca_cert_path = fs::absolute(mtls_ca_cert_path);
         if (!fs::exists(mtls_ca_cert_path)) {
-            return arrow::Status::Invalid("mTLS CA certificate file does not exist: " + mtls_ca_cert_path.string());
+            return arrow::Status::Invalid("mTLS CA certificate file does not exist: " +
+                                          mtls_ca_cert_path.string());
         }
     }
 
-    return FlightSQLServerBuilder(backend, database_filename, hostname, port, username, password, secret_key,
-                                  tls_cert_path, tls_key_path, mtls_ca_cert_path, init_sql_commands,
-                                  print_queries);
+    return FlightSQLServerBuilder(backend, database_filename, hostname, port, username, password,
+                                  secret_key, tls_cert_path, tls_key_path, mtls_ca_cert_path,
+                                  init_sql_commands, print_queries);
 }
 
-arrow::Status StartFlightSQLServer(std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server) {
+arrow::Status StartFlightSQLServer(
+        std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server) {
 
     return arrow::Status::OK();
 }
 
-int RunFlightSQLServer(
-        const BackendType backend,
-        fs::path &database_filename,
-        std::string hostname,
-        const int &port,
-        std::string username,
-        std::string password,
-        std::string secret_key,
-        fs::path tls_cert_path,
-        fs::path tls_key_path,
-        fs::path mtls_ca_cert_path,
-        std::string init_sql_commands,
-        fs::path init_sql_commands_file,
-        const bool &print_queries
-) {
-    auto create_server_result = CreateFlightSQLServer(backend, database_filename, hostname, port, username, password,
-                                                      secret_key, tls_cert_path, tls_key_path, mtls_ca_cert_path,
-                                                      init_sql_commands, init_sql_commands_file, print_queries);
+int RunFlightSQLServer(const BackendType backend,
+                       fs::path &database_filename,
+                       std::string hostname,
+                       const int &port,
+                       std::string username,
+                       std::string password,
+                       std::string secret_key,
+                       fs::path tls_cert_path,
+                       fs::path tls_key_path,
+                       fs::path mtls_ca_cert_path,
+                       std::string init_sql_commands,
+                       fs::path init_sql_commands_file,
+                       const bool &print_queries) {
+    auto create_server_result = CreateFlightSQLServer(
+            backend, database_filename, hostname, port, username, password, secret_key,
+            tls_cert_path, tls_key_path, mtls_ca_cert_path, init_sql_commands,
+            init_sql_commands_file, print_queries);
 
     if (create_server_result.ok()) {
         auto server_ptr = create_server_result.ValueOrDie();

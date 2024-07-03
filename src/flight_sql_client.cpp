@@ -56,8 +56,14 @@ DEFINE_string(password, "", "Password");
 DEFINE_bool(use_tls, false, "Use TLS for connection");
 DEFINE_string(tls_roots, "", "Path to Root certificates for TLS (in PEM format)");
 DEFINE_bool(tls_skip_verify, false, "Skip TLS server certificate verification");
-DEFINE_string(mtls_cert_chain, "", "Path to Certificate chain (in PEM format) used for mTLS authentication - if server requires it, must be accompanied by mtls_private_key");
-DEFINE_string(mtls_private_key, "", "Path to Private key (in PEM format) used for mTLS authentication - if server requires it");
+DEFINE_string(
+        mtls_cert_chain,
+        "",
+        "Path to Certificate chain (in PEM format) used for mTLS authentication - if server requires it, must be accompanied by mtls_private_key");
+DEFINE_string(
+        mtls_private_key,
+        "",
+        "Path to Private key (in PEM format) used for mTLS authentication - if server requires it");
 
 DEFINE_string(command, "", "Method to run");
 DEFINE_string(query, "", "Query");
@@ -65,12 +71,12 @@ DEFINE_string(catalog, "", "Catalog");
 DEFINE_string(schema, "", "Schema");
 DEFINE_string(table, "", "Table");
 
-Status PrintResultsForEndpoint(FlightSqlClient& client,
-                               const FlightCallOptions& call_options,
-                               const FlightEndpoint& endpoint) {
+Status PrintResultsForEndpoint(FlightSqlClient &client,
+                               const FlightCallOptions &call_options,
+                               const FlightEndpoint &endpoint) {
     ARROW_ASSIGN_OR_RAISE(auto stream, client.DoGet(call_options, endpoint.ticket));
 
-    const arrow::Result<std::shared_ptr<Schema>>& schema = stream->GetSchema();
+    const arrow::Result<std::shared_ptr<Schema>> &schema = stream->GetSchema();
     ARROW_RETURN_NOT_OK(schema);
 
     std::cout << "Schema:" << std::endl;
@@ -94,20 +100,20 @@ Status PrintResultsForEndpoint(FlightSqlClient& client,
     return Status::OK();
 }
 
-Status PrintResults(FlightSqlClient& client, const FlightCallOptions& call_options,
-                    const std::unique_ptr<FlightInfo>& info) {
-    const std::vector<FlightEndpoint>& endpoints = info->endpoints();
+Status PrintResults(FlightSqlClient &client,
+                    const FlightCallOptions &call_options,
+                    const std::unique_ptr<FlightInfo> &info) {
+    const std::vector<FlightEndpoint> &endpoints = info->endpoints();
 
     for (size_t i = 0; i < endpoints.size(); i++) {
-        std::cout << "Results from endpoint " << i + 1 << " of " << endpoints.size()
-                  << std::endl;
+        std::cout << "Results from endpoint " << i + 1 << " of " << endpoints.size() << std::endl;
         ARROW_RETURN_NOT_OK(PrintResultsForEndpoint(client, call_options, endpoints[i]));
     }
 
     return Status::OK();
 }
 
-Status getPEMCertFileContents(const std::string& cert_file_path, std::string& cert_contents) {
+Status getPEMCertFileContents(const std::string &cert_file_path, std::string &cert_contents) {
     std::ifstream cert_file(cert_file_path);
     if (!cert_file.is_open()) {
         return Status::IOError("Could not open file: " + cert_file_path);
@@ -121,12 +127,9 @@ Status getPEMCertFileContents(const std::string& cert_file_path, std::string& ce
 }
 
 Status RunMain() {
-    ARROW_ASSIGN_OR_RAISE(auto location,
-                          (FLAGS_use_tls)
-                          ? Location::ForGrpcTls(
-                                  FLAGS_host, FLAGS_port)
-                          : Location::ForGrpcTcp(
-                                  FLAGS_host, FLAGS_port));
+    ARROW_ASSIGN_OR_RAISE(auto location, (FLAGS_use_tls) ?
+                                                 Location::ForGrpcTls(FLAGS_host, FLAGS_port) :
+                                                 Location::ForGrpcTcp(FLAGS_host, FLAGS_port));
 
     // Setup our options
     arrow::flight::FlightClientOptions options;
@@ -141,10 +144,11 @@ Status RunMain() {
         ARROW_RETURN_NOT_OK(getPEMCertFileContents(FLAGS_mtls_cert_chain, options.cert_chain));
 
         if (!FLAGS_mtls_private_key.empty()) {
-            ARROW_RETURN_NOT_OK(getPEMCertFileContents(FLAGS_mtls_private_key, options.private_key));
-        }
-        else {
-            return Status::Invalid("mTLS private key file must be provided if mTLS certificate chain is provided");
+            ARROW_RETURN_NOT_OK(
+                    getPEMCertFileContents(FLAGS_mtls_private_key, options.private_key));
+        } else {
+            return Status::Invalid(
+                    "mTLS private key file must be provided if mTLS certificate chain is provided");
         }
     }
 
@@ -153,8 +157,8 @@ Status RunMain() {
     FlightCallOptions call_options;
 
     if (!FLAGS_username.empty() || !FLAGS_password.empty()) {
-        Result<std::pair<std::string, std::string>> bearer_result =
-                client->AuthenticateBasicToken({}, FLAGS_username, FLAGS_password);
+        Result<std::pair<std::string, std::string>> bearer_result = client->AuthenticateBasicToken(
+                {}, FLAGS_username, FLAGS_password);
         ARROW_RETURN_NOT_OK(bearer_result);
 
         call_options.headers.push_back(bearer_result.ValueOrDie());
@@ -198,39 +202,38 @@ Status RunMain() {
         ARROW_ASSIGN_OR_RAISE(info, prepared_statement->Execute(call_options));
         ARROW_RETURN_NOT_OK(prepared_statement->Close(call_options));
     } else if (FLAGS_command == "GetDbSchemas") {
-        ARROW_ASSIGN_OR_RAISE(
-                info, sql_client.GetDbSchemas(call_options, &FLAGS_catalog, &FLAGS_schema));
+        ARROW_ASSIGN_OR_RAISE(info,
+                              sql_client.GetDbSchemas(call_options, &FLAGS_catalog, &FLAGS_schema));
     } else if (FLAGS_command == "GetTableTypes") {
         ARROW_ASSIGN_OR_RAISE(info, sql_client.GetTableTypes(call_options));
     } else if (FLAGS_command == "GetTables") {
-        ARROW_ASSIGN_OR_RAISE(
-                info, sql_client.GetTables(call_options, &FLAGS_catalog, &FLAGS_schema,
-                                           &FLAGS_table, false, nullptr));
+        ARROW_ASSIGN_OR_RAISE(info,
+                              sql_client.GetTables(call_options, &FLAGS_catalog, &FLAGS_schema,
+                                                   &FLAGS_table, false, nullptr));
     } else if (FLAGS_command == "GetExportedKeys") {
-        TableRef table_ref = {std::make_optional(FLAGS_catalog),
-                              std::make_optional(FLAGS_schema), FLAGS_table};
+        TableRef table_ref = {std::make_optional(FLAGS_catalog), std::make_optional(FLAGS_schema),
+                              FLAGS_table};
         ARROW_ASSIGN_OR_RAISE(info, sql_client.GetExportedKeys(call_options, table_ref));
     } else if (FLAGS_command == "GetImportedKeys") {
-        TableRef table_ref = {std::make_optional(FLAGS_catalog),
-                              std::make_optional(FLAGS_schema), FLAGS_table};
+        TableRef table_ref = {std::make_optional(FLAGS_catalog), std::make_optional(FLAGS_schema),
+                              FLAGS_table};
         ARROW_ASSIGN_OR_RAISE(info, sql_client.GetImportedKeys(call_options, table_ref));
     } else if (FLAGS_command == "GetPrimaryKeys") {
-        TableRef table_ref = {std::make_optional(FLAGS_catalog),
-                              std::make_optional(FLAGS_schema), FLAGS_table};
+        TableRef table_ref = {std::make_optional(FLAGS_catalog), std::make_optional(FLAGS_schema),
+                              FLAGS_table};
         ARROW_ASSIGN_OR_RAISE(info, sql_client.GetPrimaryKeys(call_options, table_ref));
     } else if (FLAGS_command == "GetSqlInfo") {
         ARROW_ASSIGN_OR_RAISE(info, sql_client.GetSqlInfo(call_options, {}));
     }
 
-    if (info != NULLPTR &&
-        !boost::istarts_with(FLAGS_command, "PreparedStatementExecute")) {
+    if (info != NULLPTR && !boost::istarts_with(FLAGS_command, "PreparedStatementExecute")) {
         return PrintResults(sql_client, call_options, info);
     }
 
     return Status::OK();
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     Status st = RunMain();

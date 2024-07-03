@@ -64,9 +64,10 @@ namespace arrow {
 
         // Function to look in CallHeaders for a key that has a value starting with prefix and
         // return the rest of the value after the prefix.
-        std::string SecurityUtilities::FindKeyValPrefixInCallHeaders(const CallHeaders &incoming_headers,
-                                                                     const std::string &key,
-                                                                     const std::string &prefix) {
+        std::string SecurityUtilities::FindKeyValPrefixInCallHeaders(
+                const CallHeaders &incoming_headers,
+                const std::string &key,
+                const std::string &prefix) {
             // Lambda function to compare characters without case sensitivity.
             auto char_compare = [](const char &char1, const char &char2) {
                 return (::toupper(char1) == ::toupper(char2));
@@ -86,10 +87,13 @@ namespace arrow {
             return "";
         }
 
-        Status SecurityUtilities::GetAuthHeaderType(const CallHeaders &incoming_headers, std::string *out) {
-            if (!FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBasicPrefix).empty()) {
+        Status SecurityUtilities::GetAuthHeaderType(const CallHeaders &incoming_headers,
+                                                    std::string *out) {
+            if (!FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBasicPrefix)
+                         .empty()) {
                 *out = "Basic";
-            } else if (!FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBearerPrefix).empty()) {
+            } else if (!FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBearerPrefix)
+                                .empty()) {
                 *out = "Bearer";
             } else {
                 return Status::IOError("Invalid Authorization Header type!");
@@ -97,10 +101,11 @@ namespace arrow {
             return Status::OK();
         }
 
-        void SecurityUtilities::ParseBasicHeader(const CallHeaders &incoming_headers, std::string &username,
+        void SecurityUtilities::ParseBasicHeader(const CallHeaders &incoming_headers,
+                                                 std::string &username,
                                                  std::string &password) {
-            std::string encoded_credentials =
-                    FindKeyValPrefixInCallHeaders(incoming_headers, kAuthHeader, kBasicPrefix);
+            std::string encoded_credentials = FindKeyValPrefixInCallHeaders(
+                    incoming_headers, kAuthHeader, kBasicPrefix);
             std::stringstream decoded_stream(arrow::util::base64_decode(encoded_credentials));
             std::getline(decoded_stream, username, ':');
             std::getline(decoded_stream, password, ':');
@@ -109,7 +114,8 @@ namespace arrow {
         // ----------------------------------------
         HeaderAuthServerMiddleware::HeaderAuthServerMiddleware(const std::string &username,
                                                                const std::string &secret_key)
-                : username_(username), secret_key_(secret_key) {}
+            : username_(username),
+              secret_key_(secret_key) {}
 
         void HeaderAuthServerMiddleware::SendingHeaders(AddCallHeaders *outgoing_headers) {
             auto token = CreateJWTToken();
@@ -118,32 +124,43 @@ namespace arrow {
 
         void HeaderAuthServerMiddleware::CallCompleted(const Status &status) {}
 
-        std::string HeaderAuthServerMiddleware::name() const { return "HeaderAuthServerMiddleware"; }
+        std::string HeaderAuthServerMiddleware::name() const {
+            return "HeaderAuthServerMiddleware";
+        }
 
         std::string HeaderAuthServerMiddleware::CreateJWTToken() const {
             auto token = jwt::create()
-                    .set_issuer(std::string(kJWTIssuer))
-                    .set_type("JWT")
-                    .set_id("flight_sql-server-" + boost::uuids::to_string(boost::uuids::random_generator()()))
-                    .set_issued_at(std::chrono::system_clock::now())
-                    .set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds{kJWTExpiration})
-                    .set_payload_claim("username", jwt::claim(username_))
-                    .sign(jwt::algorithm::hs256{secret_key_});
+                                 .set_issuer(std::string(kJWTIssuer))
+                                 .set_type("JWT")
+                                 .set_id("flight_sql-server-" +
+                                         boost::uuids::to_string(
+                                                 boost::uuids::random_generator()()))
+                                 .set_issued_at(std::chrono::system_clock::now())
+                                 .set_expires_at(std::chrono::system_clock::now() +
+                                                 std::chrono::seconds{kJWTExpiration})
+                                 .set_payload_claim("username", jwt::claim(username_))
+                                 .sign(jwt::algorithm::hs256{secret_key_});
 
             return token;
         }
 
         // ----------------------------------------
-        HeaderAuthServerMiddlewareFactory::HeaderAuthServerMiddlewareFactory(const std::string &username,
-                                                                             const std::string &password,
-                                                                             const std::string &secret_key)
-                : username_(username), password_(password), secret_key_(secret_key) {}
+        HeaderAuthServerMiddlewareFactory::HeaderAuthServerMiddlewareFactory(
+                const std::string &username,
+                const std::string &password,
+                const std::string &secret_key)
+            : username_(username),
+              password_(password),
+              secret_key_(secret_key) {}
 
-        Status HeaderAuthServerMiddlewareFactory::StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
-                                                            std::shared_ptr<ServerMiddleware> *middleware) {
+        Status HeaderAuthServerMiddlewareFactory::StartCall(
+                const CallInfo &info,
+                const CallHeaders &incoming_headers,
+                std::shared_ptr<ServerMiddleware> *middleware) {
 
             std::string auth_header_type;
-            ARROW_RETURN_NOT_OK (SecurityUtilities::GetAuthHeaderType(incoming_headers, &auth_header_type));
+            ARROW_RETURN_NOT_OK(
+                    SecurityUtilities::GetAuthHeaderType(incoming_headers, &auth_header_type));
             if (auth_header_type == "Basic") {
                 std::string username;
                 std::string password;
@@ -151,9 +168,11 @@ namespace arrow {
                 SecurityUtilities::ParseBasicHeader(incoming_headers, username, password);
 
                 if ((username == username_) && (password == password_)) {
-                    *middleware = std::make_shared<HeaderAuthServerMiddleware>(username, secret_key_);
+                    *middleware = std::make_shared<HeaderAuthServerMiddleware>(username,
+                                                                               secret_key_);
                 } else {
-                    return MakeFlightError(FlightStatusCode::Unauthenticated, "Invalid credentials");
+                    return MakeFlightError(FlightStatusCode::Unauthenticated,
+                                           "Invalid credentials");
                 }
             }
             return Status::OK();
@@ -163,54 +182,61 @@ namespace arrow {
         BearerAuthServerMiddleware::BearerAuthServerMiddleware(const std::string &secret_key,
                                                                const CallHeaders &incoming_headers,
                                                                std::optional<bool> *isValid)
-                : secret_key_(secret_key), incoming_headers_(incoming_headers), isValid_(isValid) {}
+            : secret_key_(secret_key),
+              incoming_headers_(incoming_headers),
+              isValid_(isValid) {}
 
         void BearerAuthServerMiddleware::SendingHeaders(AddCallHeaders *outgoing_headers) {
-            std::string bearer_token =
-                    SecurityUtilities::FindKeyValPrefixInCallHeaders(incoming_headers_, kAuthHeader, kBearerPrefix);
+            std::string bearer_token = SecurityUtilities::FindKeyValPrefixInCallHeaders(
+                    incoming_headers_, kAuthHeader, kBearerPrefix);
             *isValid_ = (VerifyToken(bearer_token));
         }
 
         void BearerAuthServerMiddleware::CallCompleted(const Status &status) {}
 
-        std::string BearerAuthServerMiddleware::name() const { return "BearerAuthServerMiddleware"; }
+        std::string BearerAuthServerMiddleware::name() const {
+            return "BearerAuthServerMiddleware";
+        }
 
         bool BearerAuthServerMiddleware::VerifyToken(const std::string &token) const {
             if (token.empty()) {
                 return false;
             }
             auto verify = jwt::verify()
-                    .allow_algorithm(jwt::algorithm::hs256{secret_key_})
-                    .with_issuer(std::string(kJWTIssuer));
+                                  .allow_algorithm(jwt::algorithm::hs256{secret_key_})
+                                  .with_issuer(std::string(kJWTIssuer));
 
             try {
                 auto decoded = jwt::decode(token);
                 verify.verify(decoded);
                 // If we got this far, the token verified successfully...
                 return true;
-            }
-            catch (const std::exception &e) {
-                std::cout << "Bearer Token verification failed with exception: " << e.what() << std::endl;
+            } catch (const std::exception &e) {
+                std::cout << "Bearer Token verification failed with exception: " << e.what()
+                          << std::endl;
                 return false;
             }
         }
 
         // ----------------------------------------
-        BearerAuthServerMiddlewareFactory::BearerAuthServerMiddlewareFactory(const std::string &secret_key
-        ) : secret_key_(secret_key) {}
+        BearerAuthServerMiddlewareFactory::BearerAuthServerMiddlewareFactory(
+                const std::string &secret_key)
+            : secret_key_(secret_key) {}
 
-        Status BearerAuthServerMiddlewareFactory::StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
-                                                            std::shared_ptr<ServerMiddleware> *middleware) {
+        Status BearerAuthServerMiddlewareFactory::StartCall(
+                const CallInfo &info,
+                const CallHeaders &incoming_headers,
+                std::shared_ptr<ServerMiddleware> *middleware) {
 
-            if (const std::pair<CallHeaders::const_iterator, CallHeaders::const_iterator> &iter_pair =
-                        incoming_headers.equal_range(kAuthHeader); iter_pair.first != iter_pair.second) {
+            if (const std::pair<CallHeaders::const_iterator, CallHeaders::const_iterator>
+                        &iter_pair = incoming_headers.equal_range(kAuthHeader);
+                iter_pair.first != iter_pair.second) {
                 std::string auth_header_type;
-                ARROW_RETURN_NOT_OK (SecurityUtilities::GetAuthHeaderType(incoming_headers, &auth_header_type));
+                ARROW_RETURN_NOT_OK(
+                        SecurityUtilities::GetAuthHeaderType(incoming_headers, &auth_header_type));
                 if (auth_header_type == "Bearer") {
-                    *middleware =
-                            std::make_shared<BearerAuthServerMiddleware>(secret_key_,
-                                                                         incoming_headers,
-                                                                         &isValid_);
+                    *middleware = std::make_shared<BearerAuthServerMiddleware>(
+                            secret_key_, incoming_headers, &isValid_);
                 }
             }
             if (isValid_.has_value() && !*isValid_) {
@@ -223,7 +249,9 @@ namespace arrow {
             return Status::OK();
         }
 
-        std::optional<bool> BearerAuthServerMiddlewareFactory::GetIsValid() { return isValid_; }
+        std::optional<bool> BearerAuthServerMiddlewareFactory::GetIsValid() {
+            return isValid_;
+        }
 
-    }
-}
+    }  // namespace flight
+}  // namespace arrow

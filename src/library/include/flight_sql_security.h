@@ -35,14 +35,14 @@ namespace arrow {
 
             static Status GetAuthHeaderType(const CallHeaders &incoming_headers, std::string *out);
 
-            static void ParseBasicHeader(const CallHeaders &incoming_headers, std::string &username,
+            static void ParseBasicHeader(const CallHeaders &incoming_headers,
+                                         std::string &username,
                                          std::string &password);
         };
 
         class HeaderAuthServerMiddleware : public ServerMiddleware {
         public:
-            HeaderAuthServerMiddleware(const std::string &username,
-                                       const std::string &secret_key);
+            HeaderAuthServerMiddleware(const std::string &username, const std::string &secret_key);
 
             void SendingHeaders(AddCallHeaders *outgoing_headers) override;
 
@@ -63,7 +63,8 @@ namespace arrow {
                                               const std::string &password,
                                               const std::string &secret_key);
 
-            Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
+            Status StartCall(const CallInfo &info,
+                             const CallHeaders &incoming_headers,
                              std::shared_ptr<ServerMiddleware> *middleware) override;
 
         private:
@@ -96,7 +97,8 @@ namespace arrow {
         public:
             explicit BearerAuthServerMiddlewareFactory(const std::string &secret_key);
 
-            Status StartCall(const CallInfo &info, const CallHeaders &incoming_headers,
+            Status StartCall(const CallInfo &info,
+                             const CallHeaders &incoming_headers,
                              std::shared_ptr<ServerMiddleware> *middleware) override;
 
             std::optional<bool> GetIsValid();
@@ -106,5 +108,5 @@ namespace arrow {
             std::string secret_key_;
         };
 
-    }
-}
+    }  // namespace flight
+}  // namespace arrow

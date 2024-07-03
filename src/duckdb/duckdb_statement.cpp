@@ -35,8 +35,7 @@ namespace arrow {
             namespace duckdbflight {
 
                 std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
-                        const duckdb::LogicalType duckdb_type
-                ) {
+                        const duckdb::LogicalType duckdb_type) {
                     const duckdb::LogicalTypeId column_type_id = duckdb_type.id();
                     switch (column_type_id) {
                         case duckdb::LogicalTypeId::INTEGER:
@@ -76,7 +75,9 @@ namespace arrow {
                         case duckdb::LogicalTypeId::TIMESTAMP_NS:
                             return timestamp(arrow::TimeUnit::NANO);
                         case duckdb::LogicalTypeId::INTERVAL:
-                            return duration(arrow::TimeUnit::MICRO); // ASSUMING MICRO AS DUCKDB's DOCS DOES NOT SPECIFY
+                            return duration(
+                                    arrow::TimeUnit::
+                                            MICRO);  // ASSUMING MICRO AS DUCKDB's DOCS DOES NOT SPECIFY
                         case duckdb::LogicalTypeId::UTINYINT:
                             return uint8();
                         case duckdb::LogicalTypeId::USMALLINT:
@@ -108,13 +109,14 @@ namespace arrow {
                 }
 
                 arrow::Result<std::shared_ptr<DuckDBStatement>> DuckDBStatement::Create(
-                        std::shared_ptr<duckdb::Connection> con, const std::string &sql) {
+                        std::shared_ptr<duckdb::Connection> con,
+                        const std::string &sql) {
 
                     std::shared_ptr<duckdb::PreparedStatement> stmt = con->Prepare(sql);
 
                     if (not stmt->success) {
-                        std::string err_msg =
-                                "Can't prepare statement: '" + sql + "' - Error: " + stmt->error.Message();
+                        std::string err_msg = "Can't prepare statement: '" + sql +
+                                              "' - Error: " + stmt->error.Message();
                         return Status::Invalid(err_msg);
                     }
 
@@ -123,8 +125,7 @@ namespace arrow {
                     return result;
                 }
 
-                DuckDBStatement::~DuckDBStatement() {
-                }
+                DuckDBStatement::~DuckDBStatement() {}
 
                 arrow::Result<int> DuckDBStatement::Execute() {
                     query_result_ = stmt_->Execute(bind_parameters);
@@ -139,8 +140,8 @@ namespace arrow {
                     duckdb::ClientProperties res_options;
                     res_options.time_zone = query_result_->client_properties.time_zone;
 
-                    duckdb::ArrowConverter::ToArrowSchema(&res_schema, query_result_->types, query_result_->names,
-                                                          res_options);
+                    duckdb::ArrowConverter::ToArrowSchema(&res_schema, query_result_->types,
+                                                          query_result_->names, res_options);
 
                     duckdb::unique_ptr<duckdb::DataChunk> data_chunk;
                     duckdb::ErrorData fetch_error;
@@ -151,7 +152,8 @@ namespace arrow {
 
                     if (data_chunk != nullptr) {
                         duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr, res_options);
-                        ARROW_ASSIGN_OR_RAISE(record_batch, arrow::ImportRecordBatch(&res_arr, &res_schema));
+                        ARROW_ASSIGN_OR_RAISE(record_batch,
+                                              arrow::ImportRecordBatch(&res_arr, &res_schema));
                     }
 
                     return record_batch;
@@ -176,14 +178,15 @@ namespace arrow {
                     auto client_properties = context->GetClientProperties();
 
                     ArrowSchema arrow_schema;
-                    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, client_properties);
+                    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names,
+                                                          client_properties);
 
                     auto return_value = arrow::ImportSchema(&arrow_schema);
 
                     return return_value;
                 }
 
-            }  // namespace sqlite
+            }  // namespace duckdbflight
         }  // namespace sql
     }  // namespace flight
 }  // namespace arrow

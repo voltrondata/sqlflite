@@ -44,19 +44,17 @@ namespace fs = std::filesystem;
  */
 
 extern "C" {
-int RunFlightSQLServer(
-        const BackendType backend,
-        fs::path &database_filename,
-        std::string hostname = "",
-        const int &port = DEFAULT_FLIGHT_PORT,
-        std::string username = "",
-        std::string password = "",
-        std::string secret_key = "",
-        fs::path tls_cert_path = fs::path(),
-        fs::path tls_key_path = fs::path(),
-        fs::path mtls_ca_cert_path = fs::path(),
-        std::string init_sql_commands = "",
-        fs::path init_sql_commands_file = fs::path(),
-        const bool &print_queries = false
-);
+int RunFlightSQLServer(const BackendType backend,
+                       fs::path &database_filename,
+                       std::string hostname = "",
+                       const int &port = DEFAULT_FLIGHT_PORT,
+                       std::string username = "",
+                       std::string password = "",
+                       std::string secret_key = "",
+                       fs::path tls_cert_path = fs::path(),
+                       fs::path tls_key_path = fs::path(),
+                       fs::path mtls_ca_cert_path = fs::path(),
+                       std::string init_sql_commands = "",
+                       fs::path init_sql_commands_file = fs::path(),
+                       const bool &print_queries = false);
 }

@@ -20,11 +20,11 @@
 #include <arrow/flight/sql/types.h>
 
 namespace arrow {
-namespace flight {
-namespace sql {
-namespace duckdbflight {
+    namespace flight {
+        namespace sql {
+            namespace duckdbflight {
 
-// clang-format off
+                // clang-format off
 /// \brief Gets the mapping from SQL info ids to SqlInfoResult instances.
 /// \return the cache.
 SqlInfoResultMap GetSqlInfoResultMap() {
@@ -644,9 +644,9 @@ SqlInfoResultMap GetSqlInfoResultMap() {
              std::vector<int32_t>(
                  {SqlInfoOptions::SqlSupportsConvert::SQL_CONVERT_INTEGER})}}))}};
 }
-// clang-format on
+                // clang-format on
 
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
+            }  // namespace duckdbflight
+        }  // namespace sql
+    }  // namespace flight
 }  // namespace arrow
