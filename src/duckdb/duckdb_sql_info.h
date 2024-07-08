@@ -20,15 +20,15 @@
 #include <arrow/flight/sql/types.h>
 
 namespace arrow {
-    namespace flight {
-        namespace sql {
-            namespace duckdbflight {
+namespace flight {
+namespace sql {
+namespace duckdbflight {
 
-                /// \brief Gets the mapping from SQL info ids to SqlInfoResult instances.
-                /// \return the cache.
-                SqlInfoResultMap GetSqlInfoResultMap();
+/// \brief Gets the mapping from SQL info ids to SqlInfoResult instances.
+/// \return the cache.
+SqlInfoResultMap GetSqlInfoResultMap();
 
-            }  // namespace duckdbflight
-        }  // namespace sql
-    }  // namespace flight
+}  // namespace duckdbflight
+}  // namespace sql
+}  // namespace flight
 }  // namespace arrow

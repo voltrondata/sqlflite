@@ -5,12 +5,11 @@
 namespace po = boost::program_options;
 
 int main(int argc, char **argv) {
+  std::vector<std::string> tls_token_values;
 
-    std::vector<std::string> tls_token_values;
-
-    // Declare the supported options.
-    po::options_description desc("Allowed options");
-    // clang-format off
+  // Declare the supported options.
+  po::options_description desc("Allowed options");
+  // clang-format off
     desc.add_options()
             ("help", "produce this help message")
             ("version", "Print the version and exit")
@@ -44,87 +43,88 @@ int main(int argc, char **argv) {
             ("mtls-ca-cert-filename,M", po::value<std::string>()->default_value(""),
              "Specify an optional mTLS CA certificate path used to verify clients.  The certificate MUST be in PEM format.")
             ("print-queries,Q", po::bool_switch()->default_value(false), "Print queries run by clients to stdout");
-    // clang-format on
+  // clang-format on
 
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);
 
-    if (vm.count("help")) {
-        std::cout << desc << "\n";
-        return 0;
+  if (vm.count("help")) {
+    std::cout << desc << "\n";
+    return 0;
+  }
+
+  if (vm.count("version")) {
+    std::cout << "Flight SQL Server CLI: " << FLIGHT_SQL_SERVER_VERSION << std::endl;
+    return 0;
+  }
+
+  std::string backend_str = vm["backend"].as<std::string>();
+  BackendType backend;
+  if (backend_str == "duckdb") {
+    backend = BackendType::duckdb;
+  } else if (backend_str == "sqlite") {
+    backend = BackendType::sqlite;
+  } else {
+    std::cout << "Invalid backend: " << backend_str << std::endl;
+    return 1;
+  }
+
+  auto database_filename = fs::path(vm["database-filename"].as<std::string>());
+
+  std::string hostname = "";
+  if (vm.count("hostname")) {
+    hostname = vm["hostname"].as<std::string>();
+  }
+
+  int port = vm["port"].as<int>();
+
+  std::string username = "";
+  if (vm.count("username")) {
+    username = vm["username"].as<std::string>();
+  }
+
+  std::string password = "";
+  if (vm.count("password")) {
+    password = vm["password"].as<std::string>();
+  }
+
+  std::string secret_key = "";
+  if (vm.count("secret-key")) {
+    secret_key = vm["secret-key"].as<std::string>();
+  }
+
+  auto tls_cert_path = fs::path();
+  auto tls_key_path = fs::path();
+  if (vm.count("tls")) {
+    std::vector<std::string> tls_tokens = tls_token_values;
+    if (tls_tokens.size() != 2) {
+      std::cout << "--tls requires 2 entries - separated by a space!" << std::endl;
+      return 1;
     }
+    tls_cert_path = fs::path(tls_tokens[0]);
+    tls_key_path = fs::path(tls_tokens[1]);
+  }
 
-    if (vm.count("version")) {
-        std::cout << "Flight SQL Server CLI: " << FLIGHT_SQL_SERVER_VERSION << std::endl;
-        return 0;
-    }
+  std::string init_sql_commands = "";
+  if (vm.count("init-sql-commands")) {
+    init_sql_commands = vm["init-sql-commands"].as<std::string>();
+  }
 
-    std::string backend_str = vm["backend"].as<std::string>();
-    BackendType backend;
-    if (backend_str == "duckdb") {
-        backend = BackendType::duckdb;
-    } else if (backend_str == "sqlite") {
-        backend = BackendType::sqlite;
-    } else {
-        std::cout << "Invalid backend: " << backend_str << std::endl;
-        return 1;
-    }
+  std::string init_sql_commands_file = "";
+  if (vm.count("init-sql-commands-file")) {
+    init_sql_commands_file = fs::path(vm["init-sql-commands-file"].as<std::string>());
+  }
 
-    auto database_filename = fs::path(vm["database-filename"].as<std::string>());
+  fs::path mtls_ca_cert_path;
+  if (vm.count("mtls-ca-cert-filename")) {
+    mtls_ca_cert_path = fs::path(vm["mtls-ca-cert-filename"].as<std::string>());
+  }
 
-    std::string hostname = "";
-    if (vm.count("hostname")) {
-        hostname = vm["hostname"].as<std::string>();
-    }
+  bool print_queries = vm["print-queries"].as<bool>();
 
-    int port = vm["port"].as<int>();
-
-    std::string username = "";
-    if (vm.count("username")) {
-        username = vm["username"].as<std::string>();
-    }
-
-    std::string password = "";
-    if (vm.count("password")) {
-        password = vm["password"].as<std::string>();
-    }
-
-    std::string secret_key = "";
-    if (vm.count("secret-key")) {
-        secret_key = vm["secret-key"].as<std::string>();
-    }
-
-    auto tls_cert_path = fs::path();
-    auto tls_key_path = fs::path();
-    if (vm.count("tls")) {
-        std::vector<std::string> tls_tokens = tls_token_values;
-        if (tls_tokens.size() != 2) {
-            std::cout << "--tls requires 2 entries - separated by a space!" << std::endl;
-            return 1;
-        }
-        tls_cert_path = fs::path(tls_tokens[0]);
-        tls_key_path = fs::path(tls_tokens[1]);
-    }
-
-    std::string init_sql_commands = "";
-    if (vm.count("init-sql-commands")) {
-        init_sql_commands = vm["init-sql-commands"].as<std::string>();
-    }
-
-    std::string init_sql_commands_file = "";
-    if (vm.count("init-sql-commands-file")) {
-        init_sql_commands_file = fs::path(vm["init-sql-commands-file"].as<std::string>());
-    }
-
-    fs::path mtls_ca_cert_path;
-    if (vm.count("mtls-ca-cert-filename")) {
-        mtls_ca_cert_path = fs::path(vm["mtls-ca-cert-filename"].as<std::string>());
-    }
-
-    bool print_queries = vm["print-queries"].as<bool>();
-
-    return RunFlightSQLServer(backend, database_filename, hostname, port, username, password,
-                              secret_key, tls_cert_path, tls_key_path, mtls_ca_cert_path,
-                              init_sql_commands, init_sql_commands_file, print_queries);
+  return RunFlightSQLServer(backend, database_filename, hostname, port, username,
+                            password, secret_key, tls_cert_path, tls_key_path,
+                            mtls_ca_cert_path, init_sql_commands, init_sql_commands_file,
+                            print_queries);
 }

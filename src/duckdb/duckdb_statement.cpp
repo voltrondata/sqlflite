@@ -30,163 +30,158 @@
 using duckdb::QueryResult;
 
 namespace arrow {
-    namespace flight {
-        namespace sql {
-            namespace duckdbflight {
+namespace flight {
+namespace sql {
+namespace duckdbflight {
 
-                std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
-                        const duckdb::LogicalType duckdb_type) {
-                    const duckdb::LogicalTypeId column_type_id = duckdb_type.id();
-                    switch (column_type_id) {
-                        case duckdb::LogicalTypeId::INTEGER:
-                            return int32();
-                        case duckdb::LogicalTypeId::DECIMAL: {
-                            uint8_t width = 0;
-                            uint8_t scale = 0;
-                            bool dec_properties = duckdb_type.GetDecimalProperties(width, scale);
-                            return decimal(scale, width);
-                        }
-                        case duckdb::LogicalTypeId::FLOAT:
-                            return float32();
-                        case duckdb::LogicalTypeId::DOUBLE:
-                            return float64();
-                        case duckdb::LogicalTypeId::CHAR:
-                        case duckdb::LogicalTypeId::VARCHAR:
-                            return utf8();
-                        case duckdb::LogicalTypeId::BLOB:
-                            return binary();
-                        case duckdb::LogicalTypeId::TINYINT:
-                            return int8();
-                        case duckdb::LogicalTypeId::SMALLINT:
-                            return int16();
-                        case duckdb::LogicalTypeId::BIGINT:
-                            return int64();
-                        case duckdb::LogicalTypeId::BOOLEAN:
-                            return boolean();
-                        case duckdb::LogicalTypeId::DATE:
-                            return date32();
-                        case duckdb::LogicalTypeId::TIME:
-                        case duckdb::LogicalTypeId::TIMESTAMP_MS:
-                            return timestamp(arrow::TimeUnit::MILLI);
-                        case duckdb::LogicalTypeId::TIMESTAMP:
-                            return timestamp(arrow::TimeUnit::MICRO);
-                        case duckdb::LogicalTypeId::TIMESTAMP_SEC:
-                            return timestamp(arrow::TimeUnit::SECOND);
-                        case duckdb::LogicalTypeId::TIMESTAMP_NS:
-                            return timestamp(arrow::TimeUnit::NANO);
-                        case duckdb::LogicalTypeId::INTERVAL:
-                            return duration(
-                                    arrow::TimeUnit::
-                                            MICRO);  // ASSUMING MICRO AS DUCKDB's DOCS DOES NOT SPECIFY
-                        case duckdb::LogicalTypeId::UTINYINT:
-                            return uint8();
-                        case duckdb::LogicalTypeId::USMALLINT:
-                            return uint16();
-                        case duckdb::LogicalTypeId::UINTEGER:
-                            return uint32();
-                        case duckdb::LogicalTypeId::UBIGINT:
-                            return int64();
-                        case duckdb::LogicalTypeId::INVALID:
-                        case duckdb::LogicalTypeId::SQLNULL:
-                        case duckdb::LogicalTypeId::UNKNOWN:
-                        case duckdb::LogicalTypeId::ANY:
-                        case duckdb::LogicalTypeId::USER:
-                        case duckdb::LogicalTypeId::TIMESTAMP_TZ:
-                        case duckdb::LogicalTypeId::TIME_TZ:
-                        case duckdb::LogicalTypeId::HUGEINT:
-                            return decimal128(38, 0);
-                        case duckdb::LogicalTypeId::POINTER:
-                        case duckdb::LogicalTypeId::VALIDITY:
-                        case duckdb::LogicalTypeId::UUID:
-                        case duckdb::LogicalTypeId::STRUCT:
-                        case duckdb::LogicalTypeId::LIST:
-                        case duckdb::LogicalTypeId::MAP:
-                        case duckdb::LogicalTypeId::TABLE:
-                        case duckdb::LogicalTypeId::ENUM:
-                        default:
-                            return null();
-                    }
-                }
+std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
+    const duckdb::LogicalType duckdb_type) {
+  const duckdb::LogicalTypeId column_type_id = duckdb_type.id();
+  switch (column_type_id) {
+    case duckdb::LogicalTypeId::INTEGER:
+      return int32();
+    case duckdb::LogicalTypeId::DECIMAL: {
+      uint8_t width = 0;
+      uint8_t scale = 0;
+      bool dec_properties = duckdb_type.GetDecimalProperties(width, scale);
+      return decimal(scale, width);
+    }
+    case duckdb::LogicalTypeId::FLOAT:
+      return float32();
+    case duckdb::LogicalTypeId::DOUBLE:
+      return float64();
+    case duckdb::LogicalTypeId::CHAR:
+    case duckdb::LogicalTypeId::VARCHAR:
+      return utf8();
+    case duckdb::LogicalTypeId::BLOB:
+      return binary();
+    case duckdb::LogicalTypeId::TINYINT:
+      return int8();
+    case duckdb::LogicalTypeId::SMALLINT:
+      return int16();
+    case duckdb::LogicalTypeId::BIGINT:
+      return int64();
+    case duckdb::LogicalTypeId::BOOLEAN:
+      return boolean();
+    case duckdb::LogicalTypeId::DATE:
+      return date32();
+    case duckdb::LogicalTypeId::TIME:
+    case duckdb::LogicalTypeId::TIMESTAMP_MS:
+      return timestamp(arrow::TimeUnit::MILLI);
+    case duckdb::LogicalTypeId::TIMESTAMP:
+      return timestamp(arrow::TimeUnit::MICRO);
+    case duckdb::LogicalTypeId::TIMESTAMP_SEC:
+      return timestamp(arrow::TimeUnit::SECOND);
+    case duckdb::LogicalTypeId::TIMESTAMP_NS:
+      return timestamp(arrow::TimeUnit::NANO);
+    case duckdb::LogicalTypeId::INTERVAL:
+      return duration(
+          arrow::TimeUnit::MICRO);  // ASSUMING MICRO AS DUCKDB's DOCS DOES NOT SPECIFY
+    case duckdb::LogicalTypeId::UTINYINT:
+      return uint8();
+    case duckdb::LogicalTypeId::USMALLINT:
+      return uint16();
+    case duckdb::LogicalTypeId::UINTEGER:
+      return uint32();
+    case duckdb::LogicalTypeId::UBIGINT:
+      return int64();
+    case duckdb::LogicalTypeId::INVALID:
+    case duckdb::LogicalTypeId::SQLNULL:
+    case duckdb::LogicalTypeId::UNKNOWN:
+    case duckdb::LogicalTypeId::ANY:
+    case duckdb::LogicalTypeId::USER:
+    case duckdb::LogicalTypeId::TIMESTAMP_TZ:
+    case duckdb::LogicalTypeId::TIME_TZ:
+    case duckdb::LogicalTypeId::HUGEINT:
+      return decimal128(38, 0);
+    case duckdb::LogicalTypeId::POINTER:
+    case duckdb::LogicalTypeId::VALIDITY:
+    case duckdb::LogicalTypeId::UUID:
+    case duckdb::LogicalTypeId::STRUCT:
+    case duckdb::LogicalTypeId::LIST:
+    case duckdb::LogicalTypeId::MAP:
+    case duckdb::LogicalTypeId::TABLE:
+    case duckdb::LogicalTypeId::ENUM:
+    default:
+      return null();
+  }
+}
 
-                arrow::Result<std::shared_ptr<DuckDBStatement>> DuckDBStatement::Create(
-                        std::shared_ptr<duckdb::Connection> con,
-                        const std::string &sql) {
+arrow::Result<std::shared_ptr<DuckDBStatement>> DuckDBStatement::Create(
+    std::shared_ptr<duckdb::Connection> con, const std::string &sql) {
+  std::shared_ptr<duckdb::PreparedStatement> stmt = con->Prepare(sql);
 
-                    std::shared_ptr<duckdb::PreparedStatement> stmt = con->Prepare(sql);
+  if (not stmt->success) {
+    std::string err_msg =
+        "Can't prepare statement: '" + sql + "' - Error: " + stmt->error.Message();
+    return Status::Invalid(err_msg);
+  }
 
-                    if (not stmt->success) {
-                        std::string err_msg = "Can't prepare statement: '" + sql +
-                                              "' - Error: " + stmt->error.Message();
-                        return Status::Invalid(err_msg);
-                    }
+  std::shared_ptr<DuckDBStatement> result(new DuckDBStatement(con, stmt));
 
-                    std::shared_ptr<DuckDBStatement> result(new DuckDBStatement(con, stmt));
+  return result;
+}
 
-                    return result;
-                }
+DuckDBStatement::~DuckDBStatement() {}
 
-                DuckDBStatement::~DuckDBStatement() {}
+arrow::Result<int> DuckDBStatement::Execute() {
+  query_result_ = stmt_->Execute(bind_parameters);
 
-                arrow::Result<int> DuckDBStatement::Execute() {
-                    query_result_ = stmt_->Execute(bind_parameters);
+  return 0;
+}
 
-                    return 0;
-                }
+arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::FetchResult() {
+  std::shared_ptr<RecordBatch> record_batch;
+  ArrowArray res_arr;
+  ArrowSchema res_schema;
+  duckdb::ClientProperties res_options;
+  res_options.time_zone = query_result_->client_properties.time_zone;
 
-                arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::FetchResult() {
-                    std::shared_ptr<RecordBatch> record_batch;
-                    ArrowArray res_arr;
-                    ArrowSchema res_schema;
-                    duckdb::ClientProperties res_options;
-                    res_options.time_zone = query_result_->client_properties.time_zone;
+  duckdb::ArrowConverter::ToArrowSchema(&res_schema, query_result_->types,
+                                        query_result_->names, res_options);
 
-                    duckdb::ArrowConverter::ToArrowSchema(&res_schema, query_result_->types,
-                                                          query_result_->names, res_options);
+  duckdb::unique_ptr<duckdb::DataChunk> data_chunk;
+  duckdb::ErrorData fetch_error;
+  auto fetch_success = query_result_->TryFetch(data_chunk, fetch_error);
+  if (!fetch_success) {
+    ARROW_RETURN_NOT_OK(arrow::Status::ExecutionError(fetch_error.Message()));
+  }
 
-                    duckdb::unique_ptr<duckdb::DataChunk> data_chunk;
-                    duckdb::ErrorData fetch_error;
-                    auto fetch_success = query_result_->TryFetch(data_chunk, fetch_error);
-                    if (!fetch_success) {
-                        ARROW_RETURN_NOT_OK(arrow::Status::ExecutionError(fetch_error.Message()));
-                    }
+  if (data_chunk != nullptr) {
+    duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr, res_options);
+    ARROW_ASSIGN_OR_RAISE(record_batch, arrow::ImportRecordBatch(&res_arr, &res_schema));
+  }
 
-                    if (data_chunk != nullptr) {
-                        duckdb::ArrowConverter::ToArrowArray(*data_chunk, &res_arr, res_options);
-                        ARROW_ASSIGN_OR_RAISE(record_batch,
-                                              arrow::ImportRecordBatch(&res_arr, &res_schema));
-                    }
+  return record_batch;
+}
 
-                    return record_batch;
-                }
+std::shared_ptr<duckdb::PreparedStatement> DuckDBStatement::GetDuckDBStmt() const {
+  return stmt_;
+}
 
-                std::shared_ptr<duckdb::PreparedStatement> DuckDBStatement::GetDuckDBStmt() const {
-                    return stmt_;
-                }
+arrow::Result<int64_t> DuckDBStatement::ExecuteUpdate() {
+  ARROW_RETURN_NOT_OK(Execute());
+  auto result = FetchResult();
+  return result->get()->num_rows();
+}
 
-                arrow::Result<int64_t> DuckDBStatement::ExecuteUpdate() {
-                    ARROW_RETURN_NOT_OK(Execute());
-                    auto result = FetchResult();
-                    return result->get()->num_rows();
-                }
+arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
+  // get the names and types of the result schema
+  auto names = stmt_->GetNames();
+  auto types = stmt_->GetTypes();
 
-                arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
-                    // get the names and types of the result schema
-                    auto names = stmt_->GetNames();
-                    auto types = stmt_->GetTypes();
+  auto &context = stmt_->context;
+  auto client_properties = context->GetClientProperties();
 
-                    auto &context = stmt_->context;
-                    auto client_properties = context->GetClientProperties();
+  ArrowSchema arrow_schema;
+  duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names, client_properties);
 
-                    ArrowSchema arrow_schema;
-                    duckdb::ArrowConverter::ToArrowSchema(&arrow_schema, types, names,
-                                                          client_properties);
+  auto return_value = arrow::ImportSchema(&arrow_schema);
 
-                    auto return_value = arrow::ImportSchema(&arrow_schema);
+  return return_value;
+}
 
-                    return return_value;
-                }
-
-            }  // namespace duckdbflight
-        }  // namespace sql
-    }  // namespace flight
+}  // namespace duckdbflight
+}  // namespace sql
+}  // namespace flight
 }  // namespace arrow

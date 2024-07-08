@@ -10,10 +10,7 @@ const std::string DEFAULT_FLIGHT_HOSTNAME = "0.0.0.0";
 const std::string DEFAULT_FLIGHT_USERNAME = "flight_username";
 const int DEFAULT_FLIGHT_PORT = 31337;
 
-enum class BackendType {
-    duckdb,
-    sqlite
-};
+enum class BackendType { duckdb, sqlite };
 
 namespace fs = std::filesystem;
 
@@ -44,14 +41,10 @@ namespace fs = std::filesystem;
  */
 
 extern "C" {
-int RunFlightSQLServer(const BackendType backend,
-                       fs::path &database_filename,
-                       std::string hostname = "",
-                       const int &port = DEFAULT_FLIGHT_PORT,
-                       std::string username = "",
-                       std::string password = "",
-                       std::string secret_key = "",
-                       fs::path tls_cert_path = fs::path(),
+int RunFlightSQLServer(const BackendType backend, fs::path &database_filename,
+                       std::string hostname = "", const int &port = DEFAULT_FLIGHT_PORT,
+                       std::string username = "", std::string password = "",
+                       std::string secret_key = "", fs::path tls_cert_path = fs::path(),
                        fs::path tls_key_path = fs::path(),
                        fs::path mtls_ca_cert_path = fs::path(),
                        std::string init_sql_commands = "",
