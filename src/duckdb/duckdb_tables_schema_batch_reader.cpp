@@ -27,7 +27,7 @@
 #include "arrow/ipc/writer.h"
 #include "arrow/record_batch.h"
 
-
+// clang-format off
 namespace arrow {
 namespace flight {
 namespace sql {

@@ -26,6 +26,7 @@
 
 #include "duckdb_statement.h"
 
+// clang-format off
 namespace arrow {
 namespace flight {
 namespace sql {

@@ -28,7 +28,7 @@ namespace duckdbflight {
 /// \return the cache.
 SqlInfoResultMap GetSqlInfoResultMap();
 
-}  // namespace sqlite
+}  // namespace duckdbflight
 }  // namespace sql
 }  // namespace flight
 }  // namespace arrow

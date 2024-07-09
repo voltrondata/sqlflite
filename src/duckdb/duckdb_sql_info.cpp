@@ -24,6 +24,7 @@ namespace flight {
 namespace sql {
 namespace duckdbflight {
 
+// clang-format off
 /// \brief Gets the mapping from SQL info ids to SqlInfoResult instances.
 /// \return the cache.
 SqlInfoResultMap GetSqlInfoResultMap() {
@@ -643,8 +644,9 @@ SqlInfoResultMap GetSqlInfoResultMap() {
              std::vector<int32_t>(
                  {SqlInfoOptions::SqlSupportsConvert::SQL_CONVERT_INTEGER})}}))}};
 }
+// clang-format on
 
-}  // namespace sqlite
+}  // namespace duckdbflight
 }  // namespace sql
 }  // namespace flight
 }  // namespace arrow

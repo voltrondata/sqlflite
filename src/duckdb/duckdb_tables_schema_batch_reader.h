@@ -26,6 +26,7 @@
 #include "duckdb_statement_batch_reader.h"
 #include "arrow/record_batch.h"
 
+// clang-format off
 namespace arrow {
 namespace flight {
 namespace sql {
