@@ -18,17 +18,12 @@
 #pragma once
 
 #include <arrow/flight/sql/types.h>
+#include "flight_sql_fwd.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace duckdbflight {
+namespace sqlflite::ddb {
 
 /// \brief Gets the mapping from SQL info ids to SqlInfoResult instances.
 /// \return the cache.
-SqlInfoResultMap GetSqlInfoResultMap();
+flight::sql::SqlInfoResultMap GetSqlInfoResultMap();
 
-}  // namespace duckdbflight
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::ddb

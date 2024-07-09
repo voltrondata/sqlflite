@@ -114,12 +114,10 @@ FlightSQLServerBuilder(const BackendType backend, const fs::path &database_filen
     server = sqlite_server;
   } else if (backend == BackendType::duckdb) {
     db_type = "DuckDB";
-    std::shared_ptr<arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer>
-        duckdb_server = nullptr;
+    std::shared_ptr<sqlflite::ddb::DuckDBFlightSqlServer> duckdb_server = nullptr;
     duckdb::DBConfig config;
-    ARROW_ASSIGN_OR_RAISE(duckdb_server,
-                          arrow::flight::sql::duckdbflight::DuckDBFlightSqlServer::Create(
-                              database_filename, config, print_queries))
+    ARROW_ASSIGN_OR_RAISE(duckdb_server, sqlflite::ddb::DuckDBFlightSqlServer::Create(
+                                             database_filename, config, print_queries))
     // Run additional commands (first) for the DuckDB back-end...
     auto duckdb_init_sql_commands =
         "SET autoinstall_known_extensions = true; SET autoload_known_extensions = true;" +

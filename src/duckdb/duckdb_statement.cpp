@@ -27,44 +27,42 @@
 #include <arrow/c/bridge.h>
 #include "duckdb_server.h"
 
+using arrow::Status;
 using duckdb::QueryResult;
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace duckdbflight {
+namespace sqlflite::ddb {
 
-std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
+std::shared_ptr<arrow::DataType> GetDataTypeFromDuckDbType(
     const duckdb::LogicalType duckdb_type) {
   const duckdb::LogicalTypeId column_type_id = duckdb_type.id();
   switch (column_type_id) {
     case duckdb::LogicalTypeId::INTEGER:
-      return int32();
+      return arrow::int32();
     case duckdb::LogicalTypeId::DECIMAL: {
       uint8_t width = 0;
       uint8_t scale = 0;
       bool dec_properties = duckdb_type.GetDecimalProperties(width, scale);
-      return decimal(scale, width);
+      return arrow::decimal(scale, width);
     }
     case duckdb::LogicalTypeId::FLOAT:
-      return float32();
+      return arrow::float32();
     case duckdb::LogicalTypeId::DOUBLE:
-      return float64();
+      return arrow::float64();
     case duckdb::LogicalTypeId::CHAR:
     case duckdb::LogicalTypeId::VARCHAR:
-      return utf8();
+      return arrow::utf8();
     case duckdb::LogicalTypeId::BLOB:
-      return binary();
+      return arrow::binary();
     case duckdb::LogicalTypeId::TINYINT:
-      return int8();
+      return arrow::int8();
     case duckdb::LogicalTypeId::SMALLINT:
-      return int16();
+      return arrow::int16();
     case duckdb::LogicalTypeId::BIGINT:
-      return int64();
+      return arrow::int64();
     case duckdb::LogicalTypeId::BOOLEAN:
-      return boolean();
+      return arrow::boolean();
     case duckdb::LogicalTypeId::DATE:
-      return date32();
+      return arrow::date32();
     case duckdb::LogicalTypeId::TIME:
     case duckdb::LogicalTypeId::TIMESTAMP_MS:
       return timestamp(arrow::TimeUnit::MILLI);
@@ -78,13 +76,13 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
       return duration(
           arrow::TimeUnit::MICRO);  // ASSUMING MICRO AS DUCKDB's DOCS DOES NOT SPECIFY
     case duckdb::LogicalTypeId::UTINYINT:
-      return uint8();
+      return arrow::uint8();
     case duckdb::LogicalTypeId::USMALLINT:
-      return uint16();
+      return arrow::uint16();
     case duckdb::LogicalTypeId::UINTEGER:
-      return uint32();
+      return arrow::uint32();
     case duckdb::LogicalTypeId::UBIGINT:
-      return int64();
+      return arrow::int64();
     case duckdb::LogicalTypeId::INVALID:
     case duckdb::LogicalTypeId::SQLNULL:
     case duckdb::LogicalTypeId::UNKNOWN:
@@ -93,7 +91,7 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
     case duckdb::LogicalTypeId::TIMESTAMP_TZ:
     case duckdb::LogicalTypeId::TIME_TZ:
     case duckdb::LogicalTypeId::HUGEINT:
-      return decimal128(38, 0);
+      return arrow::decimal128(38, 0);
     case duckdb::LogicalTypeId::POINTER:
     case duckdb::LogicalTypeId::VALIDITY:
     case duckdb::LogicalTypeId::UUID:
@@ -103,7 +101,7 @@ std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
     case duckdb::LogicalTypeId::TABLE:
     case duckdb::LogicalTypeId::ENUM:
     default:
-      return null();
+      return arrow::null();
   }
 }
 
@@ -130,8 +128,8 @@ arrow::Result<int> DuckDBStatement::Execute() {
   return 0;
 }
 
-arrow::Result<std::shared_ptr<RecordBatch>> DuckDBStatement::FetchResult() {
-  std::shared_ptr<RecordBatch> record_batch;
+arrow::Result<std::shared_ptr<arrow::RecordBatch>> DuckDBStatement::FetchResult() {
+  std::shared_ptr<arrow::RecordBatch> record_batch;
   ArrowArray res_arr;
   ArrowSchema res_schema;
   duckdb::ClientProperties res_options;
@@ -165,7 +163,7 @@ arrow::Result<int64_t> DuckDBStatement::ExecuteUpdate() {
   return result->get()->num_rows();
 }
 
-arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
+arrow::Result<std::shared_ptr<arrow::Schema>> DuckDBStatement::GetSchema() const {
   // get the names and types of the result schema
   auto names = stmt_->GetNames();
   auto types = stmt_->GetTypes();
@@ -181,7 +179,4 @@ arrow::Result<std::shared_ptr<Schema>> DuckDBStatement::GetSchema() const {
   return return_value;
 }
 
-}  // namespace duckdbflight
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::ddb

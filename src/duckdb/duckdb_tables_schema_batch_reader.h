@@ -26,13 +26,9 @@
 #include "duckdb_statement_batch_reader.h"
 #include "arrow/record_batch.h"
 
-// clang-format off
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace duckdbflight {
+namespace sqlflite::ddb {
 
-class DuckDBTablesWithSchemaBatchReader : public RecordBatchReader {
+class DuckDBTablesWithSchemaBatchReader : public arrow::RecordBatchReader {
  private:
   std::shared_ptr<DuckDBStatementBatchReader> reader_;
   std::string main_query_;
@@ -44,17 +40,17 @@ class DuckDBTablesWithSchemaBatchReader : public RecordBatchReader {
   /// \param reader an shared_ptr from a DuckDBStatementBatchReader.
   /// \param main_query  SQL query that originated reader's data.
   /// \param db     a pointer to the sqlite3 db.
-  DuckDBTablesWithSchemaBatchReader(
-          std::shared_ptr<DuckDBStatementBatchReader> reader, std::string main_query,
-          std::shared_ptr<duckdb::Connection> db_conn)
-      : reader_(std::move(reader)), main_query_(std::move(main_query)), db_conn_(db_conn), already_executed_(false) {}
+  DuckDBTablesWithSchemaBatchReader(std::shared_ptr<DuckDBStatementBatchReader> reader,
+                                    std::string main_query,
+                                    std::shared_ptr<duckdb::Connection> db_conn)
+      : reader_(std::move(reader)),
+        main_query_(std::move(main_query)),
+        db_conn_(db_conn),
+        already_executed_(false) {}
 
-  std::shared_ptr<Schema> schema() const override;
+  std::shared_ptr<arrow::Schema> schema() const override;
 
-  Status ReadNext(std::shared_ptr<RecordBatch>* batch) override;
+  arrow::Status ReadNext(std::shared_ptr<arrow::RecordBatch>* batch) override;
 };
 
-}  // namespace duckdb
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::ddb

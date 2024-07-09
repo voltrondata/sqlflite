@@ -26,19 +26,17 @@
 
 #include "duckdb_statement.h"
 
-// clang-format off
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace duckdbflight {
+namespace sqlflite::ddb {
 
 // Batch size for SQLite statement results
 static constexpr int kMaxBatchSize = 1024;
 
-std::shared_ptr<Schema> DuckDBStatementBatchReader::schema() const { return schema_; }
+std::shared_ptr<arrow::Schema> DuckDBStatementBatchReader::schema() const {
+  return schema_;
+}
 
 DuckDBStatementBatchReader::DuckDBStatementBatchReader(
-    std::shared_ptr<DuckDBStatement> statement, std::shared_ptr<Schema> schema)
+    std::shared_ptr<DuckDBStatement> statement, std::shared_ptr<arrow::Schema> schema)
     : statement_(std::move(statement)),
       schema_(std::move(schema)),
       rc_(DuckDBSuccess),
@@ -57,25 +55,22 @@ DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& state
 
 arrow::Result<std::shared_ptr<DuckDBStatementBatchReader>>
 DuckDBStatementBatchReader::Create(const std::shared_ptr<DuckDBStatement>& statement,
-                                   const std::shared_ptr<Schema>& schema) {
+                                   const std::shared_ptr<arrow::Schema>& schema) {
   std::shared_ptr<DuckDBStatementBatchReader> result(
       new DuckDBStatementBatchReader(statement, schema));
 
   return result;
 }
 
-Status DuckDBStatementBatchReader::ReadNext(std::shared_ptr<RecordBatch>* out) {
-
+arrow::Status DuckDBStatementBatchReader::ReadNext(
+    std::shared_ptr<arrow::RecordBatch>* out) {
   if (!already_executed_) {
     ARROW_ASSIGN_OR_RAISE(rc_, statement_->Execute());
     already_executed_ = true;
   }
   ARROW_ASSIGN_OR_RAISE(*out, statement_->FetchResult());
 
-  return Status::OK();
+  return arrow::Status::OK();
 }
 
-}  // namespace duckdbflight
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::ddb

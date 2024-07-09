@@ -25,22 +25,19 @@
 #include <arrow/flight/sql/column_metadata.h>
 #include <arrow/type_fwd.h>
 
-// clang-format off
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace duckdbflight {
+#include "flight_sql_fwd.h"
 
-std::shared_ptr<DataType> GetDataTypeFromDuckDbType(
-        const duckdb::LogicalType duckdb_type
-);
+namespace sqlflite::ddb {
+
+std::shared_ptr<arrow::DataType> GetDataTypeFromDuckDbType(
+    const duckdb::LogicalType duckdb_type);
 
 /// \brief Create an object ColumnMetadata using the column type and
 ///        table name.
 /// \param column_type  The DuckDB type.
 /// \param table        The table name.
 /// \return             A Column Metadata object.
-ColumnMetadata GetColumnMetadata(int column_type, const char* table);
+flight::sql::ColumnMetadata GetColumnMetadata(int column_type, const char* table);
 
 class DuckDBStatement {
  public:
@@ -48,17 +45,17 @@ class DuckDBStatement {
   /// \param[in] db        duckdb database instance.
   /// \param[in] sql       SQL statement.
   /// \return              A DuckDBStatement object.
-  static arrow::Result<std::shared_ptr<DuckDBStatement>> Create(std::shared_ptr<duckdb::Connection> con,
-                                                                const std::string& sql);
+  static arrow::Result<std::shared_ptr<DuckDBStatement>> Create(
+      std::shared_ptr<duckdb::Connection> con, const std::string& sql);
 
   ~DuckDBStatement();
 
   /// \brief Creates an Arrow Schema based on the results of this statement.
   /// \return              The resulting Schema.
-  arrow::Result<std::shared_ptr<Schema>> GetSchema() const;
+  arrow::Result<std::shared_ptr<arrow::Schema>> GetSchema() const;
 
   arrow::Result<int> Execute();
-  arrow::Result<std::shared_ptr<RecordBatch>> FetchResult();
+  arrow::Result<std::shared_ptr<arrow::RecordBatch>> FetchResult();
   // arrow::Result<std::shared_ptr<Schema>> GetArrowSchema();
 
   std::shared_ptr<duckdb::PreparedStatement> GetDuckDBStmt() const;
@@ -69,20 +66,16 @@ class DuckDBStatement {
 
   duckdb::vector<duckdb::Value> bind_parameters;
 
-private:
+ private:
   std::shared_ptr<duckdb::Connection> con_;
   std::shared_ptr<duckdb::PreparedStatement> stmt_;
   duckdb::unique_ptr<duckdb::QueryResult> query_result_;
 
-  DuckDBStatement(
-    std::shared_ptr<duckdb::Connection> con, 
-    std::shared_ptr<duckdb::PreparedStatement> stmt) {
+  DuckDBStatement(std::shared_ptr<duckdb::Connection> con,
+                  std::shared_ptr<duckdb::PreparedStatement> stmt) {
     con_ = con;
     stmt_ = stmt;
   }
 };
 
-}  // namespace duckdbflight
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::ddb
