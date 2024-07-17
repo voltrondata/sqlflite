@@ -17,7 +17,9 @@
 
 #include "duckdb_sql_info.h"
 
+#include <duckdb.hpp>
 #include <arrow/flight/sql/types.h>
+#include "arrow/util/config.h"
 
 namespace arrow {
 namespace flight {
@@ -32,14 +34,20 @@ SqlInfoResultMap GetSqlInfoResultMap() {
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_NAME,
        SqlInfoResult(std::string("db_name"))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_VERSION,
-       SqlInfoResult(std::string("duckdb"))},
+       SqlInfoResult(std::string("duckdb " + std::string(duckdb_library_version())))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_ARROW_VERSION,
-       SqlInfoResult(std::string("8.0.0-SNAPSHOT" /* Only an sqlite */))},
+       SqlInfoResult(std::string(ARROW_VERSION_STRING))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_READ_ONLY, SqlInfoResult(false)},
+      {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_SQL, SqlInfoResult(true)},
+      {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_SUBSTRAIT, SqlInfoResult(false)},
+      {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_TRANSACTION,
+       SqlInfoResult(SqlInfoOptions::SqlSupportedTransaction::
+                         SQL_SUPPORTED_TRANSACTION_TRANSACTION)},
+      {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_CANCEL, SqlInfoResult(false)},
       {SqlInfoOptions::SqlInfo::SQL_DDL_CATALOG,
-       SqlInfoResult(false)},
+       SqlInfoResult(true)},
       {SqlInfoOptions::SqlInfo::SQL_DDL_SCHEMA,
-       SqlInfoResult(false)},
+       SqlInfoResult(true)},
       {SqlInfoOptions::SqlInfo::SQL_DDL_TABLE, SqlInfoResult(true)},
       {SqlInfoOptions::SqlInfo::SQL_IDENTIFIER_CASE,
        SqlInfoResult(int64_t(SqlInfoOptions::SqlSupportedCaseSensitivity::
@@ -52,7 +60,7 @@ SqlInfoResultMap GetSqlInfoResultMap() {
       {SqlInfoOptions::SqlInfo::SQL_ALL_TABLES_ARE_SELECTABLE, SqlInfoResult(true)},
       {SqlInfoOptions::SqlInfo::SQL_NULL_ORDERING,
        SqlInfoResult(
-           int64_t(SqlInfoOptions::SqlNullOrdering::SQL_NULLS_SORTED_AT_START))},
+           int64_t(SqlInfoOptions::SqlNullOrdering::SQL_NULLS_SORTED_AT_END))},
       {SqlInfoOptions::SqlInfo::SQL_KEYWORDS,
        SqlInfoResult(std::vector<std::string>({"ABORT_P"
                                                 "ABSOLUTE_P"
