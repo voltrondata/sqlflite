@@ -28,8 +28,6 @@ const int DEFAULT_FLIGHT_PORT = 31337;
 
 enum class BackendType { duckdb, sqlite };
 
-namespace fs = std::filesystem;
-
 /**
  * @brief Run a SQLFlite Server with the specified configuration.
  *
@@ -57,13 +55,14 @@ namespace fs = std::filesystem;
  */
 
 extern "C" {
-int RunFlightSQLServer(const BackendType backend, fs::path &database_filename,
-                       std::string hostname = "", const int &port = DEFAULT_FLIGHT_PORT,
-                       std::string username = "", std::string password = "",
-                       std::string secret_key = "", fs::path tls_cert_path = fs::path(),
-                       fs::path tls_key_path = fs::path(),
-                       fs::path mtls_ca_cert_path = fs::path(),
-                       std::string init_sql_commands = "",
-                       fs::path init_sql_commands_file = fs::path(),
-                       const bool &print_queries = false);
+int RunFlightSQLServer(
+    const BackendType backend, std::filesystem::path &database_filename,
+    std::string hostname = "", const int &port = DEFAULT_FLIGHT_PORT,
+    std::string username = "", std::string password = "", std::string secret_key = "",
+    std::filesystem::path tls_cert_path = std::filesystem::path(),
+    std::filesystem::path tls_key_path = std::filesystem::path(),
+    std::filesystem::path mtls_ca_cert_path = std::filesystem::path(),
+    std::string init_sql_commands = "",
+    std::filesystem::path init_sql_commands_file = std::filesystem::path(),
+    const bool &print_queries = false);
 }

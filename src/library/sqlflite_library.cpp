@@ -33,10 +33,12 @@
 
 #include "sqlite_server.h"
 #include "duckdb_server.h"
+#include "include/flight_sql_fwd.h"
 #include "include/sqlflite_security.h"
 
-namespace flight = arrow::flight;
-namespace flightsql = arrow::flight::sql;
+namespace fs = std::filesystem;
+
+namespace sqlflite {
 
 const int port = 31337;
 
@@ -58,24 +60,24 @@ const int port = 31337;
     }                                                                              \
   } while (false)
 
-arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>>
-FlightSQLServerBuilder(const BackendType backend, const fs::path &database_filename,
-                       const std::string &hostname, const int &port,
-                       const std::string &username, const std::string &password,
-                       const std::string &secret_key, const fs::path &tls_cert_path,
-                       const fs::path &tls_key_path, const fs::path &mtls_ca_cert_path,
-                       const std::string &init_sql_commands, const bool &print_queries) {
+arrow::Result<std::shared_ptr<flight::sql::FlightSqlServerBase>> FlightSQLServerBuilder(
+    const BackendType backend, const fs::path &database_filename,
+    const std::string &hostname, const int &port, const std::string &username,
+    const std::string &password, const std::string &secret_key,
+    const fs::path &tls_cert_path, const fs::path &tls_key_path,
+    const fs::path &mtls_ca_cert_path, const std::string &init_sql_commands,
+    const bool &print_queries) {
   ARROW_ASSIGN_OR_RAISE(auto location,
                         (!tls_cert_path.empty())
-                            ? arrow::flight::Location::ForGrpcTls(hostname, port)
-                            : arrow::flight::Location::ForGrpcTcp(hostname, port));
+                            ? flight::Location::ForGrpcTls(hostname, port)
+                            : flight::Location::ForGrpcTcp(hostname, port));
 
   std::cout << "Apache Arrow version: " << ARROW_VERSION_STRING << std::endl;
 
-  arrow::flight::FlightServerOptions options(location);
+  flight::FlightServerOptions options(location);
 
   if (!tls_cert_path.empty() && !tls_key_path.empty()) {
-    ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerTlsCertificates(
+    ARROW_CHECK_OK(sqlflite::SecurityUtilities::FlightServerTlsCertificates(
         tls_cert_path, tls_key_path, &options.tls_certificates));
   } else {
     std::cout << "WARNING - TLS is disabled for the SQLFlite server - this is insecure."
@@ -83,24 +85,23 @@ FlightSQLServerBuilder(const BackendType backend, const fs::path &database_filen
   }
 
   // Setup authentication middleware (using the same TLS certificate keypair)
-  auto header_middleware =
-      std::make_shared<arrow::flight::HeaderAuthServerMiddlewareFactory>(
-          username, password, secret_key);
+  auto header_middleware = std::make_shared<sqlflite::HeaderAuthServerMiddlewareFactory>(
+      username, password, secret_key);
   auto bearer_middleware =
-      std::make_shared<arrow::flight::BearerAuthServerMiddlewareFactory>(secret_key);
+      std::make_shared<sqlflite::BearerAuthServerMiddlewareFactory>(secret_key);
 
-  options.auth_handler = std::make_unique<arrow::flight::NoOpAuthHandler>();
+  options.auth_handler = std::make_unique<flight::NoOpAuthHandler>();
   options.middleware.push_back({"header-auth-server", header_middleware});
   options.middleware.push_back({"bearer-auth-server", bearer_middleware});
 
   if (!mtls_ca_cert_path.empty()) {
     std::cout << "Using mTLS CA certificate: " << mtls_ca_cert_path << std::endl;
-    ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerMtlsCACertificate(
+    ARROW_CHECK_OK(sqlflite::SecurityUtilities::FlightServerMtlsCACertificate(
         mtls_ca_cert_path, &options.root_certificates));
     options.verify_client = true;
   }
 
-  std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server = nullptr;
+  std::shared_ptr<flight::sql::FlightSqlServerBase> server = nullptr;
 
   std::string db_type = "";
   if (backend == BackendType::sqlite) {
@@ -155,13 +156,12 @@ std::string SafeGetEnvVarValue(const std::string &env_var_name) {
   }
 }
 
-arrow::Result<std::shared_ptr<arrow::flight::sql::FlightSqlServerBase>>
-CreateFlightSQLServer(const BackendType backend, fs::path &database_filename,
-                      std::string hostname, const int &port, std::string username,
-                      std::string password, std::string secret_key,
-                      fs::path tls_cert_path, fs::path tls_key_path,
-                      fs::path mtls_ca_cert_path, std::string init_sql_commands,
-                      fs::path init_sql_commands_file, const bool &print_queries) {
+arrow::Result<std::shared_ptr<flight::sql::FlightSqlServerBase>> CreateFlightSQLServer(
+    const BackendType backend, fs::path &database_filename, std::string hostname,
+    const int &port, std::string username, std::string password, std::string secret_key,
+    fs::path tls_cert_path, fs::path tls_key_path, fs::path mtls_ca_cert_path,
+    std::string init_sql_commands, fs::path init_sql_commands_file,
+    const bool &print_queries) {
   // Validate and default the arguments to env var values where applicable
   if (database_filename.empty()) {
     return arrow::Status::Invalid("The database filename was not provided!");
@@ -255,9 +255,13 @@ CreateFlightSQLServer(const BackendType backend, fs::path &database_filename,
 }
 
 arrow::Status StartFlightSQLServer(
-    std::shared_ptr<arrow::flight::sql::FlightSqlServerBase> server) {
+    std::shared_ptr<flight::sql::FlightSqlServerBase> server) {
   return arrow::Status::OK();
 }
+
+}  // namespace sqlflite
+
+extern "C" {
 
 int RunFlightSQLServer(const BackendType backend, fs::path &database_filename,
                        std::string hostname, const int &port, std::string username,
@@ -265,7 +269,7 @@ int RunFlightSQLServer(const BackendType backend, fs::path &database_filename,
                        fs::path tls_cert_path, fs::path tls_key_path,
                        fs::path mtls_ca_cert_path, std::string init_sql_commands,
                        fs::path init_sql_commands_file, const bool &print_queries) {
-  auto create_server_result = CreateFlightSQLServer(
+  auto create_server_result = sqlflite::CreateFlightSQLServer(
       backend, database_filename, hostname, port, username, password, secret_key,
       tls_cert_path, tls_key_path, mtls_ca_cert_path, init_sql_commands,
       init_sql_commands_file, print_queries);
@@ -280,4 +284,5 @@ int RunFlightSQLServer(const BackendType backend, fs::path &database_filename,
     std::cerr << "Error: " << create_server_result.status().ToString() << std::endl;
     return EXIT_FAILURE;
   }
+}
 }

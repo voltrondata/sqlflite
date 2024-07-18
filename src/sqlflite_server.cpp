@@ -20,6 +20,7 @@
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
+namespace fs = std::filesystem;
 
 int main(int argc, char **argv) {
   std::vector<std::string> tls_token_values;

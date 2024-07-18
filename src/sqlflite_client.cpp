@@ -33,21 +33,11 @@
 #include "arrow/status.h"
 #include "arrow/table.h"
 
-using arrow::Result;
-using arrow::Schema;
+#include "library/include/flight_sql_fwd.h"
+
 using arrow::Status;
-using arrow::flight::ClientAuthHandler;
-using arrow::flight::FlightCallOptions;
-using arrow::flight::FlightClient;
-using arrow::flight::FlightDescriptor;
-using arrow::flight::FlightEndpoint;
-using arrow::flight::FlightInfo;
-using arrow::flight::FlightStreamChunk;
-using arrow::flight::FlightStreamReader;
-using arrow::flight::Location;
-using arrow::flight::Ticket;
-using arrow::flight::sql::FlightSqlClient;
-using arrow::flight::sql::TableRef;
+
+namespace sqlflite {
 
 DEFINE_string(host, "localhost", "Host to connect to");
 DEFINE_int32(port, 31337, "Port to connect to");
@@ -69,12 +59,12 @@ DEFINE_string(catalog, "", "Catalog");
 DEFINE_string(schema, "", "Schema");
 DEFINE_string(table, "", "Table");
 
-Status PrintResultsForEndpoint(FlightSqlClient &client,
-                               const FlightCallOptions &call_options,
-                               const FlightEndpoint &endpoint) {
+Status PrintResultsForEndpoint(flight::sql::FlightSqlClient &client,
+                               const flight::FlightCallOptions &call_options,
+                               const flight::FlightEndpoint &endpoint) {
   ARROW_ASSIGN_OR_RAISE(auto stream, client.DoGet(call_options, endpoint.ticket));
 
-  const arrow::Result<std::shared_ptr<Schema>> &schema = stream->GetSchema();
+  const arrow::Result<std::shared_ptr<arrow::Schema>> &schema = stream->GetSchema();
   ARROW_RETURN_NOT_OK(schema);
 
   std::cout << "Schema:" << std::endl;
@@ -85,7 +75,7 @@ Status PrintResultsForEndpoint(FlightSqlClient &client,
   int64_t num_rows = 0;
 
   while (true) {
-    ARROW_ASSIGN_OR_RAISE(FlightStreamChunk chunk, stream->Next());
+    ARROW_ASSIGN_OR_RAISE(flight::FlightStreamChunk chunk, stream->Next());
     if (chunk.data == nullptr) {
       break;
     }
@@ -98,9 +88,10 @@ Status PrintResultsForEndpoint(FlightSqlClient &client,
   return Status::OK();
 }
 
-Status PrintResults(FlightSqlClient &client, const FlightCallOptions &call_options,
-                    const std::unique_ptr<FlightInfo> &info) {
-  const std::vector<FlightEndpoint> &endpoints = info->endpoints();
+Status PrintResults(flight::sql::FlightSqlClient &client,
+                    const flight::FlightCallOptions &call_options,
+                    const std::unique_ptr<flight::FlightInfo> &info) {
+  const std::vector<flight::FlightEndpoint> &endpoints = info->endpoints();
 
   for (size_t i = 0; i < endpoints.size(); i++) {
     std::cout << "Results from endpoint " << i + 1 << " of " << endpoints.size()
@@ -127,11 +118,12 @@ Status getPEMCertFileContents(const std::string &cert_file_path,
 
 Status RunMain() {
   ARROW_ASSIGN_OR_RAISE(auto location,
-                        (FLAGS_use_tls) ? Location::ForGrpcTls(FLAGS_host, FLAGS_port)
-                                        : Location::ForGrpcTcp(FLAGS_host, FLAGS_port));
+                        (FLAGS_use_tls)
+                            ? flight::Location::ForGrpcTls(FLAGS_host, FLAGS_port)
+                            : flight::Location::ForGrpcTcp(FLAGS_host, FLAGS_port));
 
   // Setup our options
-  arrow::flight::FlightClientOptions options;
+  flight::FlightClientOptions options;
 
   if (!FLAGS_tls_roots.empty()) {
     ARROW_RETURN_NOT_OK(getPEMCertFileContents(FLAGS_tls_roots, options.tls_root_certs));
@@ -152,19 +144,19 @@ Status RunMain() {
     }
   }
 
-  ARROW_ASSIGN_OR_RAISE(auto client, FlightClient::Connect(location, options));
+  ARROW_ASSIGN_OR_RAISE(auto client, flight::FlightClient::Connect(location, options));
 
-  FlightCallOptions call_options;
+  flight::FlightCallOptions call_options;
 
   if (!FLAGS_username.empty() || !FLAGS_password.empty()) {
-    Result<std::pair<std::string, std::string>> bearer_result =
+    arrow::Result<std::pair<std::string, std::string>> bearer_result =
         client->AuthenticateBasicToken({}, FLAGS_username, FLAGS_password);
     ARROW_RETURN_NOT_OK(bearer_result);
 
     call_options.headers.push_back(bearer_result.ValueOrDie());
   }
 
-  FlightSqlClient sql_client(std::move(client));
+  flight::sql::FlightSqlClient sql_client(std::move(client));
 
   if (FLAGS_command == "ExecuteUpdate") {
     ARROW_ASSIGN_OR_RAISE(auto rows, sql_client.ExecuteUpdate(call_options, FLAGS_query));
@@ -174,7 +166,7 @@ Status RunMain() {
     return Status::OK();
   }
 
-  std::unique_ptr<FlightInfo> info;
+  std::unique_ptr<flight::FlightInfo> info;
 
   std::shared_ptr<arrow::flight::sql::PreparedStatement> prepared_statement;
 
@@ -211,16 +203,16 @@ Status RunMain() {
         info, sql_client.GetTables(call_options, &FLAGS_catalog, &FLAGS_schema,
                                    &FLAGS_table, false, nullptr));
   } else if (FLAGS_command == "GetExportedKeys") {
-    TableRef table_ref = {std::make_optional(FLAGS_catalog),
-                          std::make_optional(FLAGS_schema), FLAGS_table};
+    flight::sql::TableRef table_ref = {std::make_optional(FLAGS_catalog),
+                                       std::make_optional(FLAGS_schema), FLAGS_table};
     ARROW_ASSIGN_OR_RAISE(info, sql_client.GetExportedKeys(call_options, table_ref));
   } else if (FLAGS_command == "GetImportedKeys") {
-    TableRef table_ref = {std::make_optional(FLAGS_catalog),
-                          std::make_optional(FLAGS_schema), FLAGS_table};
+    flight::sql::TableRef table_ref = {std::make_optional(FLAGS_catalog),
+                                       std::make_optional(FLAGS_schema), FLAGS_table};
     ARROW_ASSIGN_OR_RAISE(info, sql_client.GetImportedKeys(call_options, table_ref));
   } else if (FLAGS_command == "GetPrimaryKeys") {
-    TableRef table_ref = {std::make_optional(FLAGS_catalog),
-                          std::make_optional(FLAGS_schema), FLAGS_table};
+    flight::sql::TableRef table_ref = {std::make_optional(FLAGS_catalog),
+                                       std::make_optional(FLAGS_schema), FLAGS_table};
     ARROW_ASSIGN_OR_RAISE(info, sql_client.GetPrimaryKeys(call_options, table_ref));
   } else if (FLAGS_command == "GetSqlInfo") {
     ARROW_ASSIGN_OR_RAISE(info, sql_client.GetSqlInfo(call_options, {}));
@@ -238,10 +230,12 @@ Status RunMain() {
   return print_status;
 }
 
+}  // namespace sqlflite
+
 int main(int argc, char **argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  Status st = RunMain();
+  Status st = sqlflite::RunMain();
   if (!st.ok()) {
     std::cerr << st << std::endl;
     return 1;
