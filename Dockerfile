@@ -39,7 +39,7 @@ RUN case ${TARGETPLATFORM} in \
 # Create an application user
 RUN useradd app_user --create-home
 
-ARG APP_DIR=/opt/flight_sql
+ARG APP_DIR=/opt/sqlflite
 
 RUN mkdir --parents ${APP_DIR} && \
     chown app_user:app_user ${APP_DIR} && \
@@ -103,6 +103,6 @@ RUN case ${TARGETPLATFORM} in \
 EXPOSE 31337
 
 # Run a test to ensure that the server works...
-RUN scripts/test_flight_sql.sh
+RUN scripts/test_sqlflite.sh
 
-ENTRYPOINT scripts/start_flight_sql.sh
+ENTRYPOINT scripts/start_sqlflite.sh

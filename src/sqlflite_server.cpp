@@ -1,4 +1,4 @@
-#include "library/include/flight_sql_library.h"
+#include "library/include/sqlflite_library.h"
 #include <iostream>
 #include <boost/program_options.hpp>
 
@@ -16,20 +16,20 @@ int main(int argc, char **argv) {
             ("backend,B", po::value<std::string>()->default_value("duckdb"),
              "Specify the database backend. Allowed options: duckdb, sqlite.")
             ("hostname,H", po::value<std::string>()->default_value(""),
-             "Specify the hostname to listen on for the Flight SQL Server.  If not set, we will use env var: 'FLIGHT_HOSTNAME'.  "
+             "Specify the hostname to listen on for the SQLFlite Server.  If not set, we will use env var: 'SQLFLITE_HOSTNAME'.  "
              "If that isn't set, we will use the default of: '0.0.0.0'.")
             ("port,R", po::value<int>()->default_value(DEFAULT_FLIGHT_PORT),
-             "Specify the port to listen on for the Flight SQL Server.")
+             "Specify the port to listen on for the SQLFlite Server.")
             ("database-filename,D", po::value<std::string>()->default_value(""),
              "Specify the database filename (absolute or relative to the current working directory)")
             ("username,U", po::value<std::string>()->default_value(""),
-             "Specify the username to allow to connect to the Flight SQL Server for clients.  If not set, we will use env var: 'FLIGHT_USERNAME'.  "
-             "If that isn't set, we will use the default of: 'flight_username'.")
+             "Specify the username to allow to connect to the SQLFlite Server for clients.  If not set, we will use env var: 'SQLFLITE_USERNAME'.  "
+             "If that isn't set, we will use the default of: 'sqlflite_username'.")
             ("password,P", po::value<std::string>()->default_value(""),
-             "Specify the password to set on the Flight SQL Server for clients to connect with.  If not set, we will use env var: 'FLIGHT_PASSWORD'.  "
+             "Specify the password to set on the SQLFlite Server for clients to connect with.  If not set, we will use env var: 'SQLFLITE_PASSWORD'.  "
              "If that isn't set, the server will exit with failure.")
             ("secret-key,S", po::value<std::string>()->default_value(""),
-             "Specify the secret key used to sign JWTs issued by the Flight SQL Server. "
+             "Specify the secret key used to sign JWTs issued by the SQLFlite Server. "
              "If it isn't set, we use env var: 'SECRET_KEY'.  If that isn't set, the server will create a random secret key.")
             ("tls,T", po::value<std::vector<std::string>>(&tls_token_values)->multitoken()->default_value(
                      std::vector<std::string>{"", ""}, ""),
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   }
 
   if (vm.count("version")) {
-    std::cout << "Flight SQL Server CLI: " << FLIGHT_SQL_SERVER_VERSION << std::endl;
+    std::cout << "SQLFlite Server CLI: " << SQLFLITE_SERVER_VERSION << std::endl;
     return 0;
   }
 

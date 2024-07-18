@@ -176,17 +176,18 @@ Status RunMain() {
 
   std::unique_ptr<FlightInfo> info;
 
+  std::shared_ptr<arrow::flight::sql::PreparedStatement> prepared_statement;
+
   if (FLAGS_command == "Execute") {
     ARROW_ASSIGN_OR_RAISE(info, sql_client.Execute(call_options, FLAGS_query));
   } else if (FLAGS_command == "GetCatalogs") {
     ARROW_ASSIGN_OR_RAISE(info, sql_client.GetCatalogs(call_options));
   } else if (FLAGS_command == "PreparedStatementExecute") {
-    ARROW_ASSIGN_OR_RAISE(auto prepared_statement,
+    ARROW_ASSIGN_OR_RAISE(prepared_statement,
                           sql_client.Prepare(call_options, FLAGS_query));
     ARROW_ASSIGN_OR_RAISE(info, prepared_statement->Execute(call_options));
-    ARROW_RETURN_NOT_OK(prepared_statement->Close(call_options));
   } else if (FLAGS_command == "PreparedStatementExecuteParameterBinding") {
-    ARROW_ASSIGN_OR_RAISE(auto prepared_statement, sql_client.Prepare({}, FLAGS_query));
+    ARROW_ASSIGN_OR_RAISE(prepared_statement, sql_client.Prepare({}, FLAGS_query));
     auto parameter_schema = prepared_statement->parameter_schema();
     auto result_set_schema = prepared_statement->dataset_schema();
 
@@ -200,7 +201,6 @@ Status RunMain() {
 
     ARROW_RETURN_NOT_OK(prepared_statement->SetParameters(result));
     ARROW_ASSIGN_OR_RAISE(info, prepared_statement->Execute(call_options));
-    ARROW_RETURN_NOT_OK(prepared_statement->Close(call_options));
   } else if (FLAGS_command == "GetDbSchemas") {
     ARROW_ASSIGN_OR_RAISE(
         info, sql_client.GetDbSchemas(call_options, &FLAGS_catalog, &FLAGS_schema));
@@ -226,12 +226,16 @@ Status RunMain() {
     ARROW_ASSIGN_OR_RAISE(info, sql_client.GetSqlInfo(call_options, {}));
   }
 
-  if (info != NULLPTR &&
-      !boost::istarts_with(FLAGS_command, "PreparedStatementExecute")) {
-    return PrintResults(sql_client, call_options, info);
+  arrow::Status print_status;
+  if (info != NULLPTR) {
+    print_status = PrintResults(sql_client, call_options, info);
+
+    if (prepared_statement != NULLPTR) {
+      ARROW_RETURN_NOT_OK(prepared_statement->Close(call_options));
+    }
   }
 
-  return Status::OK();
+  return print_status;
 }
 
 int main(int argc, char **argv) {

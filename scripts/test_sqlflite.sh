@@ -4,10 +4,10 @@ SCRIPT_DIR=$(dirname ${0})
 TLS_DIR=${SCRIPT_DIR}/../tls
 
 # Set a dummy password for the test...
-export FLIGHT_PASSWORD="testing123"
+export SQLFLITE_PASSWORD="testing123"
 
 # Start the Flight SQL Server - in the background...
-${SCRIPT_DIR}/start_flight_sql.sh &
+${SCRIPT_DIR}/start_sqlflite.sh &
 
 # Set a timeout limit for waiting
 timeout_limit=300
@@ -18,7 +18,7 @@ started="0"
 # Check if the process is running
 while [ $elapsed_time -lt $timeout_limit ]; do
     # Check if the process is running
-    if pgrep "flight_sql" > /dev/null; then
+    if pgrep "sqlflite" > /dev/null; then
         echo "Flight SQL Server process started successfully!"
         started="1"
         # Sleep for a few more seconds...
@@ -37,7 +37,7 @@ if [ "${started}" != "1" ]; then
     exit 1
 fi
 
-python "${SCRIPT_DIR}/test_flight_sql.py"
+python "${SCRIPT_DIR}/test_sqlflite.py"
 
 RC=$?
 
