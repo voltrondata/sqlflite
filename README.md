@@ -1,8 +1,10 @@
-# Arrow Flight SQL server - DuckDB / SQLite
+# SQLFlite
 
-[<img src="https://img.shields.io/badge/dockerhub-image-green.svg?logo=Docker">](https://hub.docker.com/r/voltrondata/flight-sql)
+## An [Arrow Flight SQL Server](https://arrow.apache.org/docs/format/FlightSql.html) with [DuckDB](https://duckdb.org) or [SQLite](https://sqlite.org) back-end execution engines
+
+[<img src="https://img.shields.io/badge/dockerhub-image-green.svg?logo=Docker">](https://hub.docker.com/r/voltrondata/sqlflite)
 [<img src="https://img.shields.io/badge/Documentation-dev-yellow.svg?logo=">](https://arrow.apache.org/docs/format/FlightSql.html)
-[<img src="https://img.shields.io/badge/GitHub-voltrondata%2Fflight--sql--server--example-blue.svg?logo=Github">](https://github.com/voltrondata/flight-sql-server-example)
+[<img src="https://img.shields.io/badge/GitHub-voltrondata%2Fsqlflite-blue.svg?logo=Github">](https://github.com/voltrondata/sqlflite)
 [<img src="https://img.shields.io/badge/Arrow%20JDBC%20Driver-download%20artifact-red?logo=Apache%20Maven">](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)
 [<img src="https://img.shields.io/badge/PyPI-Arrow%20ADBC%20Flight%20SQL%20driver-blue?logo=PyPI">](https://pypi.org/project/adbc-driver-flightsql/)
 
@@ -19,17 +21,17 @@ For more information about Apache Arrow Flight SQL - please see this [article](h
 Open a terminal, then pull and run the published Docker image which has everything setup (change: "--detach" to "--interactive" if you wish to see the stdout on your screen) - with command:
 
 ```bash
-docker run --name flight-sql \
+docker run --name sqlflite \
            --detach \
            --rm \
            --tty \
            --init \
            --publish 31337:31337 \
            --env TLS_ENABLED="1" \
-           --env FLIGHT_PASSWORD="flight_password" \
+           --env SQLFLITE_PASSWORD="sqlflite_password" \
            --env PRINT_QUERIES="1" \
            --pull missing \
-           voltrondata/flight-sql:latest
+           voltrondata/sqlflite:latest
 ```
 
 The above command will automatically mount a very small TPC-H DuckDB database file.
@@ -62,19 +64,19 @@ LOAD tpch;
 CALL dbgen(sf=1);
 EOF
 
-# Run the flight-sql docker container image - and mount the host's DuckDB database file created above inside the container
-docker run --name flight-sql \
+# Run the sqlflite docker container image - and mount the host's DuckDB database file created above inside the container
+docker run --name sqlflite \
            --detach \
            --rm \
            --tty \
            --init \
            --publish 31337:31337 \
            --env TLS_ENABLED="1" \
-           --env FLIGHT_PASSWORD="flight_password" \
+           --env SQLFLITE_PASSWORD="sqlflite_password" \
            --pull missing \
-           --mount type=bind,source=$(pwd),target=/opt/flight_sql/data \
+           --mount type=bind,source=$(pwd),target=/opt/sqlflite/data \
            --env DATABASE_FILENAME="data/tpch_sf1.duckdb" \
-           voltrondata/flight-sql:latest
+           voltrondata/sqlflite:latest
 ```
 
 ### Running initialization SQL commands
@@ -84,18 +86,18 @@ You can now run initialization commands upon container startup by setting enviro
 
 Here is a full example of running the Docker image with initialization SQL commands:
 ```bash
-docker run --name flight-sql \
+docker run --name sqlflite \
            --detach \
            --rm \
            --tty \
            --init \
            --publish 31337:31337 \
            --env TLS_ENABLED="1" \
-           --env FLIGHT_PASSWORD="flight_password" \
+           --env SQLFLITE_PASSWORD="sqlflite_password" \
            --env PRINT_QUERIES="1" \
            --env INIT_SQL_COMMANDS="SET threads = 1; SET memory_limit = '1GB';" \
            --pull missing \
-           voltrondata/flight-sql:latest
+           voltrondata/sqlflite:latest
 ```
 
 You can also specify a file containing initialization SQL commands by setting environment variable: `INIT_SQL_COMMANDS_FILE` to the path of the file containing the SQL commands - example value: `/tmp/init.sql`.  The file must be mounted inside the container.   
@@ -110,14 +112,14 @@ You can also specify a file containing initialization SQL commands by setting en
 ### Connecting to the server via JDBC
 Download the [Apache Arrow Flight SQL JDBC driver](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)
 
-You can then use the JDBC driver to connect from your host computer to the locally running Docker Flight SQL server with this JDBC string (change the password value to match the value specified for the FLIGHT_PASSWORD environment variable if you changed it from the example above):
+You can then use the JDBC driver to connect from your host computer to the locally running Docker Flight SQL server with this JDBC string (change the password value to match the value specified for the SQLFLITE_PASSWORD environment variable if you changed it from the example above):
 ```bash
-jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=flight_username&password=flight_password&disableCertificateVerification=true
+jdbc:arrow-flight-sql://localhost:31337?useEncryption=true&user=sqlflite_username&password=sqlflite_password&disableCertificateVerification=true
 ```
 
 For instructions on setting up the JDBC driver in popular Database IDE tool: [DBeaver Community Edition](https://dbeaver.io) - see this [repo](https://github.com/voltrondata/setup-arrow-jdbc-driver-in-dbeaver).
 
-**Note** - if you stop/restart the Flight SQL Docker container, and attempt to connect via JDBC with the same password - you could get error: "Invalid bearer token provided. Detail: Unauthenticated".  This is because the client JDBC driver caches the bearer token signed with the previous instance's RSA private key.  Just change the password in the new container by changing the "FLIGHT_PASSWORD" env var setting - and then use that to connect via JDBC.  
+**Note** - if you stop/restart the Flight SQL Docker container, and attempt to connect via JDBC with the same password - you could get error: "Invalid bearer token provided. Detail: Unauthenticated".  This is because the client JDBC driver caches the bearer token signed with the previous instance's RSA private key.  Just change the password in the new container by changing the "SQLFLITE_PASSWORD" env var setting - and then use that to connect via JDBC.  
 
 ### Connecting to the server via the new [ADBC Python Flight SQL driver](https://pypi.org/project/adbc-driver-flightsql/)
 
@@ -143,13 +145,13 @@ python
 
 In the Python shell - you can then run:
 ```python
-from adbc_driver_flightsql import dbapi as flight_sql, DatabaseOptions
+from adbc_driver_flightsql import dbapi as sqlflite, DatabaseOptions
 
-flight_password = "flight_password" # Use an env var in production code!
+sqlflite_password = "sqlflite_password" # Use an env var in production code!
 
-with flight_sql.connect(uri="grpc+tls://localhost:31337",
-                        db_kwargs={"username": "flight_username",
-                                   "password": flight_password,
+with sqlflite.connect(uri="grpc+tls://localhost:31337",
+                        db_kwargs={"username": "sqlflite_username",
+                                   "password": sqlflite_password,
                                    DatabaseOptions.TLS_SKIP_VERIFY.value: "true" # Not needed if you use a trusted CA-signed TLS cert
                                    }
                         ) as conn:
@@ -171,17 +173,17 @@ n_nationkey: [[24]]
 n_name: [["UNITED STATES"]]
 ```
 
-### Connecting via the new `flight_sql_client` CLI tool
-You can also use the new `flight_sql_client` CLI tool to connect to the Flight SQL server, and then run a single command.  This tool is built into the Docker image, and is also available as a standalone executable for Linux and MacOS.   
+### Connecting via the new `sqlflite_client` CLI tool
+You can also use the new `sqlflite_client` CLI tool to connect to the Flight SQL server, and then run a single command.  This tool is built into the Docker image, and is also available as a standalone executable for Linux and MacOS.   
 
 Example (run from the host computer's terminal):
 ```bash
-flight_sql_client \
+sqlflite_client \
   --command Execute \
   --host "localhost" \
   --port 31337 \
-  --username "flight_username" \
-  --password "flight_password" \
+  --username "sqlflite_username" \
+  --password "sqlflite_password" \
   --query "SELECT version()" \
   --use-tls \
   --tls-skip-verify
@@ -204,25 +206,25 @@ Total: 1
 ### Tear-down
 Stop the docker image with:
 ```bash
-docker stop flight-sql
+docker stop sqlflite
 ```
 
-## Option 2 - Download and run the flight_sql CLI executable
+## Option 2 - Download and run the sqlflite CLI executable
 
-Download (and unzip) the latest release of the **flight_sql_server** CLI executable from these currently supported platforms:   
-[Linux x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_amd64.zip)   
-[Linux arm64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_linux_arm64.zip)   
-[MacOS x86-64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_macos_amd64.zip)   
-[MacOS arm64](https://github.com/voltrondata/flight-sql-server-example/releases/latest/download/flight_sql_cli_macos_arm64.zip)   
+Download (and unzip) the latest release of the **sqlflite_server** CLI executable from these currently supported platforms:   
+[Linux x86-64](https://github.com/voltrondata/sqlflite/releases/latest/download/sqlflite_cli_linux_amd64.zip)   
+[Linux arm64](https://github.com/voltrondata/sqlflite/releases/latest/download/sqlflite_cli_linux_arm64.zip)   
+[MacOS x86-64](https://github.com/voltrondata/sqlflite/releases/latest/download/sqlflite_cli_macos_amd64.zip)   
+[MacOS arm64](https://github.com/voltrondata/sqlflite/releases/latest/download/sqlflite_cli_macos_arm64.zip)   
 
 Then from a terminal - you can run:
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql_server --database-filename data/some_db.duckdb --print-queries
+SQLFLITE_PASSWORD="sqlflite_password" sqlflite_server --database-filename data/some_db.duckdb --print-queries
 ```
 
 To see all program options - run:
 ```bash
-flight_sql_server --help
+sqlflite_server --help
 ```
 
 ## Option 3 - Steps to build the solution manually
@@ -232,8 +234,8 @@ Follow these steps to do so (thanks to David Li!).
 
 1. Clone the repo and build the static library and executable
 ```bash
-git clone https://github.com/voltrondata/flight-sql-server-example --recurse-submodules
-cd flight-sql-server-example
+git clone https://github.com/voltrondata/sqlflite --recurse-submodules
+cd sqlflite
 
 # Build and install the static library and executable
 cmake -S . -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local
@@ -271,14 +273,14 @@ popd
 
 6. Start the Flight SQL server (and print client SQL commands as they run using the --print-queries option)
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql_server --database-filename data/TPC-H-small.duckdb --print-queries
+SQLFLITE_PASSWORD="sqlflite_password" sqlflite_server --database-filename data/TPC-H-small.duckdb --print-queries
 ```
 
 ## Selecting different backends
 This option allows choosing from two backends: SQLite and DuckDB. It defaults to DuckDB.
 
 ```bash
-$ FLIGHT_PASSWORD="flight_password" flight_sql_server --database-filename data/TPC-H-small.duckdb
+$ SQLFLITE_PASSWORD="sqlflite_password" sqlflite_server --database-filename data/TPC-H-small.duckdb
 Apache Arrow version: 17.0.0
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
 DuckDB version: v1.0.0
@@ -286,20 +288,20 @@ Running Init SQL command:
 SET autoinstall_known_extensions = true;
 Running Init SQL command: 
  SET autoload_known_extensions = true;
-Using database file: "/opt/flight_sql/data/TPC-H-small.duckdb"
+Using database file: "/opt/sqlflite/data/TPC-H-small.duckdb"
 Print Queries option is set to: false
 Apache Arrow Flight SQL server - with engine: DuckDB - will listen on grpc+tcp://0.0.0.0:31337
 Flight SQL server - started
 ```
 
-The above call is equivalent to running `flight_sql_server -B duckdb` or `flight_sql --backend duckdb`. To select SQLite run
+The above call is equivalent to running `sqlflite_server -B duckdb` or `sqlflite --backend duckdb`. To select SQLite run
 
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql_server -B sqlite -D data/TPC-H-small.sqlite 
+SQLFLITE_PASSWORD="sqlflite_password" sqlflite_server -B sqlite -D data/TPC-H-small.sqlite 
 ```
 or 
 ```bash
-FLIGHT_PASSWORD="flight_password" flight_sql_server --backend sqlite --database-filename data/TPC-H-small.sqlite
+SQLFLITE_PASSWORD="sqlflite_password" sqlflite_server --backend sqlite --database-filename data/TPC-H-small.sqlite
 ```
 The above will produce the following:
 
@@ -307,17 +309,17 @@ The above will produce the following:
 Apache Arrow version: 17.0.0
 WARNING - TLS is disabled for the Flight SQL server - this is insecure.
 SQLite version: 3.45.0
-Using database file: "/opt/flight_sql/data/TPC-H-small.sqlite"
+Using database file: "/opt/sqlflite/data/TPC-H-small.sqlite"
 Print Queries option is set to: false
 Apache Arrow Flight SQL server - with engine: SQLite - will listen on grpc+tcp://0.0.0.0:31337
 Flight SQL server - started
 ```
 
 ## Print help
-To see all the available options run `flight_sql_server --help`.
+To see all the available options run `sqlflite_server --help`.
 
 ```bash
-flight_sql_server --help
+sqlflite_server --help
 Allowed options:
   --help                              produce this help message
   --version                           Print the version and exit
@@ -325,7 +327,7 @@ Allowed options:
                                       options: duckdb, sqlite.
   -H [ --hostname ] arg               Specify the hostname to listen on for the
                                       Flight SQL Server.  If not set, we will 
-                                      use env var: 'FLIGHT_HOSTNAME'.  If that 
+                                      use env var: 'SQLFLITE_HOSTNAME'.  If that 
                                       isn't set, we will use the default of: 
                                       '0.0.0.0'.
   -R [ --port ] arg (=31337)          Specify the port to listen on for the 
@@ -336,13 +338,13 @@ Allowed options:
   -U [ --username ] arg               Specify the username to allow to connect 
                                       to the Flight SQL Server for clients.  If
                                       not set, we will use env var: 
-                                      'FLIGHT_USERNAME'.  If that isn't set, we
+                                      'SQLFLITE_USERNAME'.  If that isn't set, we
                                       will use the default of: 
-                                      'flight_username'.
+                                      'sqlflite_username'.
   -P [ --password ] arg               Specify the password to set on the Flight
                                       SQL Server for clients to connect with.  
                                       If not set, we will use env var: 
-                                      'FLIGHT_PASSWORD'.  If that isn't set, 
+                                      'SQLFLITE_PASSWORD'.  If that isn't set, 
                                       the server will exit with failure.
   -S [ --secret-key ] arg             Specify the secret key used to sign JWTs 
                                       issued by the Flight SQL Server. If it 
@@ -369,7 +371,7 @@ There is now a slim docker image available, without Python, tls certificate gene
 
 You must supply the following environment variables to the slim image:
 - `DATABASE_FILENAME` - the path to the database file to use
-- `FLIGHT_PASSWORD` - the password to use for the Flight SQL server
+- `SQLFLITE_PASSWORD` - the password to use for the Flight SQL server
 
 You can optionally supply the following environment variables:
 - `TLS_ENABLED` - set to "1" to enable TLS (default is "0" - disabled)
@@ -378,7 +380,7 @@ You can optionally supply the following environment variables:
 
 To run that image - use the following command:
 ```bash
-docker run --name flight-sql-slim \
+docker run --name sqlflite-slim \
            --detach \
            --rm \
            --tty \
@@ -386,10 +388,10 @@ docker run --name flight-sql-slim \
            --publish 31337:31337 \
            --env DATABASE_FILENAME="data/some_database.duckdb" \
            --env TLS_ENABLED="0" \
-           --env FLIGHT_PASSWORD="flight_password" \
+           --env SQLFLITE_PASSWORD="sqlflite_password" \
            --env PRINT_QUERIES="1" \
            --pull missing \
-           voltrondata/flight-sql:latest-slim
+           voltrondata/sqlflite:latest-slim
 ```
 
-See [start_flight_sql_slim.sh](scripts/start_flight_sql_slim.sh) - the container's entrypoint script for more details.
+See [start_sqlflite_slim.sh](scripts/start_sqlflite_slim.sh) - the container's entrypoint script for more details.

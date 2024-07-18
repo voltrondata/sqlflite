@@ -1,4 +1,4 @@
-#include "include/flight_sql_library.h"
+#include "include/sqlflite_library.h"
 
 #include <cstdlib>
 #include <csignal>
@@ -16,7 +16,7 @@
 
 #include "sqlite_server.h"
 #include "duckdb_server.h"
-#include "include/flight_sql_security.h"
+#include "include/sqlflite_security.h"
 
 namespace flight = arrow::flight;
 namespace flightsql = arrow::flight::sql;
@@ -61,7 +61,7 @@ FlightSQLServerBuilder(const BackendType backend, const fs::path &database_filen
     ARROW_CHECK_OK(arrow::flight::SecurityUtilities::FlightServerTlsCertificates(
         tls_cert_path, tls_key_path, &options.tls_certificates));
   } else {
-    std::cout << "WARNING - TLS is disabled for the Flight SQL server - this is insecure."
+    std::cout << "WARNING - TLS is disabled for the SQLFlite server - this is insecure."
               << std::endl;
   }
 
@@ -122,13 +122,13 @@ FlightSQLServerBuilder(const BackendType backend, const fs::path &database_filen
     // Exit with a clean error code (0) on SIGTERM
     ARROW_CHECK_OK(server->SetShutdownOnSignals({SIGTERM}));
 
-    std::cout << "Apache Arrow Flight SQL server version: " << FLIGHT_SQL_SERVER_VERSION
+    std::cout << "SQLFlite server version: " << SQLFLITE_SERVER_VERSION
               << " - with engine: " << db_type << " - will listen on "
               << server->location().ToString() << std::endl;
 
     return server;
   } else {
-    std::string err_msg = "Unable to create the Flight SQL Server";
+    std::string err_msg = "Unable to create the SQLFlite Server";
     return arrow::Status::Invalid(err_msg);
   }
 }
@@ -158,24 +158,24 @@ CreateFlightSQLServer(const BackendType backend, fs::path &database_filename,
   }
 
   if (hostname.empty()) {
-    hostname = SafeGetEnvVarValue("FLIGHT_HOSTNAME");
+    hostname = SafeGetEnvVarValue("SQLFLITE_HOSTNAME");
     if (hostname.empty()) {
-      hostname = DEFAULT_FLIGHT_HOSTNAME;
+      hostname = DEFAULT_SQLFLITE_HOSTNAME;
     }
   }
 
   if (username.empty()) {
-    username = SafeGetEnvVarValue("FLIGHT_USERNAME");
+    username = SafeGetEnvVarValue("SQLFLITE_USERNAME");
     if (username.empty()) {
-      username = DEFAULT_FLIGHT_USERNAME;
+      username = DEFAULT_SQLFLITE_USERNAME;
     }
   }
 
   if (password.empty()) {
-    password = SafeGetEnvVarValue("FLIGHT_PASSWORD");
+    password = SafeGetEnvVarValue("SQLFLITE_PASSWORD");
     if (password.empty()) {
       return arrow::Status::Invalid(
-          "The Flight SQL Server password is empty and env var: 'FLIGHT_PASSWORD' is not "
+          "The SQLFlite Server password is empty and env var: 'SQLFLITE_PASSWORD' is not "
           "set.  Pass a value to this argument to secure the server.");
     }
   }
@@ -259,7 +259,7 @@ int RunFlightSQLServer(const BackendType backend, fs::path &database_filename,
 
   if (create_server_result.ok()) {
     auto server_ptr = create_server_result.ValueOrDie();
-    std::cout << "Flight SQL server - started" << std::endl;
+    std::cout << "SQLFlite server - started" << std::endl;
     ARROW_CHECK_OK(server_ptr->Serve());
     return EXIT_SUCCESS;
   } else {

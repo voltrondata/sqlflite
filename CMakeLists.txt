@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(flight_sql)
+project(sqlflite)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -120,7 +120,7 @@ find_package(Threads REQUIRED)
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS program_options REQUIRED)
 
-set(ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS
+set(SQLFLITE_SQLITE_SERVER_SRCS
         src/sqlite/sqlite_sql_info.cc
         src/sqlite/sqlite_type_info.cc
         src/sqlite/sqlite_statement.cc
@@ -129,7 +129,7 @@ set(ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS
         src/sqlite/sqlite_tables_schema_batch_reader.cc)
 
 
-set(ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS
+set(SQLFLITE_DUCKDB_SERVER_SRCS
         src/duckdb/duckdb_sql_info.cpp
         src/duckdb/duckdb_statement.cpp
         src/duckdb/duckdb_statement_batch_reader.cpp
@@ -137,19 +137,19 @@ set(ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS
         src/duckdb/duckdb_tables_schema_batch_reader.cpp)
 
 # Add header file
-set(HEADER_FILES src/library/include/flight_sql_library.h)
+set(HEADER_FILES src/library/include/sqlflite_library.h)
 
 # Add a library target
-add_library(flightsqlserver STATIC
-        src/library/flight_sql_library.cpp
-        src/library/flight_sql_security.cpp
-        ${ARROW_FLIGHT_SQL_SQLITE_SERVER_SRCS}
-        ${ARROW_FLIGHT_SQL_DUCKDB_SERVER_SRCS}
+add_library(sqlfliteserver STATIC
+        src/library/sqlflite_library.cpp
+        src/library/sqlflite_security.cpp
+        ${SQLFLITE_SQLITE_SERVER_SRCS}
+        ${SQLFLITE_DUCKDB_SERVER_SRCS}
 )
 
-set_target_properties(flightsqlserver PROPERTIES PUBLIC_HEADER ${HEADER_FILES})
+set_target_properties(sqlfliteserver PROPERTIES PUBLIC_HEADER ${HEADER_FILES})
 
-target_include_directories(flightsqlserver PRIVATE
+target_include_directories(sqlfliteserver PRIVATE
         src/sqlite
         src/duckdb
         ${SQLITE_INCLUDE_DIR}
@@ -157,7 +157,7 @@ target_include_directories(flightsqlserver PRIVATE
         ${JWT_CPP_INCLUDE_DIR}
 )
 
-target_link_libraries(flightsqlserver
+target_link_libraries(sqlfliteserver
         PRIVATE
         Threads::Threads
         ArrowFlightSql::arrow_flight_sql_static
@@ -169,39 +169,39 @@ target_link_libraries(flightsqlserver
 
 if (APPLE)
     # macOS-specific libraries and options
-    target_link_libraries(flightsqlserver PRIVATE "-framework CoreFoundation")
+    target_link_libraries(sqlfliteserver PRIVATE "-framework CoreFoundation")
 elseif (UNIX AND NOT APPLE)
-    target_link_libraries(flightsqlserver PRIVATE "-lssl -lcrypto")
+    target_link_libraries(sqlfliteserver PRIVATE "-lssl -lcrypto")
 endif ()
 
 # Specify the installation directory for the library
-install(TARGETS flightsqlserver
+install(TARGETS sqlfliteserver
         LIBRARY DESTINATION lib
         PUBLIC_HEADER DESTINATION include
 )
 
 # ------------ Server Executable section ------------
-add_executable(flight_sql_server
-        src/flight_sql_server.cpp
+add_executable(sqlflite_server
+        src/sqlflite_server.cpp
 )
 
-target_link_libraries(flight_sql_server PRIVATE
-        flightsqlserver
+target_link_libraries(sqlflite_server PRIVATE
+        sqlfliteserver
         ${Boost_LIBRARIES}
 )
 
-target_compile_options(flight_sql_server PRIVATE "-static")
+target_compile_options(sqlflite_server PRIVATE "-static")
 
-install(TARGETS flight_sql_server
+install(TARGETS sqlflite_server
         DESTINATION bin
 )
 
 # ------------ Client Executable section ------------
-add_executable(flight_sql_client
-        src/flight_sql_client.cpp
+add_executable(sqlflite_client
+        src/sqlflite_client.cpp
 )
 
-target_link_libraries(flight_sql_client PRIVATE
+target_link_libraries(sqlflite_client PRIVATE
         Threads::Threads
         ArrowFlightSql::arrow_flight_sql_static
         ${Boost_LIBRARIES}
@@ -210,13 +210,13 @@ target_link_libraries(flight_sql_client PRIVATE
 
 if (APPLE)
     # macOS-specific libraries and options
-    target_link_libraries(flight_sql_client PRIVATE "-framework CoreFoundation")
+    target_link_libraries(sqlflite_client PRIVATE "-framework CoreFoundation")
 elseif (UNIX AND NOT APPLE)
-    target_link_libraries(flight_sql_client PRIVATE "-lssl -lcrypto")
+    target_link_libraries(sqlflite_client PRIVATE "-lssl -lcrypto")
 endif ()
 
-target_compile_options(flight_sql_client PRIVATE "-static")
+target_compile_options(sqlflite_client PRIVATE "-static")
 
-install(TARGETS flight_sql_client
+install(TARGETS sqlflite_client
         DESTINATION bin
 )

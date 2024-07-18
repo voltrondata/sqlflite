@@ -1,16 +1,16 @@
 //
 // Created by Philip Moore on 11/14/22.
 //
-#include "include/flight_sql_security.h"
+#include "include/sqlflite_security.h"
 
 namespace fs = std::filesystem;
 
 namespace arrow {
 namespace flight {
 
-const std::string kJWTIssuer = "flight_sql";
+const std::string kJWTIssuer = "sqlflite";
 const int kJWTExpiration = 24 * 3600;
-const std::string kValidUsername = "flight_username";
+const std::string kValidUsername = "sqlflite_username";
 const std::string kBasicPrefix = "Basic ";
 const std::string kBearerPrefix = "Bearer ";
 const std::string kAuthHeader = "authorization";
@@ -129,7 +129,7 @@ std::string HeaderAuthServerMiddleware::CreateJWTToken() const {
   auto token = jwt::create()
                    .set_issuer(std::string(kJWTIssuer))
                    .set_type("JWT")
-                   .set_id("flight_sql-server-" +
+                   .set_id("sqlflite-server-" +
                            boost::uuids::to_string(boost::uuids::random_generator()()))
                    .set_issued_at(std::chrono::system_clock::now())
                    .set_expires_at(std::chrono::system_clock::now() +

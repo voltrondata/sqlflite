@@ -1,24 +1,24 @@
 import os
 from time import sleep
 import pyarrow
-from adbc_driver_flightsql import dbapi as flight_sql, DatabaseOptions
+from adbc_driver_flightsql import dbapi as sqlflite, DatabaseOptions
 
 
 # Setup variables
 max_attempts: int = 10
 sleep_interval: int = 10
-flight_password = os.environ["FLIGHT_PASSWORD"]
+sqlflite_password = os.environ["SQLFLITE_PASSWORD"]
 
 def main():
     for attempt in range(max_attempts):
         try:
-            with flight_sql.connect(uri="grpc+tls://localhost:31337",
-                                    db_kwargs={"username": "flight_username",
-                                               "password": flight_password,
+            with sqlflite.connect(uri="grpc+tls://localhost:31337",
+                                  db_kwargs={"username": "sqlflite_username",
+                                               "password": sqlflite_password,
                                                # Not needed if you use a trusted CA-signed TLS cert
                                                DatabaseOptions.TLS_SKIP_VERIFY.value: "true"
                                                }
-                                    ) as conn:
+                                  ) as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT n_nationkey, n_name FROM nation WHERE n_nationkey = ?",
                                 parameters=[24]

@@ -1,13 +1,13 @@
-// flight_sql_library.h
+// sqlflite_library.h
 #pragma once
 
 #include <filesystem>
 #include "version.h"
 
 // Constants
-const std::string FLIGHT_SQL_SERVER_VERSION = PROJECT_VERSION;
-const std::string DEFAULT_FLIGHT_HOSTNAME = "0.0.0.0";
-const std::string DEFAULT_FLIGHT_USERNAME = "flight_username";
+const std::string SQLFLITE_SERVER_VERSION = PROJECT_VERSION;
+const std::string DEFAULT_SQLFLITE_HOSTNAME = "0.0.0.0";
+const std::string DEFAULT_SQLFLITE_USERNAME = "sqlflite_username";
 const int DEFAULT_FLIGHT_PORT = 31337;
 
 enum class BackendType { duckdb, sqlite };
@@ -15,18 +15,18 @@ enum class BackendType { duckdb, sqlite };
 namespace fs = std::filesystem;
 
 /**
- * @brief Run a Flight SQL Server with the specified configuration.
+ * @brief Run a SQLFlite Server with the specified configuration.
  *
- * This function initializes and runs a Flight SQL Server with the given parameters.
+ * This function initializes and runs a SQLFlite Server with the given parameters.
  *
  * @param backend The backend to use (duckdb or sqlite).
  * @param database_filename The path to the database file.
- * @param hostname The hostname for the Flight SQL Server. Default is "" - if so, we use environment variable: "FLIGHT_HOSTNAME",
- *   and fallback to: DEFAULT_FLIGHT_HOSTNAME if that is not set.
- * @param port The port to listen on for the Flight SQL Server. Default is DEFAULT_FLIGHT_PORT
- * @param username The username to use for authentication. Default is now "" - if not set, we use environment variable: "FLIGHT_USERNAME",
- *   if this is not defined we set this to "flight_username" again in flight_sql_library.
- * @param password The password for authentication. Default is "" - if so, we use environment variable: "FLIGHT_PASSWORD",
+ * @param hostname The hostname for the SQLFlite Server. Default is "" - if so, we use environment variable: "SQLFLITE_HOSTNAME",
+ *   and fallback to: DEFAULT_SQLFLITE_HOSTNAME if that is not set.
+ * @param port The port to listen on for the SQLFlite Server. Default is DEFAULT_FLIGHT_PORT
+ * @param username The username to use for authentication. Default is now "" - if not set, we use environment variable: "SQLFLITE_USERNAME",
+ *   if this is not defined we set this to "sqlflite_username" again in sqlflite_library.
+ * @param password The password for authentication. Default is "" - if so, we use environment variable: "SQLFLITE_PASSWORD",
  *   if both are not set, we exit with an error.
  * @param secret_key The secret key for authentication. Default is "", if so, we use environment variable: "SECRET_KEY",
      and fallback to a random string if both are not set.
