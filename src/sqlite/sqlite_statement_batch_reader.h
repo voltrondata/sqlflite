@@ -24,12 +24,9 @@
 #include "sqlite_statement.h"
 #include "arrow/record_batch.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace sqlite {
+namespace sqlflite::sqlite {
 
-class SqliteStatementBatchReader : public RecordBatchReader {
+class SqliteStatementBatchReader : public arrow::RecordBatchReader {
  public:
   /// \brief Creates a RecordBatchReader backed by a SQLite statement.
   /// \param[in] statement    SQLite statement to be read.
@@ -43,15 +40,15 @@ class SqliteStatementBatchReader : public RecordBatchReader {
   /// \return                 A SqliteStatementBatchReader..
   static arrow::Result<std::shared_ptr<SqliteStatementBatchReader>> Create(
       const std::shared_ptr<SqliteStatement>& statement,
-      const std::shared_ptr<Schema>& schema);
+      const std::shared_ptr<arrow::Schema>& schema);
 
-  std::shared_ptr<Schema> schema() const override;
+  std::shared_ptr<arrow::Schema> schema() const override;
 
-  Status ReadNext(std::shared_ptr<RecordBatch>* out) override;
+  arrow::Status ReadNext(std::shared_ptr<arrow::RecordBatch>* out) override;
 
  private:
   std::shared_ptr<SqliteStatement> statement_;
-  std::shared_ptr<Schema> schema_;
+  std::shared_ptr<arrow::Schema> schema_;
   int rc_;
   bool already_executed_;
 
@@ -60,10 +57,7 @@ class SqliteStatementBatchReader : public RecordBatchReader {
   int64_t row_index_{0};
 
   SqliteStatementBatchReader(std::shared_ptr<SqliteStatement> statement,
-                             std::shared_ptr<Schema> schema);
+                             std::shared_ptr<arrow::Schema> schema);
 };
 
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::sqlite

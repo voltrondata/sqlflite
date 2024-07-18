@@ -19,15 +19,15 @@
 
 #include "arrow/flight/sql/types.h"
 #include "arrow/util/config.h"
+#include "flight_sql_fwd.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace sqlite {
+namespace sqlflite::sqlite {
 
 /// \brief Gets the mapping from SQL info ids to SqlInfoResult instances.
 /// \return the cache.
-SqlInfoResultMap GetSqlInfoResultMap() {
+flight::sql::SqlInfoResultMap GetSqlInfoResultMap() {
+  using SqlInfoOptions = flight::sql::SqlInfoOptions;
+  using SqlInfoResult = flight::sql::SqlInfoResult;
   return {
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_NAME,
        SqlInfoResult(std::string("db_name"))},
@@ -48,17 +48,17 @@ SqlInfoResultMap GetSqlInfoResultMap() {
        SqlInfoResult(false /* SQLite 3 does not support schemas */)},
       {SqlInfoOptions::SqlInfo::SQL_DDL_TABLE, SqlInfoResult(true)},
       {SqlInfoOptions::SqlInfo::SQL_IDENTIFIER_CASE,
-       SqlInfoResult(int64_t(SqlInfoOptions::SqlSupportedCaseSensitivity::
-                                 SQL_CASE_SENSITIVITY_CASE_INSENSITIVE))},
+       SqlInfoResult(static_cast<int64_t>(SqlInfoOptions::SqlSupportedCaseSensitivity::
+                                              SQL_CASE_SENSITIVITY_CASE_INSENSITIVE))},
       {SqlInfoOptions::SqlInfo::SQL_IDENTIFIER_QUOTE_CHAR,
        SqlInfoResult(std::string("\""))},
       {SqlInfoOptions::SqlInfo::SQL_QUOTED_IDENTIFIER_CASE,
-       SqlInfoResult(int64_t(SqlInfoOptions::SqlSupportedCaseSensitivity::
-                                 SQL_CASE_SENSITIVITY_CASE_INSENSITIVE))},
+       SqlInfoResult(static_cast<int64_t>(SqlInfoOptions::SqlSupportedCaseSensitivity::
+                                              SQL_CASE_SENSITIVITY_CASE_INSENSITIVE))},
       {SqlInfoOptions::SqlInfo::SQL_ALL_TABLES_ARE_SELECTABLE, SqlInfoResult(true)},
       {SqlInfoOptions::SqlInfo::SQL_NULL_ORDERING,
-       SqlInfoResult(
-           int64_t(SqlInfoOptions::SqlNullOrdering::SQL_NULLS_SORTED_AT_START))},
+       SqlInfoResult(static_cast<int64_t>(
+           SqlInfoOptions::SqlNullOrdering::SQL_NULLS_SORTED_AT_START))},
       {SqlInfoOptions::SqlInfo::SQL_KEYWORDS,
        SqlInfoResult(std::vector<std::string>({"ABORT",
                                                "ACTION",
@@ -224,7 +224,4 @@ SqlInfoResultMap GetSqlInfoResultMap() {
                  {SqlInfoOptions::SqlSupportsConvert::SQL_CONVERT_INTEGER})}}))}};
 }
 
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::sqlite

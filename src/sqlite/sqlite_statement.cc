@@ -31,27 +31,25 @@
 #include "arrow/table.h"
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
+#include "flight_sql_fwd.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace sqlite {
+namespace sqlflite::sqlite {
 
 using arrow::internal::checked_cast;
 
-std::shared_ptr<DataType> GetDataTypeFromSqliteType(const int column_type) {
+std::shared_ptr<arrow::DataType> GetDataTypeFromSqliteType(const int column_type) {
   switch (column_type) {
     case SQLITE_INTEGER:
-      return int64();
+      return arrow::int64();
     case SQLITE_FLOAT:
-      return float64();
+      return arrow::float64();
     case SQLITE_BLOB:
-      return binary();
+      return arrow::binary();
     case SQLITE_TEXT:
-      return utf8();
+      return arrow::utf8();
     case SQLITE_NULL:
     default:
-      return null();
+      return arrow::null();
   }
 }
 
@@ -67,8 +65,9 @@ int32_t GetPrecisionFromColumn(int column_type) {
   }
 }
 
-ColumnMetadata GetColumnMetadata(int column_type, const char* table) {
-  ColumnMetadata::ColumnMetadataBuilder builder = ColumnMetadata::Builder();
+flight::sql::ColumnMetadata GetColumnMetadata(int column_type, const char* table) {
+  flight::sql::ColumnMetadata::ColumnMetadataBuilder builder =
+      flight::sql::ColumnMetadata::Builder();
 
   builder.Scale(15).IsAutoIncrement(false).IsReadOnly(false);
   if (table == NULLPTR) {
@@ -98,15 +97,15 @@ arrow::Result<std::shared_ptr<SqliteStatement>> SqliteStatement::Create(
         err_msg += std::string(sqlite3_errmsg(db));
       }
     }
-    return Status::Invalid(err_msg);
+    return arrow::Status::Invalid(err_msg);
   }
 
   std::shared_ptr<SqliteStatement> result(new SqliteStatement(db, stmt));
   return result;
 }
 
-arrow::Result<std::shared_ptr<Schema>> SqliteStatement::GetSchema() const {
-  std::vector<std::shared_ptr<Field>> fields;
+arrow::Result<std::shared_ptr<arrow::Schema>> SqliteStatement::GetSchema() const {
+  std::vector<std::shared_ptr<arrow::Field>> fields;
   int column_count = sqlite3_column_count(stmt_);
   for (int i = 0; i < column_count; i++) {
     const char* column_name = sqlite3_column_name(stmt_, i);
@@ -123,19 +122,19 @@ arrow::Result<std::shared_ptr<Schema>> SqliteStatement::GetSchema() const {
     // SQLite supports.
     const int column_type = sqlite3_column_type(stmt_, i);
     const char* table = sqlite3_column_table_name(stmt_, i);
-    std::shared_ptr<DataType> data_type = GetDataTypeFromSqliteType(column_type);
-    if (data_type->id() == Type::NA) {
+    std::shared_ptr<arrow::DataType> data_type = GetDataTypeFromSqliteType(column_type);
+    if (data_type->id() == arrow::Type::NA) {
       // Try to retrieve column type from sqlite3_column_decltype
       const char* column_decltype = sqlite3_column_decltype(stmt_, i);
       if (column_decltype != NULLPTR) {
-        ARROW_ASSIGN_OR_RAISE(data_type, GetArrowType(column_decltype));
+        ARROW_ASSIGN_OR_RAISE(data_type, sqlflite::sqlite::GetArrowType(column_decltype));
       } else {
         // If it cannot determine the actual column type, return a dense_union type
         // covering any type SQLite supports.
-        data_type = GetUnknownColumnDataType();
+        data_type = sqlflite::sqlite::GetUnknownColumnDataType();
       }
     }
-    ColumnMetadata column_metadata = GetColumnMetadata(column_type, table);
+    flight::sql::ColumnMetadata column_metadata = GetColumnMetadata(column_type, table);
 
     fields.push_back(
         arrow::field(column_name, data_type, column_metadata.metadata_map()));
@@ -149,8 +148,8 @@ SqliteStatement::~SqliteStatement() { sqlite3_finalize(stmt_); }
 arrow::Result<int> SqliteStatement::Step() {
   int rc = sqlite3_step(stmt_);
   if (rc == SQLITE_ERROR) {
-    return Status::ExecutionError("A SQLite runtime error has occurred: ",
-                                  sqlite3_errmsg(db_));
+    return arrow::Status::ExecutionError("A SQLite runtime error has occurred: ",
+                                         sqlite3_errmsg(db_));
   }
 
   return rc;
@@ -159,8 +158,8 @@ arrow::Result<int> SqliteStatement::Step() {
 arrow::Result<int> SqliteStatement::Reset() {
   int rc = sqlite3_reset(stmt_);
   if (rc == SQLITE_ERROR) {
-    return Status::ExecutionError("A SQLite runtime error has occurred: ",
-                                  sqlite3_errmsg(db_));
+    return arrow::Status::ExecutionError("A SQLite runtime error has occurred: ",
+                                         sqlite3_errmsg(db_));
   }
 
   return rc;
@@ -176,42 +175,43 @@ arrow::Result<int64_t> SqliteStatement::ExecuteUpdate() {
   return sqlite3_changes(db_);
 }
 
-Status SqliteStatement::SetParameters(
+arrow::Status SqliteStatement::SetParameters(
     std::vector<std::shared_ptr<arrow::RecordBatch>> parameters) {
   const int num_params = sqlite3_bind_parameter_count(stmt_);
   for (const auto& batch : parameters) {
     if (batch->num_columns() != num_params) {
-      return Status::Invalid("Expected ", num_params, " parameters, but got ",
-                             batch->num_columns());
+      return arrow::Status::Invalid("Expected ", num_params, " parameters, but got ",
+                                    batch->num_columns());
     }
   }
   parameters_ = std::move(parameters);
-  auto end = std::remove_if(
-      parameters_.begin(), parameters_.end(),
-      [](const std::shared_ptr<RecordBatch>& batch) { return batch->num_rows() == 0; });
+  auto end = std::remove_if(parameters_.begin(), parameters_.end(),
+                            [](const std::shared_ptr<arrow::RecordBatch>& batch) {
+                              return batch->num_rows() == 0;
+                            });
   parameters_.erase(end, parameters_.end());
-  return Status::OK();
+  return arrow::Status::OK();
 }
 
-Status SqliteStatement::Bind(size_t batch_index, int64_t row_index) {
+arrow::Status SqliteStatement::Bind(size_t batch_index, int64_t row_index) {
   if (batch_index >= parameters_.size()) {
-    return Status::IndexError("Cannot bind to batch ", batch_index);
+    return arrow::Status::IndexError("Cannot bind to batch ", batch_index);
   }
-  const RecordBatch& batch = *parameters_[batch_index];
+  const arrow::RecordBatch& batch = *parameters_[batch_index];
   if (row_index < 0 || row_index >= batch.num_rows()) {
-    return Status::IndexError("Cannot bind to row ", row_index, " in batch ",
-                              batch_index);
+    return arrow::Status::IndexError("Cannot bind to row ", row_index, " in batch ",
+                                     batch_index);
   }
 
   if (sqlite3_clear_bindings(stmt_) != SQLITE_OK) {
-    return Status::Invalid("Failed to reset bindings: ", sqlite3_errmsg(db_));
+    return arrow::Status::Invalid("Failed to reset bindings: ", sqlite3_errmsg(db_));
   }
   for (int c = 0; c < batch.num_columns(); ++c) {
-    Array* column = batch.column(c).get();
+    arrow::Array* column = batch.column(c).get();
     int64_t column_index = row_index;
-    if (column->type_id() == Type::DENSE_UNION) {
+    if (column->type_id() == arrow::Type::DENSE_UNION) {
       // Allow polymorphic bindings via union
-      const auto& u = checked_cast<const DenseUnionArray&>(*column);
+      const auto& u = checked_cast<const arrow::DenseUnionArray&>(*column);
       column_index = u.value_offset(column_index);
       column = u.field(u.child_id(row_index)).get();
     }
@@ -222,48 +222,48 @@ Status SqliteStatement::Bind(size_t batch_index, int64_t row_index) {
       continue;
     }
     switch (column->type_id()) {
-      case Type::INT32: {
+      case arrow::Type::INT32: {
         const int32_t value =
-            checked_cast<const Int32Array&>(*column).Value(column_index);
+            checked_cast<const arrow::Int32Array&>(*column).Value(column_index);
         rc = sqlite3_bind_int64(stmt_, c + 1, value);
         break;
       }
-      case Type::INT64: {
+      case arrow::Type::INT64: {
         const int64_t value =
-            checked_cast<const Int64Array&>(*column).Value(column_index);
+            checked_cast<const arrow::Int64Array&>(*column).Value(column_index);
         rc = sqlite3_bind_int64(stmt_, c + 1, value);
         break;
       }
-      case Type::FLOAT: {
-        const float value = checked_cast<const FloatArray&>(*column).Value(column_index);
+      case arrow::Type::FLOAT: {
+        const float value =
+            checked_cast<const arrow::FloatArray&>(*column).Value(column_index);
         rc = sqlite3_bind_double(stmt_, c + 1, value);
         break;
       }
-      case Type::DOUBLE: {
+      case arrow::Type::DOUBLE: {
         const double value =
-            checked_cast<const DoubleArray&>(*column).Value(column_index);
+            checked_cast<const arrow::DoubleArray&>(*column).Value(column_index);
         rc = sqlite3_bind_double(stmt_, c + 1, value);
         break;
       }
-      case Type::STRING: {
+      case arrow::Type::STRING: {
         const std::string_view value =
-            checked_cast<const StringArray&>(*column).Value(column_index);
+            checked_cast<const arrow::StringArray&>(*column).Value(column_index);
         rc = sqlite3_bind_text(stmt_, c + 1, value.data(), static_cast<int>(value.size()),
                                SQLITE_TRANSIENT);
         break;
       }
       default:
-        return Status::TypeError("Received unsupported data type: ", *column->type());
+        return arrow::Status::TypeError("Received unsupported data type: ",
+                                        *column->type());
     }
     if (rc != SQLITE_OK) {
-      return Status::UnknownError("Failed to bind parameter: ", sqlite3_errmsg(db_));
+      return arrow::Status::UnknownError("Failed to bind parameter: ",
+                                         sqlite3_errmsg(db_));
     }
   }
 
-  return Status::OK();
+  return arrow::Status::OK();
 }
 
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::sqlite

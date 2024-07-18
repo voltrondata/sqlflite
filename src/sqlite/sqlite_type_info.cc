@@ -25,33 +25,37 @@
 #include "arrow/record_batch.h"
 #include "arrow/util/rows_to_batches.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace sqlite {
+#include "flight_sql_fwd.h"
 
-arrow::Result<std::shared_ptr<RecordBatch>> DoGetTypeInfoResult() {
-  auto schema = SqlSchema::GetXdbcTypeInfoSchema();
+namespace sql = flight::sql;
+
+namespace sqlflite::sqlite {
+
+arrow::Result<std::shared_ptr<arrow::RecordBatch>> DoGetTypeInfoResult() {
+  auto schema = sql::SqlSchema::GetXdbcTypeInfoSchema();
   using ValueType =
       std::variant<bool, int32_t, std::nullptr_t, const char*, std::vector<const char*>>;
-  auto VariantConverter = [](ArrayBuilder& array_builder, const ValueType& value) {
+  auto VariantConverter = [](arrow::ArrayBuilder& array_builder, const ValueType& value) {
     if (std::holds_alternative<bool>(value)) {
-      return dynamic_cast<BooleanBuilder&>(array_builder).Append(std::get<bool>(value));
+      return dynamic_cast<arrow::BooleanBuilder&>(array_builder)
+          .Append(std::get<bool>(value));
     } else if (std::holds_alternative<int32_t>(value)) {
-      return dynamic_cast<Int32Builder&>(array_builder).Append(std::get<int32_t>(value));
+      return dynamic_cast<arrow::Int32Builder&>(array_builder)
+          .Append(std::get<int32_t>(value));
     } else if (std::holds_alternative<std::nullptr_t>(value)) {
       return array_builder.AppendNull();
     } else if (std::holds_alternative<const char*>(value)) {
-      return dynamic_cast<StringBuilder&>(array_builder)
+      return dynamic_cast<arrow::StringBuilder&>(array_builder)
           .Append(std::get<const char*>(value));
     } else {
-      auto& list_builder = dynamic_cast<ListBuilder&>(array_builder);
+      auto& list_builder = dynamic_cast<arrow::ListBuilder&>(array_builder);
       ARROW_RETURN_NOT_OK(list_builder.Append());
-      auto value_builder = dynamic_cast<StringBuilder*>(list_builder.value_builder());
+      auto value_builder =
+          dynamic_cast<arrow::StringBuilder*>(list_builder.value_builder());
       for (const auto& v : std::get<std::vector<const char*>>(value)) {
         ARROW_RETURN_NOT_OK(value_builder->Append(v));
       }
-      return Status::OK();
+      return arrow::Status::OK();
     }
   };
   std::vector<std::vector<ValueType>> rows = {
@@ -193,7 +197,8 @@ arrow::Result<std::shared_ptr<RecordBatch>> DoGetTypeInfoResult() {
   return reader->Next();
 }
 
-arrow::Result<std::shared_ptr<RecordBatch>> DoGetTypeInfoResult(int data_type_filter) {
+arrow::Result<std::shared_ptr<arrow::RecordBatch>> DoGetTypeInfoResult(
+    int data_type_filter) {
   ARROW_ASSIGN_OR_RAISE(auto record_batch, DoGetTypeInfoResult());
 
   std::vector<int> data_type_vector{-7, -6, -5, -4, -3, -1, -1, 1, 4,
@@ -207,7 +212,5 @@ arrow::Result<std::shared_ptr<RecordBatch>> DoGetTypeInfoResult(int data_type_fi
   return record_batch->Slice(pair.first - data_type_vector.begin(),
                              pair.second - pair.first);
 }
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+
+}  // namespace sqlflite::sqlite

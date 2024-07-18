@@ -105,11 +105,9 @@ FlightSQLServerBuilder(const BackendType backend, const fs::path &database_filen
   std::string db_type = "";
   if (backend == BackendType::sqlite) {
     db_type = "SQLite";
-    std::shared_ptr<arrow::flight::sql::sqlite::SQLiteFlightSqlServer> sqlite_server =
-        nullptr;
-    ARROW_ASSIGN_OR_RAISE(
-        sqlite_server,
-        arrow::flight::sql::sqlite::SQLiteFlightSqlServer::Create(database_filename))
+    std::shared_ptr<sqlflite::sqlite::SQLiteFlightSqlServer> sqlite_server = nullptr;
+    ARROW_ASSIGN_OR_RAISE(sqlite_server, sqlflite::sqlite::SQLiteFlightSqlServer::Create(
+                                             database_filename));
     RUN_INIT_COMMANDS(sqlite_server, init_sql_commands);
     server = sqlite_server;
   } else if (backend == BackendType::duckdb) {
