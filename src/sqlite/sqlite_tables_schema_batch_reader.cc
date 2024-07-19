@@ -29,16 +29,16 @@
 #include "arrow/ipc/writer.h"
 #include "arrow/record_batch.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace sqlite {
+#include "flight_sql_fwd.h"
 
-std::shared_ptr<Schema> SqliteTablesWithSchemaBatchReader::schema() const {
-  return SqlSchema::GetTablesSchemaWithIncludedSchema();
+namespace sqlflite::sqlite {
+
+std::shared_ptr<arrow::Schema> SqliteTablesWithSchemaBatchReader::schema() const {
+  return flight::sql::SqlSchema::GetTablesSchemaWithIncludedSchema();
 }
 
-Status SqliteTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>* batch) {
+arrow::Status SqliteTablesWithSchemaBatchReader::ReadNext(
+    std::shared_ptr<arrow::RecordBatch>* batch) {
   std::stringstream schema_query;
 
   schema_query
@@ -49,23 +49,23 @@ Status SqliteTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>*
   ARROW_ASSIGN_OR_RAISE(schema_statement,
                         sqlite::SqliteStatement::Create(db_, schema_query.str()))
 
-  std::shared_ptr<RecordBatch> first_batch;
+  std::shared_ptr<arrow::RecordBatch> first_batch;
 
   ARROW_RETURN_NOT_OK(reader_->ReadNext(&first_batch));
 
   if (!first_batch) {
     *batch = NULLPTR;
-    return Status::OK();
+    return arrow::Status::OK();
   }
 
-  const std::shared_ptr<Array> table_name_array =
+  const std::shared_ptr<arrow::Array> table_name_array =
       first_batch->GetColumnByName("table_name");
 
-  BinaryBuilder schema_builder;
+  arrow::BinaryBuilder schema_builder;
 
-  auto* string_array = reinterpret_cast<StringArray*>(table_name_array.get());
+  auto* string_array = reinterpret_cast<arrow::StringArray*>(table_name_array.get());
 
-  std::vector<std::shared_ptr<Field>> column_fields;
+  std::vector<std::shared_ptr<arrow::Field>> column_fields;
   for (int i = 0; i < table_name_array->length(); i++) {
     const std::string& table_name = string_array->GetString(i);
 
@@ -79,35 +79,33 @@ Status SqliteTablesWithSchemaBatchReader::ReadNext(std::shared_ptr<RecordBatch>*
             sqlite3_column_text(schema_statement->GetSqlite3Stmt(), 2));
         int nullable = sqlite3_column_int(schema_statement->GetSqlite3Stmt(), 3);
 
-        const ColumnMetadata& column_metadata = GetColumnMetadata(
-            GetSqlTypeFromTypeName(column_type), sqlite_table_name.c_str());
-        std::shared_ptr<DataType> arrow_type;
-        auto status = GetArrowType(column_type).Value(&arrow_type);
+        const flight::sql::ColumnMetadata& column_metadata =
+            GetColumnMetadata(sqlflite::sqlite::GetSqlTypeFromTypeName(column_type),
+                              sqlite_table_name.c_str());
+        std::shared_ptr<arrow::DataType> arrow_type;
+        auto status = sqlflite::sqlite::GetArrowType(column_type).Value(&arrow_type);
         if (!status.ok()) {
-          return Status::NotImplemented("Unknown SQLite type '", column_type,
-                                        "' for column '", column_name, "' in table '",
-                                        table_name, "': ", status);
+          return arrow::Status::NotImplemented("Unknown SQLite type '", column_type,
+                                               "' for column '", column_name,
+                                               "' in table '", table_name, "': ", status);
         }
         column_fields.push_back(arrow::field(column_name, arrow_type, nullable == 0,
                                              column_metadata.metadata_map()));
       }
     }
-    ARROW_ASSIGN_OR_RAISE(std::shared_ptr<Buffer> schema_buffer,
-                          ipc::SerializeSchema(*arrow::schema(column_fields)));
+    ARROW_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Buffer> schema_buffer,
+                          arrow::ipc::SerializeSchema(*arrow::schema(column_fields)));
 
     column_fields.clear();
     ARROW_RETURN_NOT_OK(schema_builder.Append(::std::string_view(*schema_buffer)));
   }
 
-  std::shared_ptr<Array> schema_array;
+  std::shared_ptr<arrow::Array> schema_array;
   ARROW_RETURN_NOT_OK(schema_builder.Finish(&schema_array));
 
   ARROW_ASSIGN_OR_RAISE(*batch, first_batch->AddColumn(4, "table_schema", schema_array));
 
-  return Status::OK();
+  return arrow::Status::OK();
 }
 
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::sqlite

@@ -26,12 +26,9 @@
 #include "sqlite_statement_batch_reader.h"
 #include "arrow/record_batch.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace sqlite {
+namespace sqlflite::sqlite {
 
-class SqliteTablesWithSchemaBatchReader : public RecordBatchReader {
+class SqliteTablesWithSchemaBatchReader : public arrow::RecordBatchReader {
  private:
   std::shared_ptr<sqlite::SqliteStatementBatchReader> reader_;
   std::string main_query_;
@@ -47,12 +44,9 @@ class SqliteTablesWithSchemaBatchReader : public RecordBatchReader {
       sqlite3* db)
       : reader_(std::move(reader)), main_query_(std::move(main_query)), db_(db) {}
 
-  std::shared_ptr<Schema> schema() const override;
+  std::shared_ptr<arrow::Schema> schema() const override;
 
-  Status ReadNext(std::shared_ptr<RecordBatch>* batch) override;
+  arrow::Status ReadNext(std::shared_ptr<arrow::RecordBatch>* batch) override;
 };
 
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::sqlite

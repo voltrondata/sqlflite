@@ -152,6 +152,7 @@ set_target_properties(sqlfliteserver PROPERTIES PUBLIC_HEADER ${HEADER_FILES})
 target_include_directories(sqlfliteserver PRIVATE
         src/sqlite
         src/duckdb
+        src/library/include
         ${SQLITE_INCLUDE_DIR}
         ${DUCKDB_INCLUDE_DIR}
         ${JWT_CPP_INCLUDE_DIR}

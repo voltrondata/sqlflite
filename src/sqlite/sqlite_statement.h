@@ -25,17 +25,14 @@
 #include "arrow/flight/sql/column_metadata.h"
 #include "arrow/type_fwd.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace sqlite {
+namespace sqlflite::sqlite {
 
 /// \brief Create an object ColumnMetadata using the column type and
 ///        table name.
 /// \param column_type  The SQLite type.
 /// \param table        The table name.
 /// \return             A Column Metadata object.
-ColumnMetadata GetColumnMetadata(int column_type, const char* table);
+arrow::flight::sql::ColumnMetadata GetColumnMetadata(int column_type, const char* table);
 
 class SqliteStatement {
  public:
@@ -50,7 +47,7 @@ class SqliteStatement {
 
   /// \brief Creates an Arrow Schema based on the results of this statement.
   /// \return              The resulting Schema.
-  arrow::Result<std::shared_ptr<Schema>> GetSchema() const;
+  arrow::Result<std::shared_ptr<arrow::Schema>> GetSchema() const;
 
   /// \brief Steps on underlying sqlite3_stmt.
   /// \return          The resulting return code from SQLite.
@@ -73,8 +70,9 @@ class SqliteStatement {
   const std::vector<std::shared_ptr<arrow::RecordBatch>>& parameters() const {
     return parameters_;
   }
-  Status SetParameters(std::vector<std::shared_ptr<arrow::RecordBatch>> parameters);
-  Status Bind(size_t batch_index, int64_t row_index);
+  arrow::Status SetParameters(
+      std::vector<std::shared_ptr<arrow::RecordBatch>> parameters);
+  arrow::Status Bind(size_t batch_index, int64_t row_index);
 
  private:
   sqlite3* db_;
@@ -84,7 +82,4 @@ class SqliteStatement {
   SqliteStatement(sqlite3* db, sqlite3_stmt* stmt) : db_(db), stmt_(stmt) {}
 };
 
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::sqlite

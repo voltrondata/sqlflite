@@ -36,19 +36,17 @@
 #include "sqlite_type_info.h"
 #include "arrow/flight/sql/server.h"
 #include "arrow/scalar.h"
-#include "arrow/util/checked_cast.h"
 #include "arrow/util/logging.h"
 
-namespace arrow {
-namespace flight {
-namespace sql {
-namespace sqlite {
+#include "flight_sql_fwd.h"
 
-using arrow::internal::checked_cast;
+using arrow::Status;
+
+namespace sqlflite::sqlite {
 
 namespace {
 
-std::string PrepareQueryForGetTables(const GetTables& command) {
+std::string PrepareQueryForGetTables(const flight::sql::GetTables& command) {
   std::stringstream table_query;
 
   table_query << "SELECT 'main' as catalog_name, null as schema_name, name as "
@@ -87,10 +85,11 @@ std::string PrepareQueryForGetTables(const GetTables& command) {
 
 template <typename Callback>
 Status SetParametersOnSQLiteStatement(SqliteStatement* statement,
-                                      FlightMessageReader* reader, Callback callback) {
+                                      flight::FlightMessageReader* reader,
+                                      Callback callback) {
   sqlite3_stmt* stmt = statement->GetSqlite3Stmt();
   while (true) {
-    ARROW_ASSIGN_OR_RAISE(FlightStreamChunk chunk, reader->Next());
+    ARROW_ASSIGN_OR_RAISE(flight::FlightStreamChunk chunk, reader->Next());
     if (chunk.data == nullptr) break;
 
     const int64_t num_rows = chunk.data->num_rows();
@@ -112,8 +111,8 @@ Status SetParametersOnSQLiteStatement(SqliteStatement* statement,
   return Status::OK();
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> DoGetSQLiteQuery(
-    sqlite3* db, const std::string& query, const std::shared_ptr<Schema>& schema) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetSQLiteQuery(
+    sqlite3* db, const std::string& query, const std::shared_ptr<arrow::Schema>& schema) {
   std::shared_ptr<SqliteStatement> statement;
 
   ARROW_ASSIGN_OR_RAISE(statement, SqliteStatement::Create(db, query));
@@ -121,17 +120,18 @@ arrow::Result<std::unique_ptr<FlightDataStream>> DoGetSQLiteQuery(
   std::shared_ptr<SqliteStatementBatchReader> reader;
   ARROW_ASSIGN_OR_RAISE(reader, SqliteStatementBatchReader::Create(statement, schema));
 
-  return std::make_unique<RecordBatchStream>(reader);
+  return std::make_unique<flight::RecordBatchStream>(reader);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoForCommand(
-    const FlightDescriptor& descriptor, const std::shared_ptr<Schema>& schema) {
-  std::vector<FlightEndpoint> endpoints{
-      FlightEndpoint{{descriptor.cmd}, {}, std::nullopt, ""}};
-  ARROW_ASSIGN_OR_RAISE(auto result,
-                        FlightInfo::Make(*schema, descriptor, endpoints, -1, -1, false))
+arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoForCommand(
+    const flight::FlightDescriptor& descriptor,
+    const std::shared_ptr<arrow::Schema>& schema) {
+  std::vector<flight::FlightEndpoint> endpoints{
+      flight::FlightEndpoint{{descriptor.cmd}, {}, std::nullopt, ""}};
+  ARROW_ASSIGN_OR_RAISE(auto result, flight::FlightInfo::Make(*schema, descriptor,
+                                                              endpoints, -1, -1, false))
 
-  return std::make_unique<FlightInfo>(result);
+  return std::make_unique<flight::FlightInfo>(result);
 }
 
 std::string PrepareQueryForGetImportedOrExportedKeys(const std::string& filter) {
@@ -169,22 +169,22 @@ std::string PrepareQueryForGetImportedOrExportedKeys(const std::string& filter) 
 
 }  // namespace
 
-arrow::Result<std::shared_ptr<DataType>> GetArrowType(const char* sqlite_type) {
+arrow::Result<std::shared_ptr<arrow::DataType>> GetArrowType(const char* sqlite_type) {
   if (sqlite_type == nullptr || std::strlen(sqlite_type) == 0) {
     // SQLite may not know the column type yet.
-    return null();
+    return arrow::null();
   }
 
   if (boost::iequals(sqlite_type, "int") || boost::iequals(sqlite_type, "integer")) {
-    return int64();
+    return arrow::int64();
   } else if (boost::iequals(sqlite_type, "REAL")) {
-    return float64();
+    return arrow::float64();
   } else if (boost::iequals(sqlite_type, "BLOB")) {
-    return binary();
+    return arrow::binary();
   } else if (boost::iequals(sqlite_type, "TEXT") || boost::iequals(sqlite_type, "DATE") ||
              boost::istarts_with(sqlite_type, "char") ||
              boost::istarts_with(sqlite_type, "varchar")) {
-    return utf8();
+    return arrow::utf8();
   }
   return Status::Invalid("Invalid SQLite type: ", sqlite_type);
 }
@@ -245,14 +245,14 @@ class SQLiteFlightSqlServer::Impl {
   }
 
   // Create a Ticket that combines a query and a transaction ID.
-  arrow::Result<Ticket> EncodeTransactionQuery(const std::string& query,
-                                               const std::string& transaction_id) {
+  arrow::Result<flight::Ticket> EncodeTransactionQuery(
+      const std::string& query, const std::string& transaction_id) {
     std::string transaction_query = transaction_id;
     transaction_query += ':';
     transaction_query += query;
     ARROW_ASSIGN_OR_RAISE(auto ticket_string,
-                          CreateStatementQueryTicket(transaction_query));
-    return Ticket{std::move(ticket_string)};
+                          flight::sql::CreateStatementQueryTicket(transaction_query));
+    return flight::Ticket{std::move(ticket_string)};
   }
 
   arrow::Result<std::pair<std::string, std::string>> DecodeTransactionQuery(
@@ -296,28 +296,31 @@ class SQLiteFlightSqlServer::Impl {
     return ret;
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoStatement(
-      const ServerCallContext& context, const StatementQuery& command,
-      const FlightDescriptor& descriptor) {
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoStatement(
+      const flight::ServerCallContext& context,
+      const flight::sql::StatementQuery& command,
+      const flight::FlightDescriptor& descriptor) {
     const std::string& query = command.query;
     ARROW_ASSIGN_OR_RAISE(auto db, GetConnection(command.transaction_id));
     ARROW_ASSIGN_OR_RAISE(auto statement, SqliteStatement::Create(db, query));
     ARROW_ASSIGN_OR_RAISE(auto schema, statement->GetSchema());
     ARROW_ASSIGN_OR_RAISE(auto ticket,
                           EncodeTransactionQuery(query, command.transaction_id));
-    std::vector<FlightEndpoint> endpoints{
-        FlightEndpoint{std::move(ticket), {}, std::nullopt, ""}};
+    std::vector<flight::FlightEndpoint> endpoints{
+        flight::FlightEndpoint{std::move(ticket), {}, std::nullopt, ""}};
     // TODO: Set true only when "ORDER BY" is used in a main "SELECT"
     // in the given query.
     const bool ordered = false;
     ARROW_ASSIGN_OR_RAISE(
-        auto result, FlightInfo::Make(*schema, descriptor, endpoints, -1, -1, ordered));
+        auto result,
+        flight::FlightInfo::Make(*schema, descriptor, endpoints, -1, -1, ordered));
 
-    return std::make_unique<FlightInfo>(result);
+    return std::make_unique<flight::FlightInfo>(result);
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetStatement(
-      const ServerCallContext& context, const StatementQueryTicket& command) {
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetStatement(
+      const flight::ServerCallContext& context,
+      const flight::sql::StatementQueryTicket& command) {
     ARROW_ASSIGN_OR_RAISE(auto pair, DecodeTransactionQuery(command.statement_handle));
     const std::string& sql = pair.first;
     const std::string transaction_id = pair.second;
@@ -329,45 +332,51 @@ class SQLiteFlightSqlServer::Impl {
     std::shared_ptr<SqliteStatementBatchReader> reader;
     ARROW_ASSIGN_OR_RAISE(reader, SqliteStatementBatchReader::Create(statement));
 
-    return std::make_unique<RecordBatchStream>(reader);
+    return std::make_unique<flight::RecordBatchStream>(reader);
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoCatalogs(
-      const ServerCallContext& context, const FlightDescriptor& descriptor) {
-    return GetFlightInfoForCommand(descriptor, SqlSchema::GetCatalogsSchema());
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoCatalogs(
+      const flight::ServerCallContext& context,
+      const flight::FlightDescriptor& descriptor) {
+    return GetFlightInfoForCommand(descriptor,
+                                   flight::sql::SqlSchema::GetCatalogsSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetCatalogs(
-      const ServerCallContext& context) {
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetCatalogs(
+      const flight::ServerCallContext& context) {
     // https://www.sqlite.org/cli.html
     // > The ".databases" command shows a list of all databases open
     // > in the current connection. There will always be at least
     // > 2. The first one is "main", the original database opened. The
     // > second is "temp", the database used for temporary tables.
     // For our purposes, return only "main" and ignore other databases.
-    const std::shared_ptr<Schema>& schema = SqlSchema::GetCatalogsSchema();
-    StringBuilder catalog_name_builder;
+    const std::shared_ptr<arrow::Schema>& schema =
+        flight::sql::SqlSchema::GetCatalogsSchema();
+    arrow::StringBuilder catalog_name_builder;
     ARROW_RETURN_NOT_OK(catalog_name_builder.Append("main"));
     ARROW_ASSIGN_OR_RAISE(auto catalog_name, catalog_name_builder.Finish());
-    std::shared_ptr<RecordBatch> batch =
-        RecordBatch::Make(schema, 1, {std::move(catalog_name)});
-    ARROW_ASSIGN_OR_RAISE(auto reader, RecordBatchReader::Make({batch}));
-    return std::make_unique<RecordBatchStream>(reader);
+    std::shared_ptr<arrow::RecordBatch> batch =
+        arrow::RecordBatch::Make(schema, 1, {std::move(catalog_name)});
+    ARROW_ASSIGN_OR_RAISE(auto reader, arrow::RecordBatchReader::Make({batch}));
+    return std::make_unique<flight::RecordBatchStream>(reader);
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoSchemas(
-      const ServerCallContext& context, const GetDbSchemas& command,
-      const FlightDescriptor& descriptor) {
-    return GetFlightInfoForCommand(descriptor, SqlSchema::GetDbSchemasSchema());
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoSchemas(
+      const flight::ServerCallContext& context, const flight::sql::GetDbSchemas& command,
+      const flight::FlightDescriptor& descriptor) {
+    return GetFlightInfoForCommand(descriptor,
+                                   flight::sql::SqlSchema::GetDbSchemasSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetDbSchemas(
-      const ServerCallContext& context, const GetDbSchemas& command) {
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetDbSchemas(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetDbSchemas& command) {
     // SQLite doesn't support schemas, so pretend we have a single
     // unnamed schema.
-    const std::shared_ptr<Schema>& schema = SqlSchema::GetDbSchemasSchema();
-    StringBuilder catalog_name_builder;
-    StringBuilder schema_name_builder;
+    const std::shared_ptr<arrow::Schema>& schema =
+        flight::sql::SqlSchema::GetDbSchemasSchema();
+    arrow::StringBuilder catalog_name_builder;
+    arrow::StringBuilder schema_name_builder;
 
     int64_t length = 0;
     // XXX: we don't really implement the full pattern match here
@@ -380,32 +389,33 @@ class SQLiteFlightSqlServer::Impl {
 
     ARROW_ASSIGN_OR_RAISE(auto catalog_name, catalog_name_builder.Finish());
     ARROW_ASSIGN_OR_RAISE(auto schema_name, schema_name_builder.Finish());
-    std::shared_ptr<RecordBatch> batch = RecordBatch::Make(
+    std::shared_ptr<arrow::RecordBatch> batch = arrow::RecordBatch::Make(
         schema, length, {std::move(catalog_name), std::move(schema_name)});
-    ARROW_ASSIGN_OR_RAISE(auto reader, RecordBatchReader::Make({batch}));
-    return std::make_unique<RecordBatchStream>(reader);
+    ARROW_ASSIGN_OR_RAISE(auto reader, arrow::RecordBatchReader::Make({batch}));
+    return std::make_unique<flight::RecordBatchStream>(reader);
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoTables(
-      const ServerCallContext& context, const GetTables& command,
-      const FlightDescriptor& descriptor) {
-    std::vector<FlightEndpoint> endpoints{
-        FlightEndpoint{{descriptor.cmd}, {}, std::nullopt, ""}};
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoTables(
+      const flight::ServerCallContext& context, const flight::sql::GetTables& command,
+      const flight::FlightDescriptor& descriptor) {
+    std::vector<flight::FlightEndpoint> endpoints{
+        flight::FlightEndpoint{{descriptor.cmd}, {}, std::nullopt, ""}};
 
     bool include_schema = command.include_schema;
     ARROW_LOG(INFO) << "GetTables include_schema=" << include_schema;
 
     ARROW_ASSIGN_OR_RAISE(
         auto result,
-        FlightInfo::Make(include_schema ? *SqlSchema::GetTablesSchemaWithIncludedSchema()
-                                        : *SqlSchema::GetTablesSchema(),
-                         descriptor, endpoints, -1, -1, false))
+        flight::FlightInfo::Make(
+            include_schema ? *flight::sql::SqlSchema::GetTablesSchemaWithIncludedSchema()
+                           : *flight::sql::SqlSchema::GetTablesSchema(),
+            descriptor, endpoints, -1, -1, false))
 
-    return std::make_unique<FlightInfo>(std::move(result));
+    return std::make_unique<flight::FlightInfo>(std::move(result));
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetTables(
-      const ServerCallContext& context, const GetTables& command) {
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetTables(
+      const flight::ServerCallContext& context, const flight::sql::GetTables& command) {
     std::string query = PrepareQueryForGetTables(command);
     ARROW_LOG(INFO) << "GetTables: " << query;
 
@@ -413,20 +423,22 @@ class SQLiteFlightSqlServer::Impl {
     ARROW_ASSIGN_OR_RAISE(statement, SqliteStatement::Create(db_, query));
 
     std::shared_ptr<SqliteStatementBatchReader> reader;
-    ARROW_ASSIGN_OR_RAISE(reader, SqliteStatementBatchReader::Create(
-                                      statement, SqlSchema::GetTablesSchema()));
+    ARROW_ASSIGN_OR_RAISE(reader,
+                          SqliteStatementBatchReader::Create(
+                              statement, flight::sql::SqlSchema::GetTablesSchema()));
 
     if (command.include_schema) {
       std::shared_ptr<SqliteTablesWithSchemaBatchReader> table_schema_reader =
           std::make_shared<SqliteTablesWithSchemaBatchReader>(reader, query, db_);
-      return std::make_unique<RecordBatchStream>(table_schema_reader);
+      return std::make_unique<flight::RecordBatchStream>(table_schema_reader);
     } else {
-      return std::make_unique<RecordBatchStream>(reader);
+      return std::make_unique<flight::RecordBatchStream>(reader);
     }
   }
 
-  arrow::Result<int64_t> DoPutCommandStatementUpdate(const ServerCallContext& context,
-                                                     const StatementUpdate& command) {
+  arrow::Result<int64_t> DoPutCommandStatementUpdate(
+      const flight::ServerCallContext& context,
+      const flight::sql::StatementUpdate& command) {
     const std::string& sql = command.query;
     ARROW_ASSIGN_OR_RAISE(auto db, GetConnection(command.transaction_id));
     ARROW_LOG(INFO) << "Executing update: " << sql;
@@ -434,9 +446,9 @@ class SQLiteFlightSqlServer::Impl {
     return statement->ExecuteUpdate();
   }
 
-  arrow::Result<ActionCreatePreparedStatementResult> CreatePreparedStatement(
-      const ServerCallContext& context,
-      const ActionCreatePreparedStatementRequest& request) {
+  arrow::Result<flight::sql::ActionCreatePreparedStatementResult> CreatePreparedStatement(
+      const flight::ServerCallContext& context,
+      const flight::sql::ActionCreatePreparedStatementRequest& request) {
     std::shared_ptr<SqliteStatement> statement;
     ARROW_ASSIGN_OR_RAISE(auto db, GetConnection(request.transaction_id));
     ARROW_LOG(INFO) << "Creating prepared statement: " << request.query;
@@ -452,13 +464,13 @@ class SQLiteFlightSqlServer::Impl {
 
     sqlite3_stmt* stmt = statement->GetSqlite3Stmt();
     const int parameter_count = sqlite3_bind_parameter_count(stmt);
-    FieldVector parameter_fields;
+    arrow::FieldVector parameter_fields;
     parameter_fields.reserve(parameter_count);
 
     // As SQLite doesn't know the parameter types before executing the query, the
     // example server is accepting any SQLite supported type as input by using a dense
     // union.
-    const std::shared_ptr<DataType>& dense_union_type = GetUnknownColumnDataType();
+    const std::shared_ptr<arrow::DataType>& dense_union_type = GetUnknownColumnDataType();
 
     for (int i = 0; i < parameter_count; i++) {
       const char* parameter_name_chars = sqlite3_bind_parameter_name(stmt, i + 1);
@@ -471,13 +483,14 @@ class SQLiteFlightSqlServer::Impl {
       parameter_fields.push_back(field(parameter_name, dense_union_type));
     }
 
-    std::shared_ptr<Schema> parameter_schema = arrow::schema(parameter_fields);
-    return ActionCreatePreparedStatementResult{
+    std::shared_ptr<arrow::Schema> parameter_schema = arrow::schema(parameter_fields);
+    return flight::sql::ActionCreatePreparedStatementResult{
         std::move(dataset_schema), std::move(parameter_schema), std::move(handle)};
   }
 
-  Status ClosePreparedStatement(const ServerCallContext& context,
-                                const ActionClosePreparedStatementRequest& request) {
+  Status ClosePreparedStatement(
+      const flight::ServerCallContext& context,
+      const flight::sql::ActionClosePreparedStatementRequest& request) {
     std::lock_guard<std::mutex> guard(mutex_);
     const std::string& prepared_statement_handle = request.prepared_statement_handle;
 
@@ -491,9 +504,10 @@ class SQLiteFlightSqlServer::Impl {
     return Status::OK();
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoPreparedStatement(
-      const ServerCallContext& context, const PreparedStatementQuery& command,
-      const FlightDescriptor& descriptor) {
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoPreparedStatement(
+      const flight::ServerCallContext& context,
+      const flight::sql::PreparedStatementQuery& command,
+      const flight::FlightDescriptor& descriptor) {
     std::lock_guard<std::mutex> guard(mutex_);
     const std::string& prepared_statement_handle = command.prepared_statement_handle;
 
@@ -509,8 +523,9 @@ class SQLiteFlightSqlServer::Impl {
     return GetFlightInfoForCommand(descriptor, schema);
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetPreparedStatement(
-      const ServerCallContext& context, const PreparedStatementQuery& command) {
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetPreparedStatement(
+      const flight::ServerCallContext& context,
+      const flight::sql::PreparedStatementQuery& command) {
     std::lock_guard<std::mutex> guard(mutex_);
     const std::string& prepared_statement_handle = command.prepared_statement_handle;
 
@@ -524,13 +539,13 @@ class SQLiteFlightSqlServer::Impl {
     std::shared_ptr<SqliteStatementBatchReader> reader;
     ARROW_ASSIGN_OR_RAISE(reader, SqliteStatementBatchReader::Create(statement));
 
-    return std::make_unique<RecordBatchStream>(reader);
+    return std::make_unique<flight::RecordBatchStream>(reader);
   }
 
-  Status DoPutPreparedStatementQuery(const ServerCallContext& context,
-                                     const PreparedStatementQuery& command,
-                                     FlightMessageReader* reader,
-                                     FlightMetadataWriter* writer) {
+  Status DoPutPreparedStatementQuery(const flight::ServerCallContext& context,
+                                     const flight::sql::PreparedStatementQuery& command,
+                                     flight::FlightMessageReader* reader,
+                                     flight::FlightMetadataWriter* writer) {
     const std::string& prepared_statement_handle = command.prepared_statement_handle;
     ARROW_ASSIGN_OR_RAISE(auto statement,
                           GetStatementByHandle(prepared_statement_handle));
@@ -541,8 +556,9 @@ class SQLiteFlightSqlServer::Impl {
   }
 
   arrow::Result<int64_t> DoPutPreparedStatementUpdate(
-      const ServerCallContext& context, const PreparedStatementUpdate& command,
-      FlightMessageReader* reader) {
+      const flight::ServerCallContext& context,
+      const flight::sql::PreparedStatementUpdate& command,
+      flight::FlightMessageReader* reader) {
     const std::string& prepared_statement_handle = command.prepared_statement_handle;
     ARROW_ASSIGN_OR_RAISE(std::shared_ptr<SqliteStatement> statement,
                           GetStatementByHandle(prepared_statement_handle));
@@ -560,43 +576,52 @@ class SQLiteFlightSqlServer::Impl {
     return rows_affected;
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoTableTypes(
-      const ServerCallContext& context, const FlightDescriptor& descriptor) {
-    return GetFlightInfoForCommand(descriptor, SqlSchema::GetTableTypesSchema());
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoTableTypes(
+      const flight::ServerCallContext& context,
+      const flight::FlightDescriptor& descriptor) {
+    return GetFlightInfoForCommand(descriptor,
+                                   flight::sql::SqlSchema::GetTableTypesSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetTableTypes(
-      const ServerCallContext& context) {
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetTableTypes(
+      const flight::ServerCallContext& context) {
     std::string query = "SELECT DISTINCT type as table_type FROM sqlite_master";
 
-    return DoGetSQLiteQuery(db_, query, SqlSchema::GetTableTypesSchema());
+    return DoGetSQLiteQuery(db_, query, flight::sql::SqlSchema::GetTableTypesSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoTypeInfo(
-      const ServerCallContext& context, const GetXdbcTypeInfo& command,
-      const FlightDescriptor& descriptor) {
-    return GetFlightInfoForCommand(descriptor, SqlSchema::GetXdbcTypeInfoSchema());
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoTypeInfo(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetXdbcTypeInfo& command,
+      const flight::FlightDescriptor& descriptor) {
+    return GetFlightInfoForCommand(descriptor,
+                                   flight::sql::SqlSchema::GetXdbcTypeInfoSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetTypeInfo(
-      const ServerCallContext& context, const GetXdbcTypeInfo& command) {
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetTypeInfo(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetXdbcTypeInfo& command) {
     ARROW_ASSIGN_OR_RAISE(auto type_info_result,
                           command.data_type.has_value()
                               ? DoGetTypeInfoResult(command.data_type.value())
                               : DoGetTypeInfoResult());
 
-    ARROW_ASSIGN_OR_RAISE(auto reader, RecordBatchReader::Make({type_info_result}));
-    return std::make_unique<RecordBatchStream>(reader);
+    ARROW_ASSIGN_OR_RAISE(auto reader,
+                          arrow::RecordBatchReader::Make({type_info_result}));
+    return std::make_unique<flight::RecordBatchStream>(reader);
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoPrimaryKeys(
-      const ServerCallContext& context, const GetPrimaryKeys& command,
-      const FlightDescriptor& descriptor) {
-    return GetFlightInfoForCommand(descriptor, SqlSchema::GetPrimaryKeysSchema());
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoPrimaryKeys(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetPrimaryKeys& command,
+      const flight::FlightDescriptor& descriptor) {
+    return GetFlightInfoForCommand(descriptor,
+                                   flight::sql::SqlSchema::GetPrimaryKeysSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetPrimaryKeys(
-      const ServerCallContext& context, const GetPrimaryKeys& command) {
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetPrimaryKeys(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetPrimaryKeys& command) {
     std::stringstream table_query;
 
     // The field key_name cannot be recovered by the sqlite, so it is being set
@@ -608,7 +633,7 @@ class SQLiteFlightSqlServer::Impl {
                    "table_name, type as table_type\n"
                    "FROM sqlite_master) where 1=1 and pk != 0";
 
-    const TableRef& table_ref = command.table_ref;
+    const flight::sql::TableRef& table_ref = command.table_ref;
     if (table_ref.catalog.has_value()) {
       table_query << " and catalog_name LIKE '" << table_ref.catalog.value() << "'";
     }
@@ -619,18 +644,22 @@ class SQLiteFlightSqlServer::Impl {
 
     table_query << " and table_name LIKE '" << table_ref.table << "'";
 
-    return DoGetSQLiteQuery(db_, table_query.str(), SqlSchema::GetPrimaryKeysSchema());
+    return DoGetSQLiteQuery(db_, table_query.str(),
+                            flight::sql::SqlSchema::GetPrimaryKeysSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoImportedKeys(
-      const ServerCallContext& context, const GetImportedKeys& command,
-      const FlightDescriptor& descriptor) {
-    return GetFlightInfoForCommand(descriptor, SqlSchema::GetImportedKeysSchema());
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoImportedKeys(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetImportedKeys& command,
+      const flight::FlightDescriptor& descriptor) {
+    return GetFlightInfoForCommand(descriptor,
+                                   flight::sql::SqlSchema::GetImportedKeysSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetImportedKeys(
-      const ServerCallContext& context, const GetImportedKeys& command) {
-    const TableRef& table_ref = command.table_ref;
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetImportedKeys(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetImportedKeys& command) {
+    const flight::sql::TableRef& table_ref = command.table_ref;
     std::string filter = "fk_table_name = '" + table_ref.table + "'";
     if (table_ref.catalog.has_value()) {
       filter += " AND fk_catalog_name = '" + table_ref.catalog.value() + "'";
@@ -640,18 +669,21 @@ class SQLiteFlightSqlServer::Impl {
     }
     std::string query = PrepareQueryForGetImportedOrExportedKeys(filter);
 
-    return DoGetSQLiteQuery(db_, query, SqlSchema::GetImportedKeysSchema());
+    return DoGetSQLiteQuery(db_, query, flight::sql::SqlSchema::GetImportedKeysSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoExportedKeys(
-      const ServerCallContext& context, const GetExportedKeys& command,
-      const FlightDescriptor& descriptor) {
-    return GetFlightInfoForCommand(descriptor, SqlSchema::GetExportedKeysSchema());
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoExportedKeys(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetExportedKeys& command,
+      const flight::FlightDescriptor& descriptor) {
+    return GetFlightInfoForCommand(descriptor,
+                                   flight::sql::SqlSchema::GetExportedKeysSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetExportedKeys(
-      const ServerCallContext& context, const GetExportedKeys& command) {
-    const TableRef& table_ref = command.table_ref;
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetExportedKeys(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetExportedKeys& command) {
+    const flight::sql::TableRef& table_ref = command.table_ref;
     std::string filter = "pk_table_name = '" + table_ref.table + "'";
     if (table_ref.catalog.has_value()) {
       filter += " AND pk_catalog_name = '" + table_ref.catalog.value() + "'";
@@ -661,18 +693,21 @@ class SQLiteFlightSqlServer::Impl {
     }
     std::string query = PrepareQueryForGetImportedOrExportedKeys(filter);
 
-    return DoGetSQLiteQuery(db_, query, SqlSchema::GetExportedKeysSchema());
+    return DoGetSQLiteQuery(db_, query, flight::sql::SqlSchema::GetExportedKeysSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightInfo>> GetFlightInfoCrossReference(
-      const ServerCallContext& context, const GetCrossReference& command,
-      const FlightDescriptor& descriptor) {
-    return GetFlightInfoForCommand(descriptor, SqlSchema::GetCrossReferenceSchema());
+  arrow::Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoCrossReference(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetCrossReference& command,
+      const flight::FlightDescriptor& descriptor) {
+    return GetFlightInfoForCommand(descriptor,
+                                   flight::sql::SqlSchema::GetCrossReferenceSchema());
   }
 
-  arrow::Result<std::unique_ptr<FlightDataStream>> DoGetCrossReference(
-      const ServerCallContext& context, const GetCrossReference& command) {
-    const TableRef& pk_table_ref = command.pk_table_ref;
+  arrow::Result<std::unique_ptr<flight::FlightDataStream>> DoGetCrossReference(
+      const flight::ServerCallContext& context,
+      const flight::sql::GetCrossReference& command) {
+    const flight::sql::TableRef& pk_table_ref = command.pk_table_ref;
     std::string filter = "pk_table_name = '" + pk_table_ref.table + "'";
     if (pk_table_ref.catalog.has_value()) {
       filter += " AND pk_catalog_name = '" + pk_table_ref.catalog.value() + "'";
@@ -681,7 +716,7 @@ class SQLiteFlightSqlServer::Impl {
       filter += " AND pk_schema_name = '" + pk_table_ref.db_schema.value() + "'";
     }
 
-    const TableRef& fk_table_ref = command.fk_table_ref;
+    const flight::sql::TableRef& fk_table_ref = command.fk_table_ref;
     filter += " AND fk_table_name = '" + fk_table_ref.table + "'";
     if (fk_table_ref.catalog.has_value()) {
       filter += " AND fk_catalog_name = '" + fk_table_ref.catalog.value() + "'";
@@ -691,7 +726,8 @@ class SQLiteFlightSqlServer::Impl {
     }
     std::string query = PrepareQueryForGetImportedOrExportedKeys(filter);
 
-    return DoGetSQLiteQuery(db_, query, SqlSchema::GetCrossReferenceSchema());
+    return DoGetSQLiteQuery(db_, query,
+                            flight::sql::SqlSchema::GetCrossReferenceSchema());
   }
 
   Status ExecuteSql(const std::string& sql) { return ExecuteSql(db_, sql); }
@@ -711,8 +747,9 @@ class SQLiteFlightSqlServer::Impl {
     return Status::OK();
   }
 
-  arrow::Result<ActionBeginTransactionResult> BeginTransaction(
-      const ServerCallContext& context, const ActionBeginTransactionRequest& request) {
+  arrow::Result<flight::sql::ActionBeginTransactionResult> BeginTransaction(
+      const flight::ServerCallContext& context,
+      const flight::sql::ActionBeginTransactionRequest& request) {
     std::string handle = GenerateRandomString();
     sqlite3* new_db = nullptr;
     if (sqlite3_open_v2(db_uri_.c_str(), &new_db,
@@ -732,11 +769,11 @@ class SQLiteFlightSqlServer::Impl {
 
     std::lock_guard<std::mutex> guard(mutex_);
     open_transactions_[handle] = new_db;
-    return ActionBeginTransactionResult{std::move(handle)};
+    return flight::sql::ActionBeginTransactionResult{std::move(handle)};
   }
 
-  Status EndTransaction(const ServerCallContext& context,
-                        const ActionEndTransactionRequest& request) {
+  Status EndTransaction(const flight::ServerCallContext& context,
+                        const flight::sql::ActionEndTransactionRequest& request) {
     Status status;
     sqlite3* transaction = nullptr;
     {
@@ -746,7 +783,7 @@ class SQLiteFlightSqlServer::Impl {
         return Status::KeyError("Unknown transaction ID: ", request.transaction_id);
       }
 
-      if (request.action == ActionEndTransactionRequest::kCommit) {
+      if (request.action == flight::sql::ActionEndTransactionRequest::kCommit) {
         ARROW_LOG(INFO) << "Committing on " << request.transaction_id;
         status = ExecuteSql(it->second, "COMMIT");
       } else {
@@ -767,20 +804,21 @@ std::atomic<int64_t> kDbCounter(0);
 SQLiteFlightSqlServer::SQLiteFlightSqlServer(std::shared_ptr<Impl> impl)
     : impl_(std::move(impl)) {}
 
-arrow::Result<std::shared_ptr<SQLiteFlightSqlServer>> SQLiteFlightSqlServer::Create(std::string path) {
+arrow::Result<std::shared_ptr<SQLiteFlightSqlServer>> SQLiteFlightSqlServer::Create(
+    std::string path) {
   std::cout << "SQLite version: " << sqlite3_libversion() << std::endl;
 
   sqlite3* db = nullptr;
 
-    char* db_location;
+  char* db_location;
 
-    bool in_memory = path == "";
+  bool in_memory = path == "";
 
-    if (in_memory) {
-        db_location = (char*)":memory:";
-    } else {
-        db_location = (char*)path.c_str(); // TODO: validate that the path exists
-    }
+  if (in_memory) {
+    db_location = (char*)":memory:";
+  } else {
+    db_location = (char*)path.c_str();  // TODO: validate that the path exists
+  }
 
   if (sqlite3_open_v2(db_location, &db,
                       SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI,
@@ -813,174 +851,193 @@ Status SQLiteFlightSqlServer::ExecuteSql(const std::string& sql) {
   return impl_->ExecuteSql(sql);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>> SQLiteFlightSqlServer::GetFlightInfoStatement(
-    const ServerCallContext& context, const StatementQuery& command,
-    const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoStatement(
+    const flight::ServerCallContext& context, const flight::sql::StatementQuery& command,
+    const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoStatement(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetStatement(
-    const ServerCallContext& context, const StatementQueryTicket& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetStatement(const flight::ServerCallContext& context,
+                                      const flight::sql::StatementQueryTicket& command) {
   return impl_->DoGetStatement(context, command);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>> SQLiteFlightSqlServer::GetFlightInfoCatalogs(
-    const ServerCallContext& context, const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoCatalogs(const flight::ServerCallContext& context,
+                                             const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoCatalogs(context, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetCatalogs(
-    const ServerCallContext& context) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetCatalogs(const flight::ServerCallContext& context) {
   return impl_->DoGetCatalogs(context);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>> SQLiteFlightSqlServer::GetFlightInfoSchemas(
-    const ServerCallContext& context, const GetDbSchemas& command,
-    const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoSchemas(const flight::ServerCallContext& context,
+                                            const flight::sql::GetDbSchemas& command,
+                                            const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoSchemas(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetDbSchemas(
-    const ServerCallContext& context, const GetDbSchemas& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetDbSchemas(const flight::ServerCallContext& context,
+                                      const flight::sql::GetDbSchemas& command) {
   return impl_->DoGetDbSchemas(context, command);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>> SQLiteFlightSqlServer::GetFlightInfoTables(
-    const ServerCallContext& context, const GetTables& command,
-    const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoTables(const flight::ServerCallContext& context,
+                                           const flight::sql::GetTables& command,
+                                           const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoTables(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetTables(
-    const ServerCallContext& context, const GetTables& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetTables(const flight::ServerCallContext& context,
+                                   const flight::sql::GetTables& command) {
   return impl_->DoGetTables(context, command);
 }
 
 arrow::Result<int64_t> SQLiteFlightSqlServer::DoPutCommandStatementUpdate(
-    const ServerCallContext& context, const StatementUpdate& command) {
+    const flight::ServerCallContext& context,
+    const flight::sql::StatementUpdate& command) {
   return impl_->DoPutCommandStatementUpdate(context, command);
 }
 
-arrow::Result<ActionCreatePreparedStatementResult>
+arrow::Result<flight::sql::ActionCreatePreparedStatementResult>
 SQLiteFlightSqlServer::CreatePreparedStatement(
-    const ServerCallContext& context,
-    const ActionCreatePreparedStatementRequest& request) {
+    const flight::ServerCallContext& context,
+    const flight::sql::ActionCreatePreparedStatementRequest& request) {
   return impl_->CreatePreparedStatement(context, request);
 }
 
 Status SQLiteFlightSqlServer::ClosePreparedStatement(
-    const ServerCallContext& context,
-    const ActionClosePreparedStatementRequest& request) {
+    const flight::ServerCallContext& context,
+    const flight::sql::ActionClosePreparedStatementRequest& request) {
   return impl_->ClosePreparedStatement(context, request);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>>
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
 SQLiteFlightSqlServer::GetFlightInfoPreparedStatement(
-    const ServerCallContext& context, const PreparedStatementQuery& command,
-    const FlightDescriptor& descriptor) {
+    const flight::ServerCallContext& context,
+    const flight::sql::PreparedStatementQuery& command,
+    const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoPreparedStatement(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>>
-SQLiteFlightSqlServer::DoGetPreparedStatement(const ServerCallContext& context,
-                                              const PreparedStatementQuery& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetPreparedStatement(
+    const flight::ServerCallContext& context,
+    const flight::sql::PreparedStatementQuery& command) {
   return impl_->DoGetPreparedStatement(context, command);
 }
 
 Status SQLiteFlightSqlServer::DoPutPreparedStatementQuery(
-    const ServerCallContext& context, const PreparedStatementQuery& command,
-    FlightMessageReader* reader, FlightMetadataWriter* writer) {
+    const flight::ServerCallContext& context,
+    const flight::sql::PreparedStatementQuery& command,
+    flight::FlightMessageReader* reader, flight::FlightMetadataWriter* writer) {
   return impl_->DoPutPreparedStatementQuery(context, command, reader, writer);
 }
 
 arrow::Result<int64_t> SQLiteFlightSqlServer::DoPutPreparedStatementUpdate(
-    const ServerCallContext& context, const PreparedStatementUpdate& command,
-    FlightMessageReader* reader) {
+    const flight::ServerCallContext& context,
+    const flight::sql::PreparedStatementUpdate& command,
+    flight::FlightMessageReader* reader) {
   return impl_->DoPutPreparedStatementUpdate(context, command, reader);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>> SQLiteFlightSqlServer::GetFlightInfoTableTypes(
-    const ServerCallContext& context, const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoTableTypes(
+    const flight::ServerCallContext& context,
+    const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoTableTypes(context, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetTableTypes(
-    const ServerCallContext& context) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetTableTypes(const flight::ServerCallContext& context) {
   return impl_->DoGetTableTypes(context);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>>
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
 SQLiteFlightSqlServer::GetFlightInfoXdbcTypeInfo(
-    const ServerCallContext& context, const arrow::flight::sql::GetXdbcTypeInfo& command,
-    const FlightDescriptor& descriptor) {
+    const flight::ServerCallContext& context, const flight::sql::GetXdbcTypeInfo& command,
+    const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoTypeInfo(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetXdbcTypeInfo(
-    const ServerCallContext& context,
-    const arrow::flight::sql::GetXdbcTypeInfo& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetXdbcTypeInfo(const flight::ServerCallContext& context,
+                                         const flight::sql::GetXdbcTypeInfo& command) {
   return impl_->DoGetTypeInfo(context, command);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>>
-SQLiteFlightSqlServer::GetFlightInfoPrimaryKeys(const ServerCallContext& context,
-                                                const GetPrimaryKeys& command,
-                                                const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoPrimaryKeys(
+    const flight::ServerCallContext& context, const flight::sql::GetPrimaryKeys& command,
+    const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoPrimaryKeys(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetPrimaryKeys(
-    const ServerCallContext& context, const GetPrimaryKeys& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetPrimaryKeys(const flight::ServerCallContext& context,
+                                        const flight::sql::GetPrimaryKeys& command) {
   return impl_->DoGetPrimaryKeys(context, command);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>>
-SQLiteFlightSqlServer::GetFlightInfoImportedKeys(const ServerCallContext& context,
-                                                 const GetImportedKeys& command,
-                                                 const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoImportedKeys(
+    const flight::ServerCallContext& context, const flight::sql::GetImportedKeys& command,
+    const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoImportedKeys(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetImportedKeys(
-    const ServerCallContext& context, const GetImportedKeys& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetImportedKeys(const flight::ServerCallContext& context,
+                                         const flight::sql::GetImportedKeys& command) {
   return impl_->DoGetImportedKeys(context, command);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>>
-SQLiteFlightSqlServer::GetFlightInfoExportedKeys(const ServerCallContext& context,
-                                                 const GetExportedKeys& command,
-                                                 const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoExportedKeys(
+    const flight::ServerCallContext& context, const flight::sql::GetExportedKeys& command,
+    const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoExportedKeys(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>> SQLiteFlightSqlServer::DoGetExportedKeys(
-    const ServerCallContext& context, const GetExportedKeys& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetExportedKeys(const flight::ServerCallContext& context,
+                                         const flight::sql::GetExportedKeys& command) {
   return impl_->DoGetExportedKeys(context, command);
 }
 
-arrow::Result<std::unique_ptr<FlightInfo>>
-SQLiteFlightSqlServer::GetFlightInfoCrossReference(const ServerCallContext& context,
-                                                   const GetCrossReference& command,
-                                                   const FlightDescriptor& descriptor) {
+arrow::Result<std::unique_ptr<flight::FlightInfo>>
+SQLiteFlightSqlServer::GetFlightInfoCrossReference(
+    const flight::ServerCallContext& context,
+    const flight::sql::GetCrossReference& command,
+    const flight::FlightDescriptor& descriptor) {
   return impl_->GetFlightInfoCrossReference(context, command, descriptor);
 }
 
-arrow::Result<std::unique_ptr<FlightDataStream>>
-SQLiteFlightSqlServer::DoGetCrossReference(const ServerCallContext& context,
-                                           const GetCrossReference& command) {
+arrow::Result<std::unique_ptr<flight::FlightDataStream>>
+SQLiteFlightSqlServer::DoGetCrossReference(
+    const flight::ServerCallContext& context,
+    const flight::sql::GetCrossReference& command) {
   return impl_->DoGetCrossReference(context, command);
 }
 
-arrow::Result<ActionBeginTransactionResult> SQLiteFlightSqlServer::BeginTransaction(
-    const ServerCallContext& context, const ActionBeginTransactionRequest& request) {
+arrow::Result<flight::sql::ActionBeginTransactionResult>
+SQLiteFlightSqlServer::BeginTransaction(
+    const flight::ServerCallContext& context,
+    const flight::sql::ActionBeginTransactionRequest& request) {
   return impl_->BeginTransaction(context, request);
 }
-Status SQLiteFlightSqlServer::EndTransaction(const ServerCallContext& context,
-                                             const ActionEndTransactionRequest& request) {
+Status SQLiteFlightSqlServer::EndTransaction(
+    const flight::ServerCallContext& context,
+    const flight::sql::ActionEndTransactionRequest& request) {
   return impl_->EndTransaction(context, request);
 }
 
-}  // namespace sqlite
-}  // namespace sql
-}  // namespace flight
-}  // namespace arrow
+}  // namespace sqlflite::sqlite
