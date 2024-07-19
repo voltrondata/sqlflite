@@ -5,7 +5,7 @@ on:
   push:
 
 env:
-  DOCKER_IMAGE_NAME: voltrondata/flight-sql
+  DOCKER_IMAGE_NAME: voltrondata/sqlflite
 
 jobs:
   build-project-macos:
