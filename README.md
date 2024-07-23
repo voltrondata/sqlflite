@@ -290,7 +290,7 @@ Running Init SQL command:
  SET autoload_known_extensions = true;
 Using database file: "/opt/sqlflite/data/TPC-H-small.duckdb"
 Print Queries option is set to: false
-Apache Arrow Flight SQL server - with engine: DuckDB - will listen on grpc+tcp://0.0.0.0:31337
+SQLFlite server - with engine: DuckDB - will listen on grpc+tcp://0.0.0.0:31337
 Flight SQL server - started
 ```
 
@@ -311,8 +311,8 @@ WARNING - TLS is disabled for the Flight SQL server - this is insecure.
 SQLite version: 3.45.0
 Using database file: "/opt/sqlflite/data/TPC-H-small.sqlite"
 Print Queries option is set to: false
-Apache Arrow Flight SQL server - with engine: SQLite - will listen on grpc+tcp://0.0.0.0:31337
-Flight SQL server - started
+SQLFlite server - with engine: SQLite - will listen on grpc+tcp://0.0.0.0:31337
+SQLFlite server - started
 ```
 
 ## Print help
@@ -326,28 +326,28 @@ Allowed options:
   -B [ --backend ] arg (=duckdb)      Specify the database backend. Allowed 
                                       options: duckdb, sqlite.
   -H [ --hostname ] arg               Specify the hostname to listen on for the
-                                      Flight SQL Server.  If not set, we will 
-                                      use env var: 'SQLFLITE_HOSTNAME'.  If that 
+                                      SQLFlite Server.  If not set, we will use
+                                      env var: 'SQLFLITE_HOSTNAME'.  If that 
                                       isn't set, we will use the default of: 
                                       '0.0.0.0'.
   -R [ --port ] arg (=31337)          Specify the port to listen on for the 
-                                      Flight SQL Server.
+                                      SQLFlite Server.
   -D [ --database-filename ] arg      Specify the database filename (absolute 
                                       or relative to the current working 
                                       directory)
   -U [ --username ] arg               Specify the username to allow to connect 
-                                      to the Flight SQL Server for clients.  If
+                                      to the SQLFlite Server for clients.  If 
                                       not set, we will use env var: 
-                                      'SQLFLITE_USERNAME'.  If that isn't set, we
-                                      will use the default of: 
+                                      'SQLFLITE_USERNAME'.  If that isn't set, 
+                                      we will use the default of: 
                                       'sqlflite_username'.
-  -P [ --password ] arg               Specify the password to set on the Flight
-                                      SQL Server for clients to connect with.  
-                                      If not set, we will use env var: 
+  -P [ --password ] arg               Specify the password to set on the 
+                                      SQLFlite Server for clients to connect 
+                                      with.  If not set, we will use env var: 
                                       'SQLFLITE_PASSWORD'.  If that isn't set, 
                                       the server will exit with failure.
   -S [ --secret-key ] arg             Specify the secret key used to sign JWTs 
-                                      issued by the Flight SQL Server. If it 
+                                      issued by the SQLFlite Server. If it 
                                       isn't set, we use env var: 'SECRET_KEY'. 
                                       If that isn't set, the server will create
                                       a random secret key.
