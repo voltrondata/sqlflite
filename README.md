@@ -282,7 +282,7 @@ This option allows choosing from two backends: SQLite and DuckDB. It defaults to
 ```bash
 $ SQLFLITE_PASSWORD="sqlflite_password" sqlflite_server --database-filename data/TPC-H-small.duckdb
 Apache Arrow version: 17.0.0
-WARNING - TLS is disabled for the Flight SQL server - this is insecure.
+WARNING - TLS is disabled for the SQLFlite server - this is insecure.
 DuckDB version: v1.0.0
 Running Init SQL command: 
 SET autoinstall_known_extensions = true;
@@ -291,7 +291,7 @@ Running Init SQL command:
 Using database file: "/opt/sqlflite/data/TPC-H-small.duckdb"
 Print Queries option is set to: false
 SQLFlite server - with engine: DuckDB - will listen on grpc+tcp://0.0.0.0:31337
-Flight SQL server - started
+SQLFlite server - started
 ```
 
 The above call is equivalent to running `sqlflite_server -B duckdb` or `sqlflite --backend duckdb`. To select SQLite run
@@ -307,7 +307,7 @@ The above will produce the following:
 
 ```bash
 Apache Arrow version: 17.0.0
-WARNING - TLS is disabled for the Flight SQL server - this is insecure.
+WARNING - TLS is disabled for the SQLFlite server - this is insecure.
 SQLite version: 3.45.0
 Using database file: "/opt/sqlflite/data/TPC-H-small.sqlite"
 Print Queries option is set to: false
@@ -371,7 +371,7 @@ There is now a slim docker image available, without Python, tls certificate gene
 
 You must supply the following environment variables to the slim image:
 - `DATABASE_FILENAME` - the path to the database file to use
-- `SQLFLITE_PASSWORD` - the password to use for the Flight SQL server
+- `SQLFLITE_PASSWORD` - the password to use for the SQLFlite server
 
 You can optionally supply the following environment variables:
 - `TLS_ENABLED` - set to "1" to enable TLS (default is "0" - disabled)
