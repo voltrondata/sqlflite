@@ -145,14 +145,14 @@ python
 
 In the Python shell - you can then run:
 ```python
+import os
 from adbc_driver_flightsql import dbapi as sqlflite, DatabaseOptions
 
-sqlflite_password = "sqlflite_password" # Use an env var in production code!
 
 with sqlflite.connect(uri="grpc+tls://localhost:31337",
-                        db_kwargs={"username": "sqlflite_username",
-                                   "password": sqlflite_password,
-                                   DatabaseOptions.TLS_SKIP_VERIFY.value: "true" # Not needed if you use a trusted CA-signed TLS cert
+                        db_kwargs={"username": os.getenv("SQLFLITE_USERNAME", "sqlflite_username"),
+                                   "password": os.getenv("SQLFLITE_PASSWORD", "sqlflite_password"),
+                                   DatabaseOptions.TLS_SKIP_VERIFY.value: "true"  # Not needed if you use a trusted CA-signed TLS cert
                                    }
                         ) as conn:
    with conn.cursor() as cur:
