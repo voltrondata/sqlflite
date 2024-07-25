@@ -130,10 +130,10 @@ You can learn more about ADBC and Flight SQL [here](https://voltrondata.com/reso
 Ensure you have Python 3.9+ installed, then open a terminal, then run:
 ```bash
 # Create a Python virtual environment
-python3 -m venv ./venv
+python3 -m venv .venv
 
 # Activate the virtual environment
-. ./venv/bin/activate
+. .venv/bin/activate
 
 # Install the requirements including the new Arrow ADBC Flight SQL driver
 pip install --upgrade pip
@@ -244,8 +244,8 @@ cmake --build build --target install
 
 2. Install Python requirements for ADBC client interaction - (ensure you have Python 3.9+ installed first)
 ```bash
-python3 -m venv ./venv
-. ./venv/bin/activate
+python3 -m venv .venv
+. .venv/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install --requirement ./requirements.txt
 ````
