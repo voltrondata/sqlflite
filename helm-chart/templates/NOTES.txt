@@ -1,0 +1,20 @@
+SQLFlite has been installed.
+
+1. Get the JDBC URL and ADBC URI by running these commands:
+
+```bash
+export SERVICE_NAME={{ include "sqlflite.fullname" . }}
+export NAMESPACE={{ .Release.Namespace }}
+
+# Wait for the external IP to be allocated
+unset EXTERNAL_IP
+while [ -z "$EXTERNAL_IP" ]; do
+  EXTERNAL_IP=$(kubectl get svc $SERVICE_NAME -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+  [ -z "$EXTERNAL_IP" ] && echo "Waiting for external IP..." && sleep 10
+done
+
+PORT=$(kubectl get svc $SERVICE_NAME -n $NAMESPACE -o jsonpath='{.spec.ports[0].port}')
+echo -e "\nJDBC URL:\njdbc:arrow-flight-sql://${EXTERNAL_IP}:${PORT}?useEncryption=true&disableCertificateVerification=true"
+
+echo -e "\nADBC URI:\ngrpc+tls://${EXTERNAL_IP}:${PORT}"
+```

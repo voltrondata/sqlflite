@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sqlflite.fullname" . }}
+  labels:
+    {{- include "sqlflite.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.sqlFliteServer.service.type }}
+  ports:
+    - port: {{ .Values.sqlFliteServer.service.port }}
+      targetPort: sqlflite-port
+      protocol: TCP
+      name: sqlflite-port
+  selector:
+    {{- include "sqlflite.selectorLabels" . | nindent 4 }}
+    app: sqlflite-server

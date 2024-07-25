@@ -1,0 +1,47 @@
+sqlFliteServer:
+  hostName: sqlflite.example.com
+  replicaCount: 1
+
+  config:
+    DATABASE_BACKEND: duckdb
+    DATABASE_FILENAME: data/TPC-H-small.duckdb
+
+  image:
+    repository: voltrondata/sqlflite
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: latest
+
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+
+  podAnnotations: {}
+
+  podSecurityContext:
+    fsGroup: 1000
+
+  securityContext: {}
+
+  service:
+    type: LoadBalancer
+    port: 31337
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 6Gi
+    requests:
+      cpu: 500m
+      memory: 6Gi
+
+  nodeSelector:
+    instanceType: r7gd.medium  # Change this to match your node's label(s)
+
+#  tolerations:
+#    - key: sidewinder
+#      operator: Equal
+#      value: "true"
+#      effect: NoSchedule
+
+  affinity: {}

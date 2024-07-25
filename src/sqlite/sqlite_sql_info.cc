@@ -30,7 +30,7 @@ flight::sql::SqlInfoResultMap GetSqlInfoResultMap() {
   using SqlInfoResult = flight::sql::SqlInfoResult;
   return {
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_NAME,
-       SqlInfoResult(std::string("db_name"))},
+       SqlInfoResult(std::string("sqlflite"))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_VERSION,
        SqlInfoResult(std::string("sqlite 3"))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_ARROW_VERSION,

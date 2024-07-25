@@ -38,7 +38,7 @@ sql::SqlInfoResultMap GetSqlInfoResultMap() {
 
   return {
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_NAME,
-       SqlInfoResult(std::string("db_name"))},
+       SqlInfoResult(std::string("sqlflite"))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_VERSION,
        SqlInfoResult(std::string("duckdb " + std::string(duckdb_library_version())))},
       {SqlInfoOptions::SqlInfo::FLIGHT_SQL_SERVER_ARROW_VERSION,
