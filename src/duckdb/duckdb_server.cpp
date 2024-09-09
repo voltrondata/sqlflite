@@ -134,31 +134,28 @@ Result<std::unique_ptr<flight::FlightInfo>> GetFlightInfoForCommand(
 }
 
 std::string PrepareQueryForGetImportedOrExportedKeys(const std::string &filter) {
-  return R"(SELECT * FROM (SELECT database_name                                                                         AS pk_catalog_name,
-       schema_name                                                                           AS pk_schema_name,
-       regexp_replace(constraint_text, '^FOREIGN KEY \(.*\) REFERENCES (.*)\(.*\)$', '\1')   AS pk_table_name,
-       regexp_replace(constraint_text, '^FOREIGN KEY \(.*\) REFERENCES (.*)\((.*)\)$', '\2') AS pk_column_name,
-       database_name                                                                         AS fk_catalog_name,
-       schema_name                                                                           AS fk_schema_name,
-       table_name                                                                            AS fk_table_name,
-       UNNEST(constraint_column_names)                                                       AS fk_column_name,
-       UNNEST(constraint_column_indexes)                                                     AS key_sequence,
-       'fk_' || fk_table_name || '_to_' || pk_table_name
-         || CASE WHEN COUNT(*) OVER (PARTITION BY pk_table_name
-                                                , fk_table_name
-                                    ) > 1
-                    THEN '_' ||
-                       DENSE_RANK() OVER (PARTITION BY pk_table_name
-                                                     , fk_table_name
-                                          ORDER BY  constraint_column_names ASC
-                                         )
-                 ELSE ''
-            END                                                                              AS fk_key_name,
-       'pk_' || pk_table_name                                                                AS pk_key_name,
-       1                                                                                     AS update_rule, /* DuckDB only supports RESTRICT */
-       1                                                                                     AS delete_rule /* DuckDB only supports RESTRICT */
-FROM duckdb_constraints()
-WHERE constraint_type = 'FOREIGN KEY') WHERE )" +
+  return R"(SELECT * FROM (
+               SELECT fk.database_name                                                                         AS pk_catalog_name,
+                      fk.schema_name                                                                           AS pk_schema_name,
+                      fk.referenced_table                                                                      AS pk_table_name,
+                      UNNEST(fk.referenced_column_names)                                                       AS pk_column_name,
+                      fk.database_name                                                                         AS fk_catalog_name,
+                      fk.schema_name                                                                           AS fk_schema_name,
+                      fk.table_name                                                                            AS fk_table_name,
+                      UNNEST(fk.constraint_column_names)                                                       AS fk_column_name,
+                      UNNEST(fk.constraint_column_indexes)                                                     AS key_sequence,
+                      fk.constraint_name                                                                       AS fk_key_name,
+                      pk.constraint_name                                                                       AS pk_key_name,
+                      1                                                                                        AS update_rule, /* DuckDB only supports RESTRICT */
+                      1                                                                                        AS delete_rule /* DuckDB only supports RESTRICT */
+               FROM duckdb_constraints() AS fk
+                  JOIN
+                    duckdb_constraints() AS pk
+                  ON (fk.referenced_table = pk.table_name
+                      AND fk.constraint_type = 'FOREIGN KEY'
+                      AND pk.constraint_type = 'PRIMARY KEY'
+                     )
+            ) WHERE )" +
          filter + R"( ORDER BY
   pk_catalog_name, pk_schema_name, pk_table_name, pk_key_name, key_sequence)";
 }
@@ -328,7 +325,7 @@ class DuckDBFlightSqlServer::Impl {
     ARROW_ASSIGN_OR_RAISE(auto dataset_schema, statement->GetSchema())
 
     std::shared_ptr<duckdb::PreparedStatement> stmt = statement->GetDuckDBStmt();
-    const id_t parameter_count = stmt->n_param;
+    const id_t parameter_count = stmt->named_param_map.size();
     arrow::FieldVector parameter_fields;
     parameter_fields.reserve(parameter_count);
 
@@ -509,7 +506,7 @@ class DuckDBFlightSqlServer::Impl {
            "     , table_name\n"
            "     , column_name\n"
            "     , column_index + 1 AS key_sequence\n"
-           "     , 'pk_' || table_name AS key_name\n"
+           "     , constraint_name  AS key_name\n"
            "   FROM (SELECT dc.*\n"
            "              , UNNEST(dc.constraint_column_indexes) AS column_index\n"
            "              , UNNEST(dc.constraint_column_names) AS column_name\n"
