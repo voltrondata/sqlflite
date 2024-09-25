@@ -205,10 +205,10 @@ version():   [
 Total: 1
 ```
 
-### Connecting via Ibis
+### Connecting via [Ibis](https://ibis-project.org)
 See: https://github.com/ibis-project/ibis-sqlflite
 
-### Connecting via SQLAlchemy
+### Connecting via [SQLAlchemy](https://www.sqlalchemy.org)
 See: https://github.com/prmoore77/sqlalchemy-sqlflite-adbc-dialect
 
 ### Tear-down
