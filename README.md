@@ -7,6 +7,8 @@
 [<img src="https://img.shields.io/badge/GitHub-voltrondata%2Fsqlflite-blue.svg?logo=Github">](https://github.com/voltrondata/sqlflite)
 [<img src="https://img.shields.io/badge/Arrow%20JDBC%20Driver-download%20artifact-red?logo=Apache%20Maven">](https://search.maven.org/search?q=a:flight-sql-jdbc-driver)
 [<img src="https://img.shields.io/badge/PyPI-Arrow%20ADBC%20Flight%20SQL%20driver-blue?logo=PyPI">](https://pypi.org/project/adbc-driver-flightsql/)
+[<img src="https://img.shields.io/badge/PyPI-SQLFlite%20Ibis%20Backend-blue?logo=PyPI">](https://pypi.org/project/ibis-sqlflite/)
+[<img src="https://img.shields.io/badge/PyPI-SQLFlite%20SQLAlchemy%20Dialect-blue?logo=PyPI">](https://pypi.org/project/sqlalchemy-sqlflite-adbc-dialect/)
 
 ## Description
 
@@ -202,6 +204,12 @@ version():   [
 
 Total: 1
 ```
+
+### Connecting via Ibis
+See: https://github.com/ibis-project/ibis-sqlflite
+
+### Connecting via SQLAlchemy
+See: https://github.com/prmoore77/sqlalchemy-sqlflite-adbc-dialect
 
 ### Tear-down
 Stop the docker image with:
